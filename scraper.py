@@ -106,17 +106,59 @@ SOURCES = [
     ("Footshop", footshop),
 ]
 
+def charger(chemin, defaut):
+    try:
+        with open(chemin, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return defaut
+
+now = datetime.datetime.now(datetime.timezone.utc)
+maj = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+jour = now.strftime("%Y-%m-%d")
+
+ancien = charger("data/promos.json", {})
+anciens_items = ancien.get("items", [])
+ancien_statut = ancien.get("statut", {})
+histo = charger("data/history.json", {})
+
 items = []
+statut = {}
 for nom, fn in SOURCES:
     try:
         r = fn()
-        print(nom, ":", len(r), "articles")
-        items += r
     except Exception as e:
         print(nom, ": ECHEC", type(e).__name__, e)
+        r = []
+    if r:
+        print(nom, ":", len(r), "articles")
+        items += r
+        statut[nom] = {"ok": True, "n": len(r), "depuis": maj}
+    else:
+        reprise = [x for x in anciens_items if x.get("boutique") == nom]
+        print(nom, ": aucun article, reprise de", len(reprise), "anciens")
+        items += reprise
+        depuis = ancien_statut.get(nom, {}).get("depuis", ancien.get("maj", maj))
+        statut[nom] = {"ok": False, "n": len(reprise), "depuis": depuis}
 
-maj = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+for x in items:
+    h = histo.setdefault(x["lien"], {"h": []})
+    serie = h["h"]
+    prix = round(x["prix"], 2)
+    if not serie or serie[-1][1] != prix:
+        serie.append([jour, prix])
+        del serie[:-10]
+    h["v"] = jour
+    if len(serie) >= 2:
+        x["prec"] = serie[-2][1]
+        x["chg"] = serie[-1][0]
+
+limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
+histo = {k: v for k, v in histo.items() if v.get("v", jour) >= limite}
+
 os.makedirs("data", exist_ok=True)
 with open("data/promos.json", "w", encoding="utf-8") as f:
-    json.dump({"maj": maj, "items": items}, f, ensure_ascii=False)
+    json.dump({"maj": maj, "statut": statut, "items": items}, f, ensure_ascii=False, separators=(",", ":"))
+with open("data/history.json", "w", encoding="utf-8") as f:
+    json.dump(histo, f, ensure_ascii=False, separators=(",", ":"))
 print("TOTAL", len(items))
