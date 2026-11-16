@@ -1,6 +1,7 @@
 var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,tm,SZ={},BR={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null;
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["acc","Accessoires"]];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
+var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",acc:"Accessoires"};
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
 var LM={"xxs":"XXS","x-small":"XS","xs":"XS","extra small":"XS","small":"S","s":"S","medium":"M","m":"M","large":"L","l":"L","x-large":"XL","xl":"XL","extra large":"XL","xx-large":"XXL","xxl":"XXL","2xl":"XXL","xxx-large":"XXXL","xxxl":"XXXL","3xl":"XXXL"};
 var TEE=/\b(t[\s-]?shirts?|tees?|tshirts?)\b/;
@@ -161,6 +162,8 @@ return '<button class="chip gen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[
 }
 function updBtn(){
 var n=0;
+if(GEN!=="all")n++;
+if(CAT!=="all")n++;
 if($("boutique").value)n++;
 if(+$("remise").value)n++;
 if($("pmax").value)n++;
@@ -169,16 +172,17 @@ if(Object.keys(BR).length)n++;
 if(onlyNew)n++;
 if(onlyDrop)n++;
 if($("tri").value!=="remise")n++;
-$("fBtn").textContent="⚙ Filtres"+(n?" · "+n:"");
-$("fBtn").className="fbtn"+($("panel").className.indexOf("open")>=0||n?" on":"");
+$("fBtn").textContent=n?"☰ "+n:"☰";
+$("fBtn").className="fbtn"+(n?" on":"");
 }
 function togglePanel(){
-var p=$("panel");
-p.className=p.className.indexOf("open")>=0?"panel":"panel open";
-updBtn();
+$("drawer").className="open";
+document.body.style.overflow="hidden";
+$("panel").scrollTop=0;
 }
 function closePanel(){
-$("panel").className="panel";
+$("drawer").className="";
+document.body.style.overflow="";
 updBtn();
 window.scrollTo({top:0,behavior:"smooth"});
 }
@@ -212,7 +216,9 @@ toggleFavL(cur);
 var bt=$("shFav");if(bt)bt.textContent=FAV[cur]?"♥":"♡";
 }else if(e.target.closest("#shShare")){shareCur()}
 });
-document.addEventListener("keydown",function(e){if(e.key==="Escape"&&cur)closeSheet()});
+document.addEventListener("keydown",function(e){
+if(e.key==="Escape"){if(cur)closeSheet();else if($("drawer").className==="open")closePanel()}
+});
 })();
 
 fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
@@ -336,10 +342,18 @@ return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'"><butto
 function render(){
 var shown=L.slice(0,PER);
 shownN=shown.length;
+var parts=[];
+if(GEN!=="all")parts.push(GL[GEN]);
+if(CAT!=="all")parts.push(CL[CAT]);
+if($("boutique").value)parts.push($("boutique").value);
+if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
+if(onlyFav)parts.push("Favoris");
+if(onlyNew)parts.push("Nouveautés");
+if(onlyDrop)parts.push("Baisses");
 var note="";
 if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
 if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
-$("n").textContent=L.length+" article"+(L.length>1?"s":"")+note;
+$("n").textContent=L.length+" article"+(L.length>1?"s":"")+(parts.length?" · "+parts.join(" · "):"")+note;
 var sr=$("showRes");
 if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
 $("g").innerHTML=shown.map(cardHtml).join("");
