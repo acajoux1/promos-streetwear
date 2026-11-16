@@ -13,6 +13,7 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
     items = []
     for page in range(1, maxpages + 1):
         url = base + collection + "/products.json?limit=250&page=" + str(page)
+        "cat": [t for t in p.get("tags", []) if t.startswith("cat_")] + [p.get("product_type", "")],
         prods = json.loads(fetch(url))["products"]
         if not prods:
             break
