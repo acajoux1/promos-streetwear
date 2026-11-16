@@ -59,6 +59,12 @@ PAT = re.compile(
     re.S,
 )
 
+def decode(s):
+    try:
+        return json.loads('"' + s + '"')
+    except Exception:
+        return s
+
 def footshop(maxpages=40):
     base = "https://www.footshop.fr/fr/"
     vus, items = set(), []
@@ -71,27 +77,32 @@ def footshop(maxpages=40):
         except Exception as e:
             print("Footshop arret page", page, type(e).__name__)
             break
+        ms = list(PAT.finditer(html))
         nouveaux = 0
-        for m in PAT.finditer(html):
-            nom, lien = m.group(1), m.group(2)
+        for i, m in enumerate(ms):
+            nom, lien = decode(m.group(1)), m.group(2)
             prix, ancien = float(m.group(3)), float(m.group(4))
             if lien in vus or ancien <= prix:
                 continue
             vus.add(lien)
             nouveaux += 1
-            try:
-                nom = json.loads('"' + nom + '"')
-            except Exception:
-                pass
+            fin = ms[i + 1].start() if i + 1 < len(ms) else m.end() + 8000
+            seg = html[m.end():fin]
+            mb = re.search(r'"manufacturer":\{"id":\d+,"name":"((?:[^"\\]|\\.)*)"', seg)
+            marque = decode(mb.group(1)) if mb else marque_de(nom)
+            mi = re.search(r'"image":"(https?://[^"]+)"', seg)
+            image = mi.group(1) if mi else ""
+            mv = re.search(r'"attributes":\{"variants":\[(.*?)\]', seg, re.S)
+            tailles = re.findall(r'\{"name":"([^"]+)","url"', mv.group(1)) if mv else []
             items.append({
                 "boutique": "Footshop",
-                "marque": marque_de(nom),
+                "marque": marque,
                 "nom": nom,
                 "prix": prix,
                 "ancien_prix": ancien,
                 "remise": round((1 - prix / ancien) * 100),
-                "tailles": [],
-                "image": "",
+                "tailles": tailles,
+                "image": image,
                 "lien": base + lien,
                 "cat": [],
             })
