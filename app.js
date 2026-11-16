@@ -12,6 +12,21 @@ function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k)
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function f(n){return n.toFixed(2).replace(".",",")+" €"}
 function $(id){return document.getElementById(id)}
+function thumb(u){
+if(!u)return u;
+if(/cdn\.shopify\.com|\/cdn\/shop\//.test(u)){
+try{var o=new URL(u);o.searchParams.set("width","400");return o.toString()}catch(e){}
+}
+return u;
+}
+function savePrefs(){ls("prefs",{gen:GEN,cat:CAT,tri:$("tri").value})}
+function loadPrefs(){
+var p=ls("prefs");
+if(!p)return;
+if(["all","h","f"].indexOf(p.gen)>=0)GEN=p.gen;
+if(["all","vet","chau","tee","acc"].indexOf(p.cat)>=0)CAT=p.cat;
+if(["remise","prix","prixd"].indexOf(p.tri)>=0)$("tri").value=p.tri;
+}
 function pathOf(x){
 var p=(x.lien||"").replace(/^https?:\/\/[^\/]+/,"");
 try{p=decodeURIComponent(p)}catch(e){}
@@ -126,6 +141,11 @@ var p=$("panel");
 p.className=p.className.indexOf("open")>=0?"panel":"panel open";
 updBtn();
 }
+function closePanel(){
+$("panel").className="panel";
+updBtn();
+window.scrollTo({top:0,behavior:"smooth"});
+}
 
 fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
 D=j.items;
@@ -146,12 +166,13 @@ $("maj").textContent="Mis à jour le "+d.toLocaleDateString("fr-FR")+" à "+d.to
 var bs=[];D.forEach(function(x){if(bs.indexOf(x.boutique)<0)bs.push(x.boutique)});
 bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textContent=b;$("boutique").appendChild(o)});
 if(!hasNew)$("cNew").style.display="none";
+loadPrefs();
 renderGens();renderCats();buildSizes();favCount();apply();
-}).catch(function(){$("maj").textContent="Données introuvables : lancez la tâche dans Actions."});
+}).catch(function(){$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
 
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
 function onSearch(){clearTimeout(tm);tm=setTimeout(apply,150)}
-function apply(){page=1;updBtn();draw()}
+function apply(){page=1;updBtn();savePrefs();draw()}
 function toggleFav2(){onlyFav=!onlyFav;favCount();apply()}
 function toggleNew(){onlyNew=!onlyNew;$("cNew").className="chip"+(onlyNew?" on":"");apply()}
 function resetAll(){
@@ -224,7 +245,7 @@ var tags="";
 if(NEWS[x.lien])tags+='<span class="tag tn">NOUVEAU</span>';
 if(x.gone)tags+='<span class="tag tg">PLUS EN PROMO</span>';
 else if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+'</span>';
-var img=x.image?'<img loading="lazy" src="'+esc(x.image)+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>';
+var img=x.image?'<img loading="lazy" decoding="async" src="'+esc(thumb(x.image))+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>';
 var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
 return '<div class="card'+(x.gone?" gone":"")+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
 }
@@ -234,6 +255,8 @@ var note="";
 if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
 if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
 $("n").textContent=L.length+" article"+(L.length>1?"s":"")+note;
+var sr=$("showRes");
+if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
 $("g").innerHTML=shown.map(cardHtml).join("");
 var rest=L.length-shown.length;
 $("moreWrap").innerHTML=rest>0?'<button class="more" onclick="page++;render()">Voir plus ('+rest+' restants)</button>':"";
@@ -249,3 +272,6 @@ if(onlyFav){var y=window.scrollY;draw();window.scrollTo(0,y)}
 else{btn.className="fav"+(FAV[l]?" on":"");btn.textContent=FAV[l]?"♥":"♡"}
 });
 window.addEventListener("scroll",function(){$("top").style.display=window.scrollY>700?"block":"none"});
+if("serviceWorker" in navigator){
+window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
+}
