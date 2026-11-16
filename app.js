@@ -245,7 +245,7 @@ var tags="";
 if(NEWS[x.lien])tags+='<span class="tag tn">NOUVEAU</span>';
 if(x.gone)tags+='<span class="tag tg">PLUS EN PROMO</span>';
 else if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+'</span>';
-var img=x.image?'<img loading="lazy" decoding="async" src="'+esc(thumb(x.image))+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>';
+var img=x.image?'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(thumb(x.image))+'" data-o="'+esc(x.image)+'" alt="" onerror="if(this.dataset.o&&this.src!==this.dataset.o){this.src=this.dataset.o;this.dataset.o=\'\'}else{this.style.visibility=\'hidden\'}">':'<div class="ph"></div>';
 var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
 return '<div class="card'+(x.gone?" gone":"")+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
 }
