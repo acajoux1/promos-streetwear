@@ -13,7 +13,6 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
     items = []
     for page in range(1, maxpages + 1):
         url = base + collection + "/products.json?limit=250&page=" + str(page)
-        "cat": [t for t in p.get("tags", []) if t.startswith("cat_")] + [p.get("product_type", "")],
         prods = json.loads(fetch(url))["products"]
         if not prods:
             break
@@ -26,6 +25,8 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
             ancien = max(anciens) if anciens else None
             if not ancien or ancien <= prix:
                 continue
+            tags = [t for t in p.get("tags", []) if t.startswith(("cat_", "gender:"))]
+            tags.append(p.get("product_type", ""))
             items.append({
                 "boutique": boutique,
                 "marque": p["vendor"],
@@ -36,6 +37,7 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
                 "tailles": [v["option1"] for v in dispo if v.get("option1")],
                 "image": p["images"][0]["src"] if p["images"] else "",
                 "lien": prod_base + p["handle"],
+                "cat": tags,
             })
         time.sleep(0.5)
     return items
@@ -91,6 +93,7 @@ def footshop(maxpages=40):
                 "tailles": [],
                 "image": "",
                 "lien": base + lien,
+                "cat": [],
             })
         if nouveaux == 0:
             break
@@ -112,10 +115,8 @@ for nom, fn in SOURCES:
     except Exception as e:
         print(nom, ": ECHEC", type(e).__name__, e)
 
+maj = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 os.makedirs("data", exist_ok=True)
 with open("data/promos.json", "w", encoding="utf-8") as f:
-    json.dump(
-        {"maj": datetime.datetime.utcnow().isoformat() + "Z", "items": items},
-        f, ensure_ascii=False,
-    )
+    json.dump({"maj": maj, "items": items}, f, ensure_ascii=False)
 print("TOTAL", len(items))
