@@ -61,7 +61,12 @@ def footshop(maxpages=40):
     vus, items = set(), []
     for page in range(1, maxpages + 1):
         url = "https://www.footshop.fr/fr/872-promos" + ("?page=" + str(page) if page > 1 else "")
-        html = fetch(url)
+                try:
+            html = fetch(url)
+        except Exception as e:
+            print("Footshop arret page", page, type(e).__name__)
+            break
+
         nouveaux = 0
         for m in PAT.finditer(html):
             nom, lien, prix, ancien = m.group(1), m.group(2), float(m.group(3)), float(m.group(4))
