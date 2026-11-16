@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Promos Streetwear</title>
+<style>
+:root{--bg:#fff;--card:#f4f4f5;--text:#111;--muted:#666;--accent:#e11d48;--line:#e4e4e7}
+@media (prefers-color-scheme:dark){:root{--bg:#0b0b0c;--card:#18181b;--text:#f4f4f5;--muted:#a1a1aa;--line:#27272a;--accent:#fb7185}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,system-ui,Arial,sans-serif;padding:16px;max-width:760px;margin-inline:auto}
+h1{font-size:22px;margin:4px 0 2px}
+.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
+input,select{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px;margin-bottom:8px}
+.row{display:flex;gap:8px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:8px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit;display:block;position:relative}
+.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--line)}
+.pct{position:absolute;top:8px;left:8px;background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:2px 7px;border-radius:6px}
+.in{padding:9px 10px 11px}
+.b{font-size:11px;color:var(--muted);text-transform:uppercase}
+.t{font-size:13px;font-weight:600;margin:2px 0 4px}
+.now{font-weight:700}
+.old{font-size:12px;color:var(--muted);text-decoration:line-through;margin-left:6px}
+.s{font-size:11px;color:var(--muted);margin-top:4px}
+@media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
+</style>
+</head>
+<body>
+<h1>Promos Streetwear</h1>
+<p class="sub" id="maj">Chargement…</p>
+<input id="q" placeholder="Rechercher marque, modèle, taille…" oninput="draw()">
+<div class="row">
+<select id="boutique" onchange="draw()"><option value="">Toutes les boutiques</option></select>
+<select id="remise" onchange="draw()">
+<option value="0">Toutes remises</option><option value="20">−20 % et +</option>
+<option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option>
+</select>
+</div>
+<select id="tri" onchange="draw()">
+<option value="remise">Tri : plus grosse remise</option>
+<option value="prix">Tri : prix croissant</option>
+</select>
+<div class="sub" id="n"></div>
+<div class="grid" id="g"></div>
+<script>
+var D=[];
+fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
+D=j.items;
+var d=new Date(j.maj);
+document.getElementById("maj").textContent="Mis à jour le "+d.toLocaleDateString("fr-FR")+" à "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+var bs=[];D.forEach(function(x){if(bs.indexOf(x.boutique)<0)bs.push(x.boutique)});
+bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textContent=b;document.getElementById("boutique").appendChild(o)});
+draw();
+}).catch(function(){document.getElementById("maj").textContent="Données introuvables : lancez la tâche dans Actions."});
+function f(n){return n.toFixed(2).replace(".",",")+" €"}
+function draw(){
+var q=document.getElementById("q").value.toLowerCase().trim();
+var b=document.getElementById("boutique").value;
+var r=+document.getElementById("remise").value;
+var t=document.getElementById("tri").value;
+var L=D.filter(function(x){
+if(b&&x.boutique!==b)return false;
+if(x.remise<r)return false;
+if(q){var txt=(x.marque+" "+x.nom+" "+x.tailles.join(" ")+" "+x.boutique).toLowerCase();
+return q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0})}
+return true});
+L.sort(function(a,c){return t==="prix"?a.prix-c.prix:c.remise-a.remise});
+document.getElementById("n").textContent=L.length+" article"+(L.length>1?"s":"");
+document.getElementById("g").innerHTML=L.map(function(x){
+return '<a class="card" href="'+x.lien+'" target="_blank" rel="noopener"><span class="pct">−'+x.remise+' %</span><img loading="lazy" src="'+x.image+'" alt=""><div class="in"><div class="b">'+x.marque+' · '+x.boutique+'</div><div class="t">'+x.nom+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+x.tailles.join(", ")+'</div></div></a>'}).join("");
+}
+</script>
+</body>
+</html>
