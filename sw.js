@@ -1,4 +1,4 @@
-var V="promos-v1";
+var V="promos-v2";
 var SHELL=["./","index.html","app.js","style.css","manifest.json"];
 self.addEventListener("install",function(e){
 e.waitUntil(caches.open(V).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
