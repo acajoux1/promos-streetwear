@@ -40,6 +40,23 @@ input:focus,select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 10
 .tn{background:var(--gold);color:#1a1405}
 .td{background:#5fd38d;color:#07110c}
 .tg{background:#5b6b63;color:#fff}
+.tb{background:#d9a93f;color:#1a1405}
 .more{display:block;width:100%;margin:12px 0 6px;padding:14px;border-radius:12px;border:1px solid #8fd6c6;background:linear-gradient(90deg,#2d7c98,#3a9a82);color:#f2fbf8;font-size:15px;font-weight:700;cursor:pointer}
+.sentinel{text-align:center;color:var(--muted);font-size:12px;padding:18px}
+#warn{background:rgba(201,86,111,.18);border:1px solid #c9566f;color:#f6d3dc;border-radius:10px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5}
 #top{position:fixed;right:14px;bottom:max(14px,env(safe-area-inset-bottom));width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--ctl);color:var(--gold);font-size:20px;display:none;cursor:pointer;z-index:5}
+#sheet{position:fixed;top:0;left:0;right:0;bottom:0;z-index:20;display:none}
+#sheet.open{display:block}
+.sh-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.62)}
+.sh-body{position:absolute;left:0;right:0;bottom:0;max-height:86vh;overflow-y:auto;background:#0f1c16;border-top:1px solid var(--line);border-radius:18px 18px 0 0;padding:14px 16px calc(20px + env(safe-area-inset-bottom));max-width:760px;margin:0 auto}
+.sh-x{float:right;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--ctl);color:var(--text);font-size:16px;cursor:pointer}
+.sh-img{clear:both;width:100%;max-height:300px;object-fit:cover;border-radius:12px;margin:8px 0 10px;display:block}
+.sh-t{font-size:17px;font-weight:700;margin:4px 0 8px}
+.big{font-size:22px}
+.pct2{background:linear-gradient(90deg,#c9566f,#d97a52);color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px;margin-left:8px}
+.pills{display:flex;flex-wrap:wrap;gap:6px}
+.pill{border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:12px;background:var(--ctl)}
+.altl{display:flex;justify-content:space-between;padding:10px 12px;border:1px solid var(--line);border-radius:10px;margin-top:6px;color:var(--text);text-decoration:none;background:var(--ctl)}
+.sh-act{display:flex;gap:8px;margin-top:16px}
+.go{flex:1;text-align:center;padding:14px;border-radius:12px;border:1px solid #8fd6c6;background:linear-gradient(90deg,#2d7c98,#3a9a82);color:#f2fbf8;font-size:15px;font-weight:700;text-decoration:none}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
