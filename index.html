@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta name="theme-color" content="#0a110e">
+<meta name="theme-color" content="#0a1618">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
@@ -14,89 +14,65 @@
 <title>Promos Streetwear</title>
 </head>
 <body>
-<svg class="scene" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+<svg class="scene" viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
 <defs>
-<g id="fr">
-<path d="M0 0C3 70 3 140 0 210" fill="none" stroke="currentColor" stroke-width="2.5"/>
-<path id="lf" d="M0 0Q24 -12 50 2Q24 7 0 0Z" transform="translate(0,14)"/>
-<use href="#lf" transform="translate(0,40) scale(1)"/>
-<use href="#lf" transform="translate(0,66) scale(.95)"/>
-<use href="#lf" transform="translate(0,92) scale(.85)"/>
-<use href="#lf" transform="translate(0,118) scale(.7)"/>
-<use href="#lf" transform="translate(0,144) scale(.55)"/>
-<use href="#lf" transform="translate(0,170) scale(.4)"/>
-<use href="#lf" transform="translate(0,14) scale(-1,1)"/>
-<use href="#lf" transform="translate(0,40) scale(-1,1)"/>
-<use href="#lf" transform="translate(0,66) scale(-.95,.95)"/>
-<use href="#lf" transform="translate(0,92) scale(-.85,.85)"/>
-<use href="#lf" transform="translate(0,118) scale(-.7,.7)"/>
-<use href="#lf" transform="translate(0,144) scale(-.55,.55)"/>
-<use href="#lf" transform="translate(0,170) scale(-.4,.4)"/>
-</g>
-<g id="fl">
-<ellipse cx="0" cy="-13" rx="6.5" ry="14"/>
-<ellipse cx="0" cy="-13" rx="6.5" ry="14" transform="rotate(72)"/>
-<ellipse cx="0" cy="-13" rx="6.5" ry="14" transform="rotate(144)"/>
-<ellipse cx="0" cy="-13" rx="6.5" ry="14" transform="rotate(216)"/>
-<ellipse cx="0" cy="-13" rx="6.5" ry="14" transform="rotate(288)"/>
-<circle r="4" fill="#d9a93f"/>
-</g>
-<g id="mo">
-<path d="M0 0C-42 -18 -64 -72 -32 -104C-10 -120 22 -118 42 -96C68 -64 42 -14 0 0Z"/>
-<path d="M0 0L-2 -100M-4 -30L-34 -42M-3 -55L-40 -75M3 -35L36 -46M4 -62L42 -78" stroke="#0a110e" stroke-width="3" fill="none"/>
+<linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#0a1820"/>
+<stop offset=".38" stop-color="#12303a"/>
+<stop offset=".62" stop-color="#3d4a45"/>
+<stop offset=".72" stop-color="#8a5a42"/>
+<stop offset="1" stop-color="#4a2a22"/>
+</linearGradient>
+<radialGradient id="glow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#e8cf9c" stop-opacity=".45"/>
+<stop offset="1" stop-color="#e8cf9c" stop-opacity="0"/>
+</radialGradient>
+<g id="bao">
+<path d="M-12 0C-9 -40 -7 -80 -8 -112L8 -112C7 -80 8 -40 12 0Z" stroke="none"/>
+<path d="M-6 -108L-30 -134M-2 -110L-14 -148M3 -110L12 -148M7 -108L32 -132M0 -112L2 -156" fill="none" stroke-width="3.5" stroke-linecap="round"/>
+<ellipse cx="-32" cy="-136" rx="14" ry="6"/>
+<ellipse cx="-15" cy="-150" rx="13" ry="6"/>
+<ellipse cx="13" cy="-150" rx="13" ry="6"/>
+<ellipse cx="34" cy="-134" rx="14" ry="6"/>
+<ellipse cx="2" cy="-158" rx="12" ry="5"/>
 </g>
 </defs>
-<g opacity=".55">
-<use href="#mo" fill="#1f4a37" transform="translate(40,170) rotate(-20) scale(1.5)"/>
-<use href="#mo" fill="#2c4a52" transform="translate(400,540) rotate(70) scale(1.4)"/>
-<use href="#fr" color="#2d7c98" fill="#2d7c98" transform="translate(370,30) rotate(150) scale(1.2)"/>
-<use href="#fr" color="#a8862f" fill="#a8862f" transform="translate(-10,430) rotate(-70) scale(1.3)"/>
-<use href="#fr" color="#2d7c98" fill="#2d7c98" transform="translate(70,800) rotate(15) scale(1.6)"/>
-<use href="#fr" color="#2f6b4c" fill="#2f6b4c" transform="translate(375,800) rotate(-20) scale(1.5)"/>
-<use href="#fr" color="#a8862f" fill="#a8862f" transform="translate(320,800) rotate(-45) scale(1.2)"/>
-<use href="#fl" fill="#cfe0f0" transform="translate(95,720) scale(1.5)"/>
-<use href="#fl" fill="#cfe0f0" transform="translate(155,765) scale(1.1)"/>
-<use href="#fl" fill="#e58aa6" transform="translate(335,735) scale(1.4)"/>
-<use href="#fl" fill="#e59a7a" transform="translate(290,780) scale(1)"/>
-<use href="#fl" fill="#e58aa6" transform="translate(205,40) scale(1.2)"/>
-<use href="#fl" fill="#cfe0f0" transform="translate(60,70) scale(1)"/>
+<rect width="400" height="800" fill="url(#sky)"/>
+<circle cx="268" cy="520" r="95" fill="url(#glow)"/>
+<circle cx="268" cy="520" r="30" fill="#e8cf9c" opacity=".5"/>
+<path d="M0 575L30 548L55 560L95 515L130 552L165 530L200 560L238 522L262 540L286 535L296 505L306 505L318 538L328 545L360 528L400 548L400 800L0 800Z" fill="#24474f" opacity=".7"/>
+<path d="M0 610Q70 585 140 603T270 598T400 604L400 800L0 800Z" fill="#1b3b42" opacity=".9"/>
+<g fill="#173238" stroke="#173238">
+<use href="#bao" transform="translate(30,606) scale(.3)"/>
+<use href="#bao" transform="translate(110,603) scale(.26)"/>
+<use href="#bao" transform="translate(175,604) scale(.32)"/>
+<use href="#bao" transform="translate(250,600) scale(.27)"/>
+<use href="#bao" transform="translate(320,603) scale(.3)"/>
+<use href="#bao" transform="translate(380,604) scale(.25)"/>
 </g>
+<path d="M0 665Q90 640 180 658T400 650L400 800L0 800Z" fill="#122a30"/>
+<g fill="#0f2328" stroke="#0f2328">
+<use href="#bao" transform="translate(60,668) scale(.55)"/>
+<use href="#bao" transform="translate(150,661) scale(.5)"/>
+<use href="#bao" transform="translate(240,658) scale(.6)"/>
+<use href="#bao" transform="translate(335,656) scale(.5)"/>
+</g>
+<path d="M0 730Q120 712 240 726T400 718L400 800L0 800Z" fill="#0b1a1d"/>
+<path d="M0 762Q150 744 400 760L400 800L0 800Z" fill="#2b1a16" opacity=".9"/>
+<g fill="#081214" stroke="#081214">
+<use href="#bao" transform="translate(52,775) scale(1.15)"/>
+<use href="#bao" transform="translate(352,780) scale(.95)"/>
+</g>
+<rect width="400" height="800" fill="#000" opacity=".18"/>
 </svg>
 <div class="app">
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
 <div id="bar">
 <div class="row">
+<button class="fbtn" id="fBtn" onclick="togglePanel()" aria-label="Menu">☰</button>
 <input id="q" placeholder="Rechercher marque, modèle…" oninput="onSearch()">
-<button class="fbtn" id="fBtn" onclick="togglePanel()">⚙ Filtres</button>
 <button class="fbtn" id="cFav" onclick="toggleFav2()">♥ 0</button>
-</div>
-<div class="tabs" id="gens"></div>
-<div class="tabs" id="cats"></div>
-<div class="panel" id="panel">
-<div class="row">
-<select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select>
-<select id="remise" onchange="apply()">
-<option value="0">Toutes remises</option><option value="20">−20 % et +</option>
-<option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option>
-</select>
-</div>
-<div class="row">
-<input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()">
-<select id="tri" onchange="apply()">
-<option value="remise">Plus grosse remise</option>
-<option value="prix">Prix croissant</option>
-<option value="prixd">Prix décroissant</option>
-</select>
-</div>
-<div id="szLet"></div>
-<div id="szSys"></div>
-<div id="szNum"></div>
-<div class="prow">
-<button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
-<button class="chip" onclick="resetAll()">Réinitialiser</button>
-</div>
-<button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button>
 </div>
 </div>
 <div class="sub" id="n"></div>
@@ -104,6 +80,42 @@
 <div id="moreWrap"></div>
 </div>
 <button id="top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<div id="drawer">
+<div class="dr-bg" onclick="closePanel()"></div>
+<div class="dr-body">
+<div class="dr-head"><span>Menu</span><button class="sh-x" onclick="closePanel()">✕</button></div>
+<div id="panel">
+<div class="lbl">Rayon</div>
+<div class="tabs" id="gens"></div>
+<div class="lbl">Catégories</div>
+<div class="tabs" id="cats"></div>
+<div class="lbl">Collections</div>
+<div class="prow">
+<button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
+</div>
+<div class="lbl">Boutique</div>
+<select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select>
+<div class="lbl">Remise minimale</div>
+<select id="remise" onchange="apply()">
+<option value="0">Toutes remises</option><option value="20">−20 % et +</option>
+<option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option>
+</select>
+<div class="lbl">Prix maximum</div>
+<input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()">
+<div class="lbl">Tri</div>
+<select id="tri" onchange="apply()">
+<option value="remise">Plus grosse remise</option>
+<option value="prix">Prix croissant</option>
+<option value="prixd">Prix décroissant</option>
+</select>
+<div id="szLet"></div>
+<div id="szSys"></div>
+<div id="szNum"></div>
+<div class="prow" style="margin-top:14px"><button class="chip" onclick="resetAll()">Tout réinitialiser</button></div>
+</div>
+<div class="dr-foot"><button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
+</div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>
