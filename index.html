@@ -5,41 +5,79 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Promos Streetwear</title>
 <style>
-:root{--pink:#ff2e97;--cyan:#00f0ff;--violet:#7a2cff;--card:#241046;--text:#fdf4ff;--muted:#b9a6e0}
+:root{--pink:#ff5fa2;--gold:#ffc15e;--violet:#8b5fd6;--card:rgba(38,20,76,.9);--ctl:rgba(34,16,70,.82);--text:#fff6fb;--muted:#cdbbea}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,system-ui,Arial,sans-serif;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));max-width:760px;margin-inline:auto;background:linear-gradient(180deg,#12062b 0%,#2a0d54 55%,#4a1262 100%) fixed}
-h1{font-size:30px;margin:6px 0 2px;font-style:italic;font-weight:900;letter-spacing:1px;text-transform:uppercase;background:linear-gradient(90deg,var(--pink),#ff9a5c,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 8px rgba(255,46,151,.55))}
-.sub{color:var(--muted);font-size:13px;margin:0 0 12px}
-input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--cyan);background:rgba(18,6,43,.85);color:var(--text);font-size:15px;margin-bottom:8px;box-shadow:0 0 10px rgba(0,240,255,.25)}
-input:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 14px rgba(255,46,151,.6)}
+body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,system-ui,Arial,sans-serif;background:linear-gradient(180deg,#5a78b8 0%,#7a78bd 25%,#a67bb8 42%,#e57aa0 60%,#f0907f 72%,#f5b36d 86%,#f7d27c 100%) fixed}
+.scene{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.app{position:relative;z-index:1;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));max-width:760px;margin-inline:auto}
+h1{font-size:30px;margin:6px 0 2px;font-style:italic;font-weight:900;letter-spacing:1px;text-transform:uppercase;color:#fff;text-shadow:0 2px 0 #c2417e,0 0 18px rgba(255,150,120,.7)}
+.sub{color:#fff;font-size:13px;margin:0 0 12px;text-shadow:0 1px 4px rgba(40,10,80,.7)}
+input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--gold);background:var(--ctl);color:var(--text);font-size:15px;margin-bottom:8px}
+input::placeholder{color:var(--muted)}
+input:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 12px rgba(255,95,162,.6)}
 .row{display:flex;gap:8px}
 .chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
-.chip{padding:8px 13px;border-radius:99px;border:1px solid var(--cyan);background:rgba(18,6,43,.85);color:var(--text);font-size:13px;cursor:pointer}
-.chip.on{background:linear-gradient(90deg,var(--pink),#ff7a3c);border-color:var(--pink);box-shadow:0 0 12px rgba(255,46,151,.7)}
+.chip{padding:8px 13px;border-radius:99px;border:1px solid var(--gold);background:var(--ctl);color:var(--text);font-size:13px;cursor:pointer}
+.chip.on{background:linear-gradient(90deg,var(--pink),#ff9a5c);border-color:#fff;color:#fff;font-weight:700}
+.szbox{margin-bottom:6px}
+.lbl{font-size:11px;color:#fff;text-shadow:0 1px 3px rgba(40,10,80,.8);margin:4px 2px 4px;text-transform:uppercase;letter-spacing:.5px}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs .chip{flex:0 0 auto;min-width:46px;text-align:center}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
-.card{background:var(--card);border:1px solid rgba(0,240,255,.45);border-radius:14px;overflow:hidden;position:relative;box-shadow:0 0 12px rgba(122,44,255,.35)}
+.card{background:var(--card);border:1px solid rgba(255,193,94,.5);border-radius:14px;overflow:hidden;position:relative;box-shadow:0 4px 14px rgba(40,10,80,.35)}
 .card a{text-decoration:none;color:inherit;display:block}
 .card.gone{opacity:.6}
-.ph,.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:linear-gradient(135deg,#3a1670,#12062b)}
-.pct{position:absolute;top:8px;left:8px;background:linear-gradient(90deg,var(--pink),#ff7a3c);color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px;box-shadow:0 0 10px rgba(255,46,151,.8)}
-.fav{position:absolute;top:6px;right:6px;width:38px;height:38px;border-radius:50%;border:1px solid var(--cyan);background:rgba(18,6,43,.8);color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
-.fav.on{color:var(--pink);border-color:var(--pink);box-shadow:0 0 12px rgba(255,46,151,.8)}
+.ph,.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:linear-gradient(135deg,#5b3f8f,#2a1555)}
+.pct{position:absolute;top:8px;left:8px;background:linear-gradient(90deg,var(--pink),#ff9a5c);color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px}
+.fav{position:absolute;top:6px;right:6px;width:38px;height:38px;border-radius:50%;border:1px solid var(--gold);background:rgba(34,16,70,.8);color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
+.fav.on{color:var(--pink);border-color:var(--pink)}
 .in{padding:10px 11px 12px}
-.b{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px}
+.b{font-size:11px;color:var(--gold);text-transform:uppercase;letter-spacing:.5px}
 .t{font-size:13px;font-weight:600;margin:3px 0 5px}
-.now{font-weight:800;color:var(--pink);text-shadow:0 0 8px rgba(255,46,151,.6)}
+.now{font-weight:800;color:#ff8fc0}
 .old{font-size:12px;color:var(--muted);text-decoration:line-through;margin-left:6px}
 .s{font-size:11px;color:var(--muted);margin-top:4px}
 .tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;margin-right:4px;margin-top:5px}
-.tn{background:var(--cyan);color:#12062b}
+.tn{background:var(--gold);color:#2a1555}
 .td{background:#2dff88;color:#12062b}
-.tg{background:#555;color:#fff}
-.more{display:block;width:100%;margin:16px 0 8px;padding:14px;border-radius:12px;border:1px solid var(--pink);background:rgba(255,46,151,.15);color:var(--text);font-size:15px;font-weight:700;cursor:pointer}
-#top{position:fixed;right:14px;bottom:max(14px,env(safe-area-inset-bottom));width:44px;height:44px;border-radius:50%;border:1px solid var(--cyan);background:rgba(18,6,43,.9);color:var(--cyan);font-size:20px;display:none;cursor:pointer;box-shadow:0 0 12px rgba(0,240,255,.5)}
+.tg{background:#777;color:#fff}
+.more{display:block;width:100%;margin:16px 0 8px;padding:14px;border-radius:12px;border:1px solid #fff;background:linear-gradient(90deg,var(--pink),#ff9a5c);color:#fff;font-size:15px;font-weight:700;cursor:pointer}
+#top{position:fixed;right:14px;bottom:max(14px,env(safe-area-inset-bottom));width:44px;height:44px;border-radius:50%;border:1px solid var(--gold);background:var(--ctl);color:var(--gold);font-size:20px;display:none;cursor:pointer;z-index:5}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
+<svg class="scene" viewBox="0 0 400 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs>
+<radialGradient id="sun" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#ffe28a" stop-opacity=".55"/><stop offset="100%" stop-color="#ffe28a" stop-opacity="0"/></radialGradient>
+<symbol id="palm" viewBox="0 -20 230 320">
+<path d="M95 300C100 220 90 140 110 60L118 62C100 140 112 220 112 300Z"/>
+<path d="M114 58C85 15 40 20 8 62C48 40 86 44 114 58Z"/>
+<path d="M114 58C80 40 35 55 5 110C45 78 85 68 114 58Z"/>
+<path d="M114 58C90 70 55 95 38 150C70 105 96 85 114 58Z"/>
+<path d="M114 58C140 10 190 15 222 60C182 38 142 42 114 58Z"/>
+<path d="M114 58C148 38 195 55 225 112C185 78 145 68 114 58Z"/>
+<path d="M114 58C138 72 175 98 190 152C160 108 132 86 114 58Z"/>
+<path d="M114 58C108 20 112 0 122 -10C126 20 122 40 114 58Z"/>
+</symbol>
+</defs>
+<circle cx="150" cy="600" r="150" fill="url(#sun)"/>
+<g fill="#8a6bc4" opacity=".35">
+<rect x="0" y="590" width="30" height="50"/><rect x="30" y="570" width="26" height="70"/><rect x="58" y="600" width="34" height="40"/>
+<rect x="95" y="560" width="22" height="80"/><rect x="120" y="595" width="40" height="45"/><rect x="165" y="575" width="28" height="65"/>
+<rect x="195" y="600" width="36" height="40"/><rect x="272" y="560" width="30" height="80"/><rect x="305" y="585" width="42" height="55"/>
+<rect x="350" y="565" width="25" height="75"/><rect x="378" y="595" width="30" height="45"/>
+</g>
+<rect x="232" y="470" width="38" height="170" fill="#c3a4ee" opacity=".45"/>
+<rect x="0" y="640" width="400" height="160" fill="#7766b8" opacity=".45"/>
+<path d="M0 735Q200 700 400 725L400 800L0 800Z" fill="#f4b673" opacity=".55"/>
+<g fill="#4b2f88" opacity=".6">
+<use href="#palm" x="-60" y="400" width="260" height="361"/>
+<use href="#palm" x="40" y="470" width="170" height="236"/>
+</g>
+</svg>
+<div class="app">
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
 <input id="q" placeholder="Rechercher marque, modèle…" oninput="onSearch()">
@@ -51,14 +89,14 @@ input:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 14
 </select>
 </div>
 <div class="row">
-<input id="taille" placeholder="Taille (M, 42…)" oninput="onSearch()">
 <input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()">
-</div>
 <select id="tri" onchange="apply()">
-<option value="remise">Tri : plus grosse remise</option>
-<option value="prix">Tri : prix croissant</option>
-<option value="prixd">Tri : prix décroissant</option>
+<option value="remise">Plus grosse remise</option>
+<option value="prix">Prix croissant</option>
+<option value="prixd">Prix décroissant</option>
 </select>
+</div>
+<div class="szbox" id="sizes"><div id="szLet"></div><div id="szNum"></div><div id="szUk"></div></div>
 <div class="chips">
 <button class="chip" id="cFav" onclick="toggleFav2()">♥ Favoris (0)</button>
 <button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
@@ -67,13 +105,44 @@ input:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 14
 <div class="sub" id="n"></div>
 <div class="grid" id="g"></div>
 <div id="moreWrap"></div>
+</div>
 <button id="top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 <script>
-var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,page=1,L=[],onlyFav=false,onlyNew=false,tm;
+var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,page=1,L=[],onlyFav=false,onlyNew=false,tm,SZ={};
+var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
+var LM={"xxs":"XXS","x-small":"XS","xs":"XS","extra small":"XS","small":"S","s":"S","medium":"M","m":"M","large":"L","l":"L","x-large":"XL","xl":"XL","extra large":"XL","xx-large":"XXL","xxl":"XXL","2xl":"XXL","xxx-large":"XXXL","xxxl":"XXXL","3xl":"XXXL"};
 function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k))}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function f(n){return n.toFixed(2).replace(".",",")+" €"}
 function $(id){return document.getElementById(id)}
+function norm(s){
+s=String(s).trim().toLowerCase().replace(/^(eu|fr)\s*/,"");
+if(LM[s])return LM[s];
+var m=s.match(/^(\d{2}(?:[.,]5)?)(?:\s*(1\/3|2\/3))?$/);
+if(m)return m[1].replace(",",".")+(m[2]?" "+m[2]:"");
+var u=s.match(/^(uk|us)\s*(\d{1,2}(?:\.5)?)$/);
+if(u)return u[1].toUpperCase()+" "+u[2];
+return null;
+}
+function getT(x){
+if(!x._t){x._t=[];(x.tailles||[]).forEach(function(s){var n=norm(s);if(n&&x._t.indexOf(n)<0)x._t.push(n)})}
+return x._t;
+}
+function val(t){var n=parseFloat(t.replace(/^[A-Z]+\s*/,""));if(t.indexOf("1/3")>=0)n+=.33;if(t.indexOf("2/3")>=0)n+=.67;return n}
+function fill(id,label,arr){
+var el=$(id);
+if(!arr.length){el.style.display="none";return}
+el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs">'+arr.map(function(t){return '<button class="chip sz" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
+}
+function buildSizes(){
+var all={};
+D.forEach(function(x){getT(x).forEach(function(t){all[t]=1})});
+var keys=Object.keys(all);
+var lt=LET.filter(function(t){return all[t]});
+var nm=keys.filter(function(t){return /^\d/.test(t)}).sort(function(a,b){return val(a)-val(b)});
+var uk=keys.filter(function(t){return /^(UK|US)/.test(t)}).sort(function(a,b){return a.slice(0,2)===b.slice(0,2)?val(a)-val(b):(a<b?-1:1)});
+fill("szLet","Vêtements",lt);fill("szNum","Pointures / pantalons",nm);fill("szUk","UK / US",uk);
+}
 
 fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
 D=j.items;
@@ -93,7 +162,7 @@ $("maj").textContent="Mis à jour le "+d.toLocaleDateString("fr-FR")+" à "+d.to
 var bs=[];D.forEach(function(x){if(bs.indexOf(x.boutique)<0)bs.push(x.boutique)});
 bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textContent=b;$("boutique").appendChild(o)});
 if(!hasNew)$("cNew").style.display="none";
-favCount();apply();
+buildSizes();favCount();apply();
 }).catch(function(){$("maj").textContent="Données introuvables : lancez la tâche dans Actions."});
 
 function favCount(){$("cFav").textContent="♥ Favoris ("+Object.keys(FAV).length+")"}
@@ -102,21 +171,28 @@ function apply(){page=1;draw()}
 function toggleFav2(){onlyFav=!onlyFav;$("cFav").className="chip"+(onlyFav?" on":"");apply()}
 function toggleNew(){onlyNew=!onlyNew;$("cNew").className="chip"+(onlyNew?" on":"");apply()}
 function resetAll(){
-$("q").value="";$("taille").value="";$("pmax").value="";
+$("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
+SZ={};
+Array.prototype.forEach.call(document.querySelectorAll(".sz.on"),function(b){b.classList.remove("on")});
 onlyFav=false;onlyNew=false;$("cFav").className="chip";$("cNew").className="chip";
 apply();
 }
-function tailleOk(x,t){
-if(!t)return true;
-t=t.toLowerCase();
-return (x.tailles||[]).some(function(s){s=String(s).toLowerCase();return s===t||s.indexOf(t+" ")===0||s.indexOf(t+"/")===0});
+$("sizes").addEventListener("click",function(e){
+var b=e.target.closest(".sz");
+if(!b)return;
+var s=b.getAttribute("data-s");
+if(SZ[s]){delete SZ[s];b.classList.remove("on")}else{SZ[s]=1;b.classList.add("on")}
+apply();
+});
+function tailleOk(x){
+if(!Object.keys(SZ).length)return true;
+return getT(x).some(function(t){return SZ[t]});
 }
 function draw(){
 var q=$("q").value.toLowerCase().trim();
 var b=$("boutique").value;
 var r=+$("remise").value;
-var t=$("taille").value.trim();
 var pm=parseFloat($("pmax").value);
 var tri=$("tri").value;
 var base;
@@ -128,7 +204,7 @@ if(onlyNew&&!NEWS[x.lien])return false;
 if(b&&x.boutique!==b)return false;
 if(x.remise<r)return false;
 if(!isNaN(pm)&&x.prix>pm)return false;
-if(!tailleOk(x,t))return false;
+if(!tailleOk(x))return false;
 if(q){
 var txt=(x.marque+" "+x.nom+" "+x.boutique).toLowerCase();
 return q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0});
@@ -154,7 +230,10 @@ return '<div class="card'+(x.gone?" gone":"")+'"><button class="fav'+(fv?" on":"
 }
 function render(){
 var shown=L.slice(0,page*PER);
-$("n").textContent=L.length+" article"+(L.length>1?"s":"")+(onlyFav&&!L.length?" · touchez ♡ sur un article pour l’ajouter":"");
+var note="";
+if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
+if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
+$("n").textContent=L.length+" article"+(L.length>1?"s":"")+note;
 $("g").innerHTML=shown.map(cardHtml).join("");
 var rest=L.length-shown.length;
 $("moreWrap").innerHTML=rest>0?'<button class="more" onclick="page++;render()">Voir plus ('+rest+' restants)</button>':"";
