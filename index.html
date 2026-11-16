@@ -2,34 +2,174 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Promos Streetwear</title>
 <style>
-:root{--pink:#ff2e97;--cyan:#00f0ff;--violet:#7a2cff;--night:#12062b;--card:#241046;--text:#fdf4ff;--muted:#b9a6e0}
+:root{--pink:#ff2e97;--cyan:#00f0ff;--violet:#7a2cff;--card:#241046;--text:#fdf4ff;--muted:#b9a6e0}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,system-ui,Arial,sans-serif;padding:16px;max-width:760px;margin-inline:auto;background:linear-gradient(180deg,#12062b 0%,#2a0d54 55%,#4a1262 100%) fixed}
+body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,system-ui,Arial,sans-serif;padding:16px;padding-top:max(16px,env(safe-area-inset-top));padding-bottom:max(24px,env(safe-area-inset-bottom));max-width:760px;margin-inline:auto;background:linear-gradient(180deg,#12062b 0%,#2a0d54 55%,#4a1262 100%) fixed}
 h1{font-size:30px;margin:6px 0 2px;font-style:italic;font-weight:900;letter-spacing:1px;text-transform:uppercase;background:linear-gradient(90deg,var(--pink),#ff9a5c,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 8px rgba(255,46,151,.55))}
 .sub{color:var(--muted);font-size:13px;margin:0 0 12px}
 input,select{width:100%;padding:12px;border-radius:12px;border:1px solid var(--cyan);background:rgba(18,6,43,.85);color:var(--text);font-size:15px;margin-bottom:8px;box-shadow:0 0 10px rgba(0,240,255,.25)}
 input:focus,select:focus{outline:none;border-color:var(--pink);box-shadow:0 0 14px rgba(255,46,151,.6)}
 .row{display:flex;gap:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.chip{padding:8px 13px;border-radius:99px;border:1px solid var(--cyan);background:rgba(18,6,43,.85);color:var(--text);font-size:13px;cursor:pointer}
+.chip.on{background:linear-gradient(90deg,var(--pink),#ff7a3c);border-color:var(--pink);box-shadow:0 0 12px rgba(255,46,151,.7)}
 .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
-.card{background:var(--card);border:1px solid rgba(0,240,255,.45);border-radius:14px;overflow:hidden;text-decoration:none;color:inherit;display:block;position:relative;box-shadow:0 0 12px rgba(122,44,255,.35)}
-.card:active{border-color:var(--pink);box-shadow:0 0 16px rgba(255,46,151,.7)}
-.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:linear-gradient(135deg,#3a1670,#12062b)}
+.card{background:var(--card);border:1px solid rgba(0,240,255,.45);border-radius:14px;overflow:hidden;position:relative;box-shadow:0 0 12px rgba(122,44,255,.35)}
+.card a{text-decoration:none;color:inherit;display:block}
+.card.gone{opacity:.6}
+.ph,.card img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:linear-gradient(135deg,#3a1670,#12062b)}
 .pct{position:absolute;top:8px;left:8px;background:linear-gradient(90deg,var(--pink),#ff7a3c);color:#fff;font-size:12px;font-weight:800;padding:3px 8px;border-radius:7px;box-shadow:0 0 10px rgba(255,46,151,.8)}
+.fav{position:absolute;top:6px;right:6px;width:38px;height:38px;border-radius:50%;border:1px solid var(--cyan);background:rgba(18,6,43,.8);color:var(--muted);font-size:20px;line-height:1;cursor:pointer;padding:0}
+.fav.on{color:var(--pink);border-color:var(--pink);box-shadow:0 0 12px rgba(255,46,151,.8)}
 .in{padding:10px 11px 12px}
 .b{font-size:11px;color:var(--cyan);text-transform:uppercase;letter-spacing:.5px}
 .t{font-size:13px;font-weight:600;margin:3px 0 5px}
 .now{font-weight:800;color:var(--pink);text-shadow:0 0 8px rgba(255,46,151,.6)}
 .old{font-size:12px;color:var(--muted);text-decoration:line-through;margin-left:6px}
 .s{font-size:11px;color:var(--muted);margin-top:4px}
+.tag{display:inline-block;font-size:10px;font-weight:800;padding:2px 6px;border-radius:5px;margin-right:4px;margin-top:5px}
+.tn{background:var(--cyan);color:#12062b}
+.td{background:#2dff88;color:#12062b}
+.tg{background:#555;color:#fff}
+.more{display:block;width:100%;margin:16px 0 8px;padding:14px;border-radius:12px;border:1px solid var(--pink);background:rgba(255,46,151,.15);color:var(--text);font-size:15px;font-weight:700;cursor:pointer}
+#top{position:fixed;right:14px;bottom:max(14px,env(safe-area-inset-bottom));width:44px;height:44px;border-radius:50%;border:1px solid var(--cyan);background:rgba(18,6,43,.9);color:var(--cyan);font-size:20px;display:none;cursor:pointer;box-shadow:0 0 12px rgba(0,240,255,.5)}
 @media(min-width:600px){.grid{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
-<input id="q" placeholder="Rechercher marque, modèle, taille…" oninput="draw()">
+<input id="q" placeholder="Rechercher marque, modèle…" oninput="onSearch()">
 <div class="row">
-<select id="boutique" onchange="draw()">
+<select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select>
+<select id="remise" onchange="apply()">
+<option value="0">Toutes remises</option><option value="20">−20 % et +</option>
+<option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option>
+</select>
+</div>
+<div class="row">
+<input id="taille" placeholder="Taille (M, 42…)" oninput="onSearch()">
+<input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()">
+</div>
+<select id="tri" onchange="apply()">
+<option value="remise">Tri : plus grosse remise</option>
+<option value="prix">Tri : prix croissant</option>
+<option value="prixd">Tri : prix décroissant</option>
+</select>
+<div class="chips">
+<button class="chip" id="cFav" onclick="toggleFav2()">♥ Favoris (0)</button>
+<button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
+<button class="chip" onclick="resetAll()">Réinitialiser</button>
+</div>
+<div class="sub" id="n"></div>
+<div class="grid" id="g"></div>
+<div id="moreWrap"></div>
+<button id="top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+<script>
+var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,page=1,L=[],onlyFav=false,onlyNew=false,tm;
+function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k))}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function f(n){return n.toFixed(2).replace(".",",")+" €"}
+function $(id){return document.getElementById(id)}
+
+fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
+D=j.items;
+D.forEach(function(x){M[x.lien]=x});
+FAV=ls("fav")||{};
+var snap=ls("snap");
+var links=D.map(function(x){return x.lien});
+if(!snap){snap={maj:j.maj,links:links,prev:null};ls("snap",snap)}
+else if(snap.maj!==j.maj){snap={maj:j.maj,links:links,prev:snap.links};ls("snap",snap)}
+if(snap.prev){
+hasNew=true;
+var p={};snap.prev.forEach(function(l){p[l]=1});
+D.forEach(function(x){if(!p[x.lien])NEWS[x.lien]=1});
+}
+var d=new Date(j.maj);
+$("maj").textContent="Mis à jour le "+d.toLocaleDateString("fr-FR")+" à "+d.toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+var bs=[];D.forEach(function(x){if(bs.indexOf(x.boutique)<0)bs.push(x.boutique)});
+bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textContent=b;$("boutique").appendChild(o)});
+if(!hasNew)$("cNew").style.display="none";
+favCount();apply();
+}).catch(function(){$("maj").textContent="Données introuvables : lancez la tâche dans Actions."});
+
+function favCount(){$("cFav").textContent="♥ Favoris ("+Object.keys(FAV).length+")"}
+function onSearch(){clearTimeout(tm);tm=setTimeout(apply,150)}
+function apply(){page=1;draw()}
+function toggleFav2(){onlyFav=!onlyFav;$("cFav").className="chip"+(onlyFav?" on":"");apply()}
+function toggleNew(){onlyNew=!onlyNew;$("cNew").className="chip"+(onlyNew?" on":"");apply()}
+function resetAll(){
+$("q").value="";$("taille").value="";$("pmax").value="";
+$("boutique").value="";$("remise").value="0";$("tri").value="remise";
+onlyFav=false;onlyNew=false;$("cFav").className="chip";$("cNew").className="chip";
+apply();
+}
+function tailleOk(x,t){
+if(!t)return true;
+t=t.toLowerCase();
+return (x.tailles||[]).some(function(s){s=String(s).toLowerCase();return s===t||s.indexOf(t+" ")===0||s.indexOf(t+"/")===0});
+}
+function draw(){
+var q=$("q").value.toLowerCase().trim();
+var b=$("boutique").value;
+var r=+$("remise").value;
+var t=$("taille").value.trim();
+var pm=parseFloat($("pmax").value);
+var tri=$("tri").value;
+var base;
+if(onlyFav){
+base=Object.keys(FAV).map(function(l){return M[l]||Object.assign({},FAV[l],{gone:true})});
+}else{base=D}
+L=base.filter(function(x){
+if(onlyNew&&!NEWS[x.lien])return false;
+if(b&&x.boutique!==b)return false;
+if(x.remise<r)return false;
+if(!isNaN(pm)&&x.prix>pm)return false;
+if(!tailleOk(x,t))return false;
+if(q){
+var txt=(x.marque+" "+x.nom+" "+x.boutique).toLowerCase();
+return q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0});
+}
+return true;
+});
+L.sort(function(a,c){
+if(tri==="prix")return a.prix-c.prix;
+if(tri==="prixd")return c.prix-a.prix;
+return c.remise-a.remise;
+});
+render();
+}
+function cardHtml(x){
+var fv=FAV[x.lien];
+var tags="";
+if(NEWS[x.lien])tags+='<span class="tag tn">NOUVEAU</span>';
+if(x.gone)tags+='<span class="tag tg">PLUS EN PROMO</span>';
+else if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+'</span>';
+var img=x.image?'<img loading="lazy" src="'+esc(x.image)+'" alt="" onerror="this.style.visibility=\'hidden\'">':'<div class="ph"></div>';
+var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
+return '<div class="card'+(x.gone?" gone":"")+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
+}
+function render(){
+var shown=L.slice(0,page*PER);
+$("n").textContent=L.length+" article"+(L.length>1?"s":"")+(onlyFav&&!L.length?" · touchez ♡ sur un article pour l’ajouter":"");
+$("g").innerHTML=shown.map(cardHtml).join("");
+var rest=L.length-shown.length;
+$("moreWrap").innerHTML=rest>0?'<button class="more" onclick="page++;render()">Voir plus ('+rest+' restants)</button>':"";
+}
+$("g").addEventListener("click",function(e){
+var btn=e.target.closest(".fav");
+if(!btn)return;
+var l=btn.getAttribute("data-l");
+if(FAV[l]){delete FAV[l]}
+else if(M[l]){FAV[l]=Object.assign({},M[l])}
+ls("fav",FAV);favCount();
+if(onlyFav){var y=window.scrollY;draw();window.scrollTo(0,y)}
+else{btn.className="fav"+(FAV[l]?" on":"");btn.textContent=FAV[l]?"♥":"♡"}
+});
+window.addEventListener("scroll",function(){$("top").style.display=window.scrollY>700?"block":"none"});
+</script>
+</body>
+</html>
