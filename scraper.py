@@ -115,6 +115,7 @@ SOURCES = [
     ("Starcow Paris", lambda: shopify("Starcow Paris", "https://www.starcowparis.com", "/collections/outlet", "https://www.starcowparis.com/products/")),
     ("END.", lambda: shopify("END.", "https://www.endclothing.com", "/en-eu/collections/sale", "https://www.endclothing.com/en-eu/products/")),
     ("Footshop", footshop),
+    ("Laced Run", lambda: shopify("Laced Run", "https://lacedrun.com", "/collections/soldes-2026", "https://lacedrun.com/products/")),
 ]
 
 def charger(chemin, defaut):
