@@ -132,6 +132,7 @@
 <button class="fbtn" id="cBell" onclick="openAlerts()" aria-label="Alertes">🔔</button>
 <button class="fbtn" id="cFav" onclick="toggleFav2()">♥ 0</button>
 </div>
+<div class="pills2" id="pills"></div>
 </div>
 <div class="sub" id="n"></div>
 <div class="grid" id="g"></div>
@@ -195,37 +196,19 @@
 <div class="lbl">Alertes</div>
 <div class="prow">
 <button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer cette recherche</button>
-<button class="chip" onclick="closePanel();openAlerts()">Mes alertes</button>
+<button class="chip" onclick="openAlertsFromPanel()">Mes alertes</button>
 </div>
 <div class="lbl">Autres boutiques</div>
 <div class="prow">
 <a class="chip" style="text-decoration:none" href="https://www.fenom.com/fr/123-outlet" target="_blank" rel="noopener">Fenom · Outlet ↗</a>
 <a class="chip" style="text-decoration:none" href="https://secondemain.lacoste.com/" target="_blank" rel="noopener">Lacoste seconde main ↗</a>
 </div>
-<div class="prow" style="margin-top:14px"><button class="chip" onclick="resetAll()">Tout réinitialiser</button></div>
 </div>
 </details>
 </div>
-<div class="dr-foot"><button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
+<div class="dr-foot"><button class="fbtn" onclick="resetAll()">Réinitialiser</button><button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
 </div>
 </div>
 <script src="app.js"></script>
-<script>
-function updSec(){
-function set(id,n){var e=document.getElementById(id);if(!e)return;e.textContent=n;e.style.display=n?"":"none"}
-try{
-set("bd1",(GEN!=="all"?1:0)+(CAT!=="all"?1:0));
-set("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0));
-set("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
-set("bd4",Object.keys(SZ).length+Object.keys(BR).length);
-}catch(e){}
-}
-(function(){
-var p=document.getElementById("panel");
-["click","change","input"].forEach(function(ev){p.addEventListener(ev,function(){setTimeout(updSec,30)})});
-var tp=window.togglePanel;
-window.togglePanel=function(){tp();updSec()};
-})();
-</script>
 </body>
 </html>
