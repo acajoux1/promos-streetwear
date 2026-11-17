@@ -157,13 +157,30 @@ for x in items:
     h = histo.setdefault(x["lien"], {"h": []})
     serie = h["h"]
     prix = round(x["prix"], 2)
-    if not serie or serie[-1][1] != prix:
-        serie.append([jour, prix])
-        del serie[:-10]
+    anc = round(x["ancien_prix"], 2)
+    der = serie[-1] if serie else None
+    if der is None or der[1] != prix or (len(der) > 2 and der[2] != anc):
+        serie.append([jour, prix, anc])
+        del serie[:-12]
     h["v"] = jour
-    if len(serie) >= 2:
-        x["prec"] = serie[-2][1]
-        x["chg"] = serie[-1][0]
+    prev = None
+    debut = jour
+    for e in reversed(serie):
+        if e[1] != prix:
+            prev = e[1]
+            break
+        debut = e[0]
+    if prev is not None:
+        x["prec"] = prev
+        x["chg"] = debut
+    pmin = min(e[1] for e in serie)
+    if pmin < prix - 0.01:
+        x["pmin"] = pmin
+    ancs = [e[2] for e in serie if len(e) > 2]
+    if len(ancs) >= 2:
+        bas = min(ancs)
+        if anc > bas * 1.05:
+            x["inf"] = bas
 
 limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
 histo = {k: v for k, v in histo.items() if v.get("v", jour) >= limite}
