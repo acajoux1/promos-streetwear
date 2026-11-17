@@ -66,8 +66,65 @@
 <rect width="400" height="800" fill="#000" opacity=".18"/>
 </svg>
 <div class="app">
+<div class="hero">
+<svg class="hero-bg" viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs>
+<linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1">
+<stop offset="0" stop-color="#34435c"/>
+<stop offset=".5" stop-color="#7a6f88"/>
+<stop offset=".78" stop-color="#d99a80"/>
+<stop offset="1" stop-color="#eab88c"/>
+</linearGradient>
+<radialGradient id="hGlow" cx="50%" cy="50%" r="50%">
+<stop offset="0" stop-color="#ff7a3c" stop-opacity=".85"/>
+<stop offset="1" stop-color="#ff7a3c" stop-opacity="0"/>
+</radialGradient>
+<symbol id="hTree" viewBox="0 0 20 60">
+<path d="M10 0L16 18L12 18L18 34L13 34L20 54L11 54L11 60L9 60L9 54L0 54L7 34L2 34L8 18L4 18Z"/>
+</symbol>
+</defs>
+<rect width="400" height="220" fill="url(#hSky)"/>
+<g fill="#f6dcc8" opacity=".55">
+<ellipse cx="285" cy="52" rx="26" ry="9"/>
+<ellipse cx="302" cy="45" rx="18" ry="8"/>
+<ellipse cx="266" cy="57" rx="20" ry="7"/>
+<ellipse cx="62" cy="40" rx="22" ry="8"/>
+<ellipse cx="78" cy="34" rx="14" ry="7"/>
+<ellipse cx="350" cy="84" rx="22" ry="6" opacity=".7"/>
+</g>
+<path d="M0 150L30 118L58 134L92 100L130 132L165 120L200 140L235 126L270 138L310 112L345 136L380 118L400 128L400 220L0 220Z" fill="#5a6585" opacity=".75"/>
+<path d="M0 172L45 146L90 164L140 140L190 160L240 142L290 158L340 136L400 156L400 220L0 220Z" fill="#3f566a"/>
+<circle cx="200" cy="106" r="46" fill="url(#hGlow)" opacity=".55"/>
+<path d="M70 200L108 160L140 134L168 118L182 106L192 102L200 106L210 101L222 110L246 124L282 146L318 170L350 200Z" fill="#2b3042"/>
+<path d="M70 200L108 160L140 134L168 118L182 106L192 102L188 140L150 200Z" fill="#3b4258" opacity=".9"/>
+<path d="M200 106L210 101L222 110L246 124L282 146L318 170L350 200L232 200L214 150Z" fill="#1b1f30"/>
+<path d="M182 106L192 102L200 106L210 101L218 107L205 113L192 112Z" fill="#121624"/>
+<ellipse cx="200" cy="109" rx="9" ry="3" fill="#ff6a33"/>
+<path d="M202 112L206 130L202 150L210 176" fill="none" stroke="#e8532c" stroke-width="2.2" stroke-linecap="round" opacity=".9"/>
+<path d="M208 114L222 138L236 150" fill="none" stroke="#ff8a3d" stroke-width="1.6" stroke-linecap="round" opacity=".8"/>
+<g fill="#cfc6c8" opacity=".35">
+<ellipse cx="204" cy="92" rx="10" ry="6"/>
+<ellipse cx="212" cy="82" rx="13" ry="7"/>
+<ellipse cx="224" cy="72" rx="15" ry="8"/>
+</g>
+<path d="M300 176Q350 166 400 170L400 192L300 192Z" fill="#2f7188" opacity=".85"/>
+<path d="M0 196Q60 168 130 186Q170 196 200 206L200 220L0 220Z" fill="#1e4a3c"/>
+<path d="M400 190Q350 176 290 192Q250 202 220 212L220 220L400 220Z" fill="#1a3f36"/>
+<path d="M0 210Q100 200 200 208T400 206L400 220L0 220Z" fill="#0b1a17"/>
+<g fill="#0b1a17">
+<use href="#hTree" x="4" y="162" width="14" height="46"/>
+<use href="#hTree" x="19" y="174" width="10" height="34"/>
+<use href="#hTree" x="32" y="166" width="12" height="40"/>
+<use href="#hTree" x="47" y="178" width="8" height="28"/>
+<use href="#hTree" x="330" y="178" width="9" height="32"/>
+<use href="#hTree" x="350" y="164" width="14" height="46"/>
+<use href="#hTree" x="367" y="150" width="18" height="60"/>
+<use href="#hTree" x="385" y="168" width="12" height="40"/>
+</g>
+</svg>
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
+</div>
 <div id="bar">
 <div class="row">
 <button class="fbtn" id="fBtn" onclick="togglePanel()" aria-label="Menu">☰</button>
@@ -86,17 +143,27 @@
 <div class="dr-body">
 <div class="dr-head"><span>Menu</span><button class="sh-x" onclick="closePanel()">✕</button></div>
 <div id="panel">
-<div class="lbl">Rayon</div>
+<details class="sec" open>
+<summary><span>Rayon &amp; catégorie<i class="bdg" id="bd1" style="display:none"></i></span></summary>
+<div class="sec-body">
 <div class="tabs" id="gens"></div>
-<div class="lbl">Catégories</div>
 <div class="tabs" id="cats"></div>
-<div class="lbl">Collections</div>
+</div>
+</details>
+<details class="sec">
+<summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary>
+<div class="sec-body">
 <div class="prow">
 <button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
 <button class="chip" id="cTop" onclick="toggleTop()">🏆 Top 30</button>
 <button class="chip" id="cRE" onclick="toggleRE()">🇷🇪 Livre à La Réunion</button>
 </div>
-<div class="s" style="margin:6px 2px">Seul Laced Run (Saint-Denis) est vérifié pour La Réunion. Les autres boutiques ne le sont pas.</div>
+<div class="s" style="margin-top:8px">Seul Laced Run (Saint-Denis) est vérifié pour La Réunion.</div>
+</div>
+</details>
+<details class="sec">
+<summary><span>Boutique &amp; prix<i class="bdg" id="bd3" style="display:none"></i></span></summary>
+<div class="sec-body">
 <div class="lbl">Boutique</div>
 <select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select>
 <div class="lbl">Remise minimale</div>
@@ -112,24 +179,53 @@
 <option value="prix">Prix croissant</option>
 <option value="prixd">Prix décroissant</option>
 </select>
+</div>
+</details>
+<details class="sec">
+<summary><span>Marques &amp; tailles<i class="bdg" id="bd4" style="display:none"></i></span></summary>
+<div class="sec-body">
 <div id="szLet"></div>
 <div id="szSys"></div>
 <div id="szNum"></div>
+</div>
+</details>
+<details class="sec">
+<summary><span>Alertes &amp; liens</span></summary>
+<div class="sec-body">
 <div class="lbl">Alertes</div>
 <div class="prow">
 <button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer cette recherche</button>
 <button class="chip" onclick="closePanel();openAlerts()">Mes alertes</button>
 </div>
-<div class="lbl">Autres boutiques (liens directs)</div>
+<div class="lbl">Autres boutiques</div>
 <div class="prow">
 <a class="chip" style="text-decoration:none" href="https://www.fenom.com/fr/123-outlet" target="_blank" rel="noopener">Fenom · Outlet ↗</a>
 <a class="chip" style="text-decoration:none" href="https://secondemain.lacoste.com/" target="_blank" rel="noopener">Lacoste seconde main ↗</a>
 </div>
 <div class="prow" style="margin-top:14px"><button class="chip" onclick="resetAll()">Tout réinitialiser</button></div>
 </div>
+</details>
+</div>
 <div class="dr-foot"><button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
 </div>
 </div>
 <script src="app.js"></script>
+<script>
+function updSec(){
+function set(id,n){var e=document.getElementById(id);if(!e)return;e.textContent=n;e.style.display=n?"":"none"}
+try{
+set("bd1",(GEN!=="all"?1:0)+(CAT!=="all"?1:0));
+set("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0));
+set("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
+set("bd4",Object.keys(SZ).length+Object.keys(BR).length);
+}catch(e){}
+}
+(function(){
+var p=document.getElementById("panel");
+["click","change","input"].forEach(function(ev){p.addEventListener(ev,function(){setTimeout(updSec,30)})});
+var tp=window.togglePanel;
+window.togglePanel=function(){tp();updSec()};
+})();
+</script>
 </body>
 </html>
