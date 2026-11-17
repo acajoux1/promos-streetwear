@@ -1,4 +1,5 @@
-var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,tm,SZ={},BR={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null;
+var PER=60,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null;
+var RE_OK=["Laced Run"];
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["acc","Accessoires"]];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
 var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",acc:"Accessoires"};
@@ -30,6 +31,18 @@ function isDrop(x){return x.prec!=null&&x.prec>x.prix+0.01&&recent(x.chg,7)}
 function brandOf(x){return (x.marque||"").trim()}
 function bkey(x){return brandOf(x).toLowerCase()}
 function nkey(x){return (x.nom||"").toLowerCase().replace(/[^a-z0-9]+/g,"")}
+function pathOf(x){
+var p=(x.lien||"").replace(/^https?:\/\/[^\/]+/,"");
+try{p=decodeURIComponent(p)}catch(e){}
+return p;
+}
+function toks(x){
+var s=(pathOf(x)+" "+(x.nom||"")).toLowerCase();
+var m=s.match(/[a-z0-9]{6,}/g)||[];
+var o=[];
+m.forEach(function(t){if(/[a-z]/.test(t)&&/\d/.test(t)&&o.indexOf(t)<0)o.push(t)});
+return o;
+}
 function savePrefs(){ls("prefs",{gen:GEN,cat:CAT,tri:$("tri").value})}
 function loadPrefs(){
 var p=ls("prefs");
@@ -37,11 +50,6 @@ if(!p)return;
 if(["all","h","f"].indexOf(p.gen)>=0)GEN=p.gen;
 if(["all","vet","chau","tee","acc"].indexOf(p.cat)>=0)CAT=p.cat;
 if(["remise","prix","prixd"].indexOf(p.tri)>=0)$("tri").value=p.tri;
-}
-function pathOf(x){
-var p=(x.lien||"").replace(/^https?:\/\/[^\/]+/,"");
-try{p=decodeURIComponent(p)}catch(e){}
-return p;
 }
 function catOf(x){
 if(x._c)return x._c;
@@ -81,11 +89,12 @@ else g="u";
 }
 x._g=g;return g;
 }
-function genOk(x){
-if(GEN==="all")return true;
-var g=genOf(x);
-return g===GEN||g==="u";
+function genOkG(x,g){
+if(g==="all")return true;
+var o=genOf(x);
+return o===g||o==="u";
 }
+function genOk(x){return genOkG(x,GEN)}
 function norm(s){
 s=String(s).trim().toLowerCase().replace(/^(eu|fr)\s*/,"");
 if(LM[s])return LM[s];
@@ -137,17 +146,24 @@ el.style.display="";
 el.innerHTML='<div class="lbl">Marques</div><div class="tabs">'+ks.map(function(k){return '<button class="chip br'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'">'+esc(name[k])+' ('+c[k]+')</button>'}).join("")+'</div>';
 }
 function buildDup(){
-var g={};
-D.forEach(function(x){var k=nkey(x);if(k.length<8)return;(g[k]=g[k]||[]).push(x)});
-Object.keys(g).forEach(function(k){
-var a=g[k];
-var bs={};a.forEach(function(x){bs[x.boutique]=1});
-if(Object.keys(bs).length<2)return;
-var min=Math.min.apply(null,a.map(function(y){return y.prix}));
-a.forEach(function(x){
-x._alt=a.filter(function(y){return y.boutique!==x.boutique});
-x._best=x.prix<=min;
+var T={},N={};
+D.forEach(function(x){
+x._k=toks(x);
+x._k.forEach(function(t){(T[t]=T[t]||[]).push(x)});
+var k=nkey(x);
+if(k.length>=8)(N[k]=N[k]||[]).push(x);
 });
+D.forEach(function(x){
+var seen={},alt=[];
+function add(y){if(y!==x&&y.boutique!==x.boutique&&!seen[y.lien]){seen[y.lien]=1;alt.push(y)}}
+x._k.forEach(function(t){(T[t]||[]).forEach(add)});
+var k=nkey(x);
+if(k.length>=8)(N[k]||[]).forEach(add);
+if(alt.length){
+x._alt=alt;
+var min=Math.min.apply(null,alt.map(function(y){return y.prix}));
+x._best=x.prix<=min;
+}
 });
 }
 function renderCats(){
@@ -160,6 +176,12 @@ $("gens").innerHTML=GENS.map(function(g){
 return '<button class="chip gen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'</button>';
 }).join("");
 }
+function syncChips(){
+$("cNew").className="chip"+(onlyNew?" on":"");
+$("cDrop").className="chip"+(onlyDrop?" on":"");
+$("cTop").className="chip"+(onlyTop?" on":"");
+$("cRE").className="chip"+(onlyRE?" on":"");
+}
 function updBtn(){
 var n=0;
 if(GEN!=="all")n++;
@@ -171,6 +193,8 @@ if(Object.keys(SZ).length)n++;
 if(Object.keys(BR).length)n++;
 if(onlyNew)n++;
 if(onlyDrop)n++;
+if(onlyTop)n++;
+if(onlyRE)n++;
 if($("tri").value!=="remise")n++;
 $("fBtn").textContent=n?"☰ "+n:"☰";
 $("fBtn").className="fbtn"+(n?" on":"");
@@ -214,12 +238,31 @@ s.addEventListener("click",function(e){
 if(e.target.closest("#shFav")){
 toggleFavL(cur);
 var bt=$("shFav");if(bt)bt.textContent=FAV[cur]?"♥":"♡";
-}else if(e.target.closest("#shShare")){shareCur()}
+return;
+}
+if(e.target.closest("#shShare")){shareCur();return}
+var g=e.target.closest(".al-go");
+if(g){
+var A=ls("alerts")||[];
+var a=A[+g.getAttribute("data-i")];
+if(a){closeSheet();applyF(a.f);window.scrollTo(0,0)}
+return;
+}
+var d=e.target.closest(".al-del");
+if(d){
+var B=ls("alerts")||[];
+B.splice(+d.getAttribute("data-i"),1);
+ls("alerts",B);
+updBell();
+openAlerts();
+}
 });
 document.addEventListener("keydown",function(e){
-if(e.key==="Escape"){if(cur)closeSheet();else if($("drawer").className==="open")closePanel()}
+if(e.key==="Escape"){if($("sheet").className==="open")closeSheet();else if($("drawer").className==="open")closePanel()}
 });
 })();
+
+$("g").innerHTML=Array(9).join('<div class="card sk"><div class="ph"></div><div class="in"><div class="skl"></div><div class="skl s2"></div></div></div>');
 
 fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
 D=j.items;
@@ -244,19 +287,22 @@ if(!hasNew)$("cNew").style.display="none";
 showWarn(j);
 loadPrefs();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
-}).catch(function(){$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
+updBell();
+}).catch(function(){$("g").innerHTML="";$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
 
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
 function onSearch(){clearTimeout(tm);tm=setTimeout(apply,150)}
 function apply(){updBtn();savePrefs();draw()}
 function toggleFav2(){onlyFav=!onlyFav;favCount();apply()}
-function toggleNew(){onlyNew=!onlyNew;$("cNew").className="chip"+(onlyNew?" on":"");apply()}
-function toggleDrop(){onlyDrop=!onlyDrop;$("cDrop").className="chip"+(onlyDrop?" on":"");apply()}
+function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
+function toggleDrop(){onlyDrop=!onlyDrop;syncChips();apply()}
+function toggleTop(){onlyTop=!onlyTop;syncChips();apply()}
+function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";onlyFav=false;onlyNew=false;onlyDrop=false;
-$("cNew").className="chip";$("cDrop").className="chip";
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+syncChips();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
 }
 $("gens").addEventListener("click",function(e){
@@ -287,42 +333,60 @@ apply();return;
 var y=e.target.closest(".sys");
 if(y){SYS=y.getAttribute("data-y");buildSizes();}
 });
-function tailleOk(x){
-if(!Object.keys(SZ).length)return true;
-return getT(x).some(function(t){return SZ[t]});
+function curF(){
+var pm=parseFloat($("pmax").value);
+return {q:$("q").value.toLowerCase().trim(),gen:GEN,cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
+}
+function pass(x,F){
+if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
+if(!genOkG(x,F.gen))return false;
+if(F.b&&x.boutique!==F.b)return false;
+if(x.remise<F.r)return false;
+if(F.pm!=null&&x.prix>F.pm)return false;
+if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
+if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
+if(F.sz.length){
+var t=getT(x);
+if(!F.sz.some(function(s){return t.indexOf(s)>=0}))return false;
+}
+if(F.q){
+var txt=(x.marque+" "+x.nom+" "+x.boutique).toLowerCase();
+if(!F.q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0}))return false;
+}
+return true;
+}
+function applyF(F){
+$("q").value=F.q||"";
+$("pmax").value=F.pm==null?"":F.pm;
+$("boutique").value=F.b||"";
+$("remise").value=String(F.r||0);
+GEN=F.gen||"all";CAT=F.cat||"all";
+SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
+BR={};(F.br||[]).forEach(function(b){BR[b]=1});
+onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
+syncChips();
+renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
 }
 function draw(){
-var q=$("q").value.toLowerCase().trim();
-var b=$("boutique").value;
-var r=+$("remise").value;
-var pm=parseFloat($("pmax").value);
+var F=curF();
 var tri=$("tri").value;
-var hasBr=Object.keys(BR).length>0;
 var base;
 if(onlyFav){
 base=Object.keys(FAV).map(function(l){return M[l]||Object.assign({},FAV[l],{gone:true})});
 }else{base=D}
 L=base.filter(function(x){
-if(CAT!=="all"&&catOf(x)!==CAT)return false;
-if(!genOk(x))return false;
 if(onlyNew&&!NEWS[x.lien])return false;
 if(onlyDrop&&!isDrop(x))return false;
-if(hasBr&&!BR[bkey(x)])return false;
-if(b&&x.boutique!==b)return false;
-if(x.remise<r)return false;
-if(!isNaN(pm)&&x.prix>pm)return false;
-if(!tailleOk(x))return false;
-if(q){
-var txt=(x.marque+" "+x.nom+" "+x.boutique).toLowerCase();
-return q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0});
-}
-return true;
+if(onlyTop&&x.inf)return false;
+return pass(x,F);
 });
 L.sort(function(a,c){
+if(onlyTop)return c.remise-a.remise;
 if(tri==="prix")return a.prix-c.prix;
 if(tri==="prixd")return c.prix-a.prix;
 return c.remise-a.remise;
 });
+if(onlyTop)L=L.slice(0,30);
 render();
 }
 function cardHtml(x){
@@ -334,6 +398,8 @@ else{
 if(isDrop(x))tags+='<span class="tag td">↓ −'+f(x.prec-x.prix)+'</span>';
 if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+' depuis l’ajout</span>';
 if(x._alt)tags+=x._best?'<span class="tag tb">MEILLEUR PRIX</span>':'<span class="tag tg">MOINS CHER AILLEURS</span>';
+if(x.inf)tags+='<span class="tag tg">PRIX BARRÉ ?</span>';
+else if(x.pmin&&x.pmin<x.prix-0.5&&!isDrop(x))tags+='<span class="tag tg">DÉJÀ À '+f(x.pmin)+'</span>';
 }
 var img=x.image?'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(thumb(x.image))+'" data-o="'+esc(x.image)+'" alt="" onerror="if(this.dataset.o&&this.src!==this.dataset.o){this.src=this.dataset.o;this.dataset.o=\'\'}else{this.style.visibility=\'hidden\'}">':'<div class="ph"></div>';
 var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
@@ -350,6 +416,8 @@ if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.ke
 if(onlyFav)parts.push("Favoris");
 if(onlyNew)parts.push("Nouveautés");
 if(onlyDrop)parts.push("Baisses");
+if(onlyTop)parts.push("Top 30");
+if(onlyRE)parts.push("La Réunion");
 var note="";
 if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
 if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
@@ -395,6 +463,54 @@ b.className="fav"+(on?" on":"");
 b.textContent=on?"♥":"♡";
 });
 }
+function alertName(F){
+var p=[];
+if(F.q)p.push(F.q);
+if(F.gen!=="all")p.push(GL[F.gen]);
+if(F.cat!=="all")p.push(CL[F.cat]);
+if(F.br.length)p.push(F.br.join("/"));
+if(F.sz.length)p.push("taille "+F.sz.join("/"));
+if(F.b)p.push(F.b);
+if(F.pm!=null)p.push("≤ "+F.pm+" €");
+if(F.r)p.push("−"+F.r+" %+");
+if(F.re)p.push("La Réunion");
+return p.length?p.join(" · "):"Toutes les promos";
+}
+function updBell(){
+var A=ls("alerts")||[];
+var n=0;
+A.forEach(function(a){
+D.forEach(function(x){if((NEWS[x.lien]||isDrop(x))&&pass(x,a.f))n++});
+});
+$("cBell").textContent="🔔"+(n?" "+n:"");
+$("cBell").className="fbtn"+(n?" on":"");
+}
+function saveAlert(){
+var A=ls("alerts")||[];
+var btn=$("cSave");
+if(A.length>=10){btn.textContent="10 alertes maximum";return}
+var F=curF();
+A.push({name:alertName(F),f:F});
+ls("alerts",A);
+updBell();
+btn.textContent="Alerte enregistrée ✓";
+setTimeout(function(){btn.textContent="🔔 Enregistrer cette recherche"},2200);
+}
+function openAlerts(){
+var A=ls("alerts")||[];
+var h='<button class="sh-x" onclick="closeSheet()">✕</button><div class="sh-t">🔔 Mes alertes</div>';
+if(!A.length)h+='<div class="s">Aucune alerte pour l’instant. Réglez vos filtres, puis touchez « Enregistrer cette recherche » dans le menu ☰.</div>';
+A.forEach(function(a,i){
+var tot=0,nw=0;
+D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
+h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
+});
+cur=null;
+$("shBody").innerHTML=h;
+$("shBody").scrollTop=0;
+$("sheet").className="open";
+document.body.style.overflow="hidden";
+}
 function openSheet(l){
 var x=M[l]||FAV[l];
 if(!x)return;
@@ -405,7 +521,9 @@ if(M[l]&&x._alt){
 alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
 }
 var hist="";
-if(x.prec!=null&&x.chg)hist='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
+if(x.prec!=null&&x.chg)hist+='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
+if(x.inf)hist+='<div class="s" style="color:#e0a48c">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
+if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
 var img=x.image?'<img class="sh-img" referrerpolicy="no-referrer" src="'+esc(thumb(x.image,700))+'" alt="" onerror="this.style.display=\'none\'">':"";
 $("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="lbl">Tailles disponibles</div><div class="pills">'+tl+'</div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
 $("shBody").scrollTop=0;
