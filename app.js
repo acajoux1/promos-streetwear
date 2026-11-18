@@ -198,17 +198,30 @@ x._best=x.prix<=min;
 }
 });
 }
+function renderQuickNav(){
+var qn=$("quickNav");
+if(!qn)return;
+var gHtml=GENS.slice(1).map(function(g){
+return '<button class="chip qgen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'</button>';
+}).join("");
+var cHtml=CATS.map(function(c){
+return '<button class="chip qcat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
+}).join("");
+qn.innerHTML=gHtml+'<span class="qsep"></span>'+cHtml;
+}
 function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
 return '<button class="chip cat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+(CNT[c[0]]!==undefined?" ("+CNT[c[0]]+")":"")+'</button>';
 }).join("");
 $("cats").className="tabs tabs-h";
+renderQuickNav();
 }
 function renderGens(){
 $("gens").innerHTML=GENS.map(function(g){
 return '<button class="chip gen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'</button>';
 }).join("");
 $("gens").className="tabs tabs-h";
+renderQuickNav();
 }
 function syncChips(){
 $("cNew").className="chip"+(onlyNew?" on":"");
@@ -346,7 +359,7 @@ var drop=document.createElement("button");drop.className="chip";drop.id="cDrop";
 var nb=$("cNew");nb.parentNode.insertBefore(drop,nb);
 var w=document.createElement("div");w.id="warn";w.style.display="none";
 var n=$("n");n.parentNode.insertBefore(w,n);
-var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.18);border:1px solid #4fb0bd;color:#d8f2f4;border-radius:10px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
+var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.18);border:1px solid #4fb0bd;color:#d8f2f4;border-radius:6px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
 w.parentNode.insertBefore(gb,n);
 gb.addEventListener("click",function(e){
 if(e.target.closest("#goneGo")){
@@ -389,6 +402,7 @@ if(e.key==="Escape"){if(sheetOpen())closeSheet();else if(drawerOpen())closePanel
 (function(){
 var sb=$("shBody"),y0=0,dy=0,on=false;
 sb.addEventListener("touchstart",function(e){
+if(window.innerWidth>=900)return;
 if(sb.scrollTop<=0){y0=e.touches[0].clientY;dy=0;on=true}else on=false;
 },{passive:true});
 sb.addEventListener("touchmove",function(e){
@@ -426,7 +440,7 @@ b.className="chip dn"+(+b.getAttribute("data-d")===d?" on":"");
 }
 (function(){
 var dr=document.createElement("div");
-dr.innerHTML='<div class="lbl" style="margin-top:4px">Affichage</div><div class="tabs"><button class="chip dn" data-d="2">▦ 2 colonnes</button><button class="chip dn" data-d="3">▩ Compact (3)</button></div>';
+dr.innerHTML='<div class="lbl" style="margin-top:4px">Affichage</div><div class="tabs"><button class="chip dn" data-d="2">▦ Normal</button><button class="chip dn" data-d="3">▩ Compact</button></div>';
 var pn=$("panel");
 pn.insertBefore(dr,pn.firstChild);
 dr.addEventListener("click",function(e){
@@ -498,6 +512,20 @@ SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;only
 syncChips();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
 }
+$("quickNav").addEventListener("click",function(e){
+var g=e.target.closest(".qgen");
+if(g){
+var valG=g.getAttribute("data-g");
+GEN=(GEN===valG)?"all":valG;
+pruneSZBR();renderGens();buildSizes();buildBrands();apply();
+return;
+}
+var c=e.target.closest(".qcat");
+if(c){
+CAT=c.getAttribute("data-c");
+pruneSZBR();renderCats();buildSizes();buildBrands();apply();
+}
+});
 $("pills").addEventListener("click",function(e){
 var p=e.target.closest(".pl2");
 if(!p)return;
