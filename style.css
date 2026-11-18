@@ -123,3 +123,11 @@ details.sec[open]>summary::after{content:"–"}
 .brand-row.on{border-color:var(--teal);background:var(--acc);color:#fff;font-weight:700}
 .brand-row .cnt{color:var(--muted);font-size:12px}
 .brand-row.on .cnt{color:#fff}
+/* Bouton copier */
+.copy{position:absolute;top:6px;right:46px;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);background:rgba(10,7,22,.82);color:var(--muted);font-size:16px;cursor:pointer;line-height:1;transition:color .15s,border-color .15s}
+.copy:hover{color:var(--teal);border-color:var(--teal)}
+.copy.pop{animation:pop .3s ease}
+
+/* Mini graphique */
+.mini-chart{margin:8px 0;text-align:center}
+.mini-chart svg{width:120px;height:32px;display:block;margin:0 auto}
