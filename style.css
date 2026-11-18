@@ -3,11 +3,9 @@
 button,.chip,a,input,select{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,system-ui,"Segoe UI",Arial,sans-serif;background:#0b0818;position:relative}
 
-/* Effet CRT scanlines animé en arrière-plan */
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);opacity:.65;animation:scanlineMove 8s linear infinite}
 @keyframes scanlineMove{0%{background-position:0 0}100%{background-position:0 60px}}
 
-/* Animation des étoiles et du soleil */
 .stars{animation:starTwinkle 3s ease-in-out infinite alternate}
 @keyframes starTwinkle{0%{opacity:.4}100%{opacity:1}}
 
@@ -21,7 +19,6 @@ body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;bac
 .hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:40px;background:linear-gradient(rgba(11,8,24,0),#0b0818);z-index:0;pointer-events:none}
 .hero-in{position:relative;z-index:1;max-width:1328px;margin:0 auto}
 
-/* Titre translucide avec contour néon Madagascar et lueur animée */
 h1{font-size:clamp(28px,5vw,44px);margin:0 0 6px;font-style:italic;font-weight:900;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,.15);-webkit-text-stroke:1.5px #ffffff;text-shadow:-2px -2px 0 #ffffff,2px -1px 0 #d63a2f,2px 2px 0 #268c4c,0 0 22px rgba(255,92,147,.5);animation:titleGlow 3s ease-in-out infinite alternate}
 @keyframes titleGlow{0%{text-shadow:-2px -2px 0 #ffffff,2px -1px 0 #d63a2f,2px 2px 0 #268c4c,0 0 15px rgba(79,224,214,.3)}100%{text-shadow:-2px -2px 0 #ffffff,2px -1px 0 #d63a2f,2px 2px 0 #268c4c,0 0 30px rgba(255,92,147,.8)}}
 
@@ -50,10 +47,22 @@ input:focus,select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 
 .pl2::after{content:" ✕";opacity:.75}
 .pl2.clr{border-color:#ff5c93;background:rgba(180,35,95,.35);color:#ffe0ec}
 .pl2.clr::after{content:""}
+
+/* NOUVEAU DESIGN DE CATÉGORIES MINIMALISTE ET FLUIDE */
+.cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
+.cat-btn{display:flex;align-items:center;justify-content:between;padding:12px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden}
+.cat-btn .cat-ico{font-size:16px;margin-right:8px}
+.cat-btn .cat-name{flex:1;text-align:left}
+.cat-btn .cat-cnt{font-size:11px;color:var(--muted);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;font-weight:700}
+.cat-btn.on{border-color:var(--teal);background:var(--acc);color:#fff;box-shadow:0 0 12px rgba(79,224,214,.3)}
+.cat-btn.on .cat-cnt{background:rgba(0,0,0,.3);color:#fff}
+.cat-btn:active{transform:scale(.97)}
+
 .tabs{display:flex;gap:6px;flex-wrap:wrap;padding-bottom:8px}
-.tabs-h{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:10px}
+.tabs-h{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;padding-bottom:6px}
 .tabs-h::-webkit-scrollbar{display:none}
 .tabs-h .chip{flex:0 0 auto;scroll-snap-align:start}
+
 .lbl{font-size:11px;color:var(--gold);margin:12px 2px 6px;text-transform:uppercase;letter-spacing:.8px;font-weight:800}
 .prow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 details.sec{border-top:1px solid var(--line)}
@@ -64,6 +73,7 @@ details.sec[open]>summary::after{content:"–"}
 .sec-body{padding:0 0 12px}
 .sec-body>.lbl:first-child{margin-top:0}
 .bdg{display:inline-block;background:var(--acc);border:1px solid var(--teal);color:#fff;font-style:normal;font-size:11px;font-weight:700;padding:1px 8px;border-radius:4px;margin-left:8px}
+
 #drawer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:30;pointer-events:none;visibility:hidden;transition:visibility 0s linear .25s}
 #drawer.open{pointer-events:auto;visibility:visible;transition-delay:0s}
 .dr-bg{position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);opacity:0;transition:opacity .25s}
@@ -75,9 +85,8 @@ details.sec[open]>summary::after{content:"–"}
 .dr-foot{display:flex;gap:8px;padding:10px 14px calc(12px + env(safe-area-inset-bottom));border-top:2px solid var(--line)}
 .dr-foot .more{margin:0;flex:1}
 .dr-foot .fbtn{height:auto;padding:12px 14px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
 
-/* Animation des cartes au chargement et au survol */
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:8px}
 .card{background:var(--card);border:2px solid rgba(255,120,175,.22);border-radius:8px;overflow:hidden;position:relative;box-shadow:0 4px 0 rgba(5,3,15,.85);content-visibility:auto;contain-intrinsic-size:auto 290px;animation:rise .35s ease backwards;animation-delay:calc(var(--i,0)*14ms);transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease}
 .card.pick{transform:scale(.96);border-color:var(--teal);box-shadow:0 0 0 2px var(--teal)}
 .card a{text-decoration:none;color:inherit;display:block}
