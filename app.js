@@ -232,6 +232,12 @@ setBd("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?
 setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
 renderPills();
 }
+function keepView(){
+var el=$("n");
+if(!el)return;
+var top=el.getBoundingClientRect().top+window.scrollY-$("bar").offsetHeight-6;
+if(window.scrollY>top)window.scrollTo(0,Math.max(0,top));
+}
 function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
 function pushO(){try{history.pushState({o:1},"");hs=1}catch(e){}}
@@ -259,12 +265,11 @@ function hidePanel(){
 $("drawer").className="";
 document.body.style.overflow="";
 updBtn();
-if(dirty){dirty=false;render()}
+if(dirty){dirty=false;render();keepView()}
 }
 function closePanel(){
 hidePanel();
 popO();
-window.scrollTo({top:0,behavior:"smooth"});
 }
 function openAlertsFromPanel(){hidePanel();openAlerts()}
 function showWarn(j){
@@ -303,7 +308,7 @@ var g=e.target.closest(".al-go");
 if(g){
 var A=ls("alerts")||[];
 var a=A[+g.getAttribute("data-i")];
-if(a){closeSheet();applyF(a.f);window.scrollTo(0,0)}
+if(a){closeSheet();applyF(a.f)}
 return;
 }
 var d=e.target.closest(".al-del");
@@ -476,6 +481,7 @@ compute();
 updRes();
 if(drawerOpen()){dirty=true;return}
 render();
+keepView();
 }
 function cardHtml(x,i){
 var fv=FAV[x.lien];
@@ -610,14 +616,21 @@ alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class=
 }
 var hist="";
 if(x.prec!=null&&x.chg)hist+='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
-if(x.inf)hist+='<div class="s" style="color:#e0a48c">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
+if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
 if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
-var img=x.image?'<img class="sh-img" referrerpolicy="no-referrer" src="'+esc(thumb(x.image,700))+'" alt="" onerror="this.style.display=\'none\'">':"";
+var small=thumb(x.image),big=thumb(x.image,700);
+var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
 $("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="lbl">Tailles disponibles</div><div class="pills">'+tl+'</div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
 $("shBody").scrollTop=0;
 $("sheet").className="open";
 document.body.style.overflow="hidden";
 if(hs===0)pushO();
+if(x.image&&big&&big!==small){
+var im=new Image();
+im.referrerPolicy="no-referrer";
+im.onload=function(){var el=$("shImg");if(el&&cur===l)el.src=big};
+im.src=big;
+}
 }
 function hideSheet(){
 $("sheet").className="";
@@ -666,7 +679,7 @@ setTimeout(function(){
 c.classList.remove("pick");
 picking=false;
 openSheet(id);
-},150);
+},110);
 }
 });
 window.addEventListener("scroll",function(){
