@@ -1,7 +1,14 @@
 var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var RE_OK=["Laced Run"];
-var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["sub","Sous-vêtements"],["acc","Accessoires"]];
+var CATS=[
+  ["all","Tout","⚡"],
+  ["vet","Vêtements","🧥"],
+  ["chau","Chaussures","👟"],
+  ["tee","T-shirts","👕"],
+  ["sub","Sous-vêtements","🩲"],
+  ["acc","Accessoires","🧢"]
+];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
 var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
@@ -205,7 +212,7 @@ var gHtml=GENS.slice(1).map(function(g){
 return '<button class="chip qgen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'</button>';
 }).join("");
 var cHtml=CATS.map(function(c){
-return '<button class="chip qcat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
+return '<button class="chip qcat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[2]+' '+c[1]+'</button>';
 }).join("");
 var curShop=$("boutique").value;
 var shops=[];
@@ -217,9 +224,9 @@ qn.innerHTML=gHtml+'<span class="qsep"></span>'+cHtml+'<span class="qsep"></span
 }
 function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
-return '<button class="chip cat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+(CNT[c[0]]!==undefined?" ("+CNT[c[0]]+")":"")+'</button>';
+var cnt=CNT[c[0]]!==undefined?CNT[c[0]]:0;
+return '<button class="cat-btn'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'"><span class="cat-ico">'+c[2]+'</span><span class="cat-name">'+c[1]+'</span><span class="cat-cnt">'+cnt+'</span></button>';
 }).join("");
-$("cats").className="tabs tabs-h";
 renderQuickNav();
 }
 function renderGens(){
@@ -366,7 +373,6 @@ var nb=$("cNew");nb.parentNode.insertBefore(drop,nb);
 var w=document.createElement("div");w.id="warn";w.style.display="none";
 var n=$("n");n.parentNode.insertBefore(w,n);
 
-// Profil Tailles Rapide dans le menu
 var profSec=document.createElement("details");
 profSec.className="sec";
 profSec.innerHTML='<summary><span>👤 Mon profil tailles (Sauvegarde)</span></summary><div class="sec-body"><div class="lbl">Pointure sneakers / Chaussures</div><input id="profSz" placeholder="Ex: 42 ou 42.5" style="margin-bottom:8px"><div class="prow"><button class="chip" id="saveProf">Enregistrer ma taille</button><button class="chip" id="clearProf">Effacer</button></div></div>';
@@ -592,7 +598,7 @@ pruneSZBR();
 renderGens();buildSizes();buildBrands();apply();
 });
 $("cats").addEventListener("click",function(e){
-var b=e.target.closest(".cat");
+var b=e.target.closest(".cat-btn");
 if(!b)return;
 CAT=b.getAttribute("data-c");
 pruneSZBR();
@@ -670,7 +676,6 @@ return pass(x,F);
 });
 L.sort(function(a,c){
 if(tri==="pepite"){
-// Score Pépite = % de remise élevé + prix bas intelligent
 var scoreA = a.remise * 1.5 - (a.prix / 10);
 var scoreC = c.remise * 1.5 - (c.prix / 10);
 return scoreC - scoreA;
