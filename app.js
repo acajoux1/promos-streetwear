@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2,brandQuery="";
 var RE_OK=["Laced Run"];
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["sub","Sous-vêtements"],["acc","Accessoires"]];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
@@ -116,7 +116,7 @@ function fill(id,label,arr){
 var el=$(id);
 if(!arr.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="";
-el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
+el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs scroll">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
 }
 function buildSizes(){
 var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
@@ -138,35 +138,33 @@ se.innerHTML='<div class="lbl">Système de pointures</div><div class="tabs">'+sy
 }else{se.style.display="none";se.innerHTML=""}
 fill("szNum",(CAT==="chau"?"Pointures":"Pointures / pantalons")+" ("+SYS+")",av[SYS]);
 }
+function pruneSelections(){
+var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
+var validT={};
+items.forEach(function(x){getT(x).forEach(function(t){validT[t]=1})});
+Object.keys(SZ).forEach(function(k){if(!validT[k])delete SZ[k]});
+var validB={};
+items.forEach(function(x){var k=bkey(x);if(k)validB[k]=1});
+Object.keys(BR).forEach(function(k){if(!validB[k])delete BR[k]});
+}
 function buildBrands(){
 var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
 var c={},name={};
 items.forEach(function(x){var k=bkey(x);if(!k)return;c[k]=(c[k]||0)+1;name[k]=brandOf(x)});
-var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]}).slice(0,30);
+var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]}).slice(0,40);
 var el=$("brands");
 if(!ks.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="";
-el.innerHTML='<div class="lbl">Marques</div><div class="tabs">'+ks.map(function(k){return '<button class="chip br'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'">'+esc(name[k])+' ('+c[k]+')</button>'}).join("")+'</div>';
+el.innerHTML='<div class="lbl">Marques</div><input id="brSearch" placeholder="Rechercher une marque…" value="'+esc(brandQuery)+'"><div class="tabs scroll" id="brTabs">'+ks.map(function(k){return '<button class="chip br'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'" data-n="'+esc(name[k].toLowerCase())+'">'+esc(name[k])+' ('+c[k]+')</button>'}).join("")+'</div>';
+filterBrandChips();
 }
-function buildDup(){
-var T={},N={};
-D.forEach(function(x){
-x._k=toks(x);
-x._k.forEach(function(t){(T[t]=T[t]||[]).push(x)});
-var k=nkey(x);
-if(k.length>=8)(N[k]=N[k]||[]).push(x);
-});
-D.forEach(function(x){
-var seen={},alt=[];
-function add(y){if(y!==x&&y.boutique!==x.boutique&&!seen[y.lien]){seen[y.lien]=1;alt.push(y)}}
-x._k.forEach(function(t){(T[t]||[]).forEach(add)});
-var k=nkey(x);
-if(k.length>=8)(N[k]||[]).forEach(add);
-if(alt.length){
-x._alt=alt;
-var min=Math.min.apply(null,alt.map(function(y){return y.prix}));
-x._best=x.prix<=min;
-}
+function filterBrandChips(){
+var q=brandQuery.trim().toLowerCase();
+var t=$("brTabs");
+if(!t)return;
+Array.prototype.forEach.call(t.querySelectorAll(".chip"),function(b){
+var n=b.getAttribute("data-n")||"";
+b.style.display=(!q||n.indexOf(q)>=0)?"":"none";
 });
 }
 function renderCats(){
@@ -288,7 +286,21 @@ var age=(Date.now()-new Date(j.maj).getTime())/3600000;
 if(age>40){var jr=Math.floor(age/24);msgs.push("Données anciennes ("+jr+" jour"+(jr>1?"s":"")+") : la mise à jour automatique semble en panne")}
 var w=$("warn");
 if(msgs.length){w.style.display="";w.innerHTML="⚠ "+msgs.map(esc).join("<br>⚠ ")}
-else{w.style.display="none"}
+else{w.style.display="none";w.innerHTML=""}
+}
+function checkGoneFavs(){
+var favLinks=Object.keys(FAV);
+if(!favLinks.length)return;
+var gone=favLinks.filter(function(l){return !M[l]});
+if(!gone.length)return;
+var sig=gone.slice().sort().join(",");
+var seen=ls("goneSeen");
+if(seen&&seen.sig===sig)return;
+ls("goneSeen",{sig:sig,t:Date.now()});
+var w=$("warn");
+var msg="📦 "+gone.length+" favori"+(gone.length>1?"s ne sont":" ne")+" plus en promo ou disponible"+(gone.length>1?"s":"")+".";
+if(w.style.display!=="none"&&w.innerHTML)w.innerHTML+="<br>"+msg;
+else{w.style.display="";w.innerHTML=msg}
 }
 
 (function(){
@@ -328,6 +340,9 @@ openAlerts();
 });
 document.addEventListener("keydown",function(e){
 if(e.key==="Escape"){if(sheetOpen())closeSheet();else if(drawerOpen())closePanel()}
+});
+$("brands").addEventListener("input",function(e){
+if(e.target&&e.target.id==="brSearch"){brandQuery=e.target.value;filterBrandChips()}
 });
 })();
 
@@ -421,12 +436,34 @@ var bs=[];D.forEach(function(x){if(bs.indexOf(x.boutique)<0)bs.push(x.boutique)}
 bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textContent=b;$("boutique").appendChild(o)});
 if(!hasNew)$("cNew").style.display="none";
 showWarn(j);
+checkGoneFavs();
 loadPrefs();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply(true);
 updBell();
 restoreView();
 }).catch(function(){$("g").innerHTML="";$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
 
+function buildDup(){
+var T={},N={};
+D.forEach(function(x){
+x._k=toks(x);
+x._k.forEach(function(t){(T[t]=T[t]||[]).push(x)});
+var k=nkey(x);
+if(k.length>=8)(N[k]=N[k]||[]).push(x);
+});
+D.forEach(function(x){
+var seen={},alt=[];
+function add(y){if(y!==x&&y.boutique!==x.boutique&&!seen[y.lien]){seen[y.lien]=1;alt.push(y)}}
+x._k.forEach(function(t){(T[t]||[]).forEach(add)});
+var k=nkey(x);
+if(k.length>=8)(N[k]||[]).forEach(add);
+if(alt.length){
+x._alt=alt;
+var min=Math.min.apply(null,alt.map(function(y){return y.prix}));
+x._best=x.prix<=min;
+}
+});
+}
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
 function onSearch(){clearTimeout(tm);tm=setTimeout(function(){apply(true)},120)}
 function apply(soft){updBtn();savePrefs();draw(soft)}
@@ -438,7 +475,7 @@ function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;brandQuery="";
 syncChips();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
 }
@@ -448,8 +485,8 @@ if(!p)return;
 var k=p.getAttribute("data-k"),v=p.getAttribute("data-v");
 if(k==="all"){resetAll();return}
 if(k==="q")$("q").value="";
-else if(k==="gen"){GEN="all";SZ={};BR={};renderGens();buildSizes();buildBrands()}
-else if(k==="cat"){CAT="all";SZ={};BR={};renderCats();buildSizes();buildBrands()}
+else if(k==="gen"){GEN="all";pruneSelections();renderGens();buildSizes();buildBrands()}
+else if(k==="cat"){CAT="all";pruneSelections();renderCats();buildSizes();buildBrands()}
 else if(k==="b")$("boutique").value="";
 else if(k==="r")$("remise").value="0";
 else if(k==="pm")$("pmax").value="";
@@ -466,13 +503,15 @@ apply();
 $("gens").addEventListener("click",function(e){
 var b=e.target.closest(".gen");
 if(!b)return;
-GEN=b.getAttribute("data-g");SZ={};BR={};
+GEN=b.getAttribute("data-g");
+pruneSelections();
 renderGens();buildSizes();buildBrands();apply();
 });
 $("cats").addEventListener("click",function(e){
 var b=e.target.closest(".cat");
 if(!b)return;
-CAT=b.getAttribute("data-c");SZ={};BR={};
+CAT=b.getAttribute("data-c");
+pruneSelections();
 renderCats();buildSizes();buildBrands();apply();
 });
 $("panel").addEventListener("click",function(e){
@@ -575,7 +614,7 @@ else if(x.pmin&&x.pmin<x.prix-0.5&&!isDrop(x))tags+='<span class="tag tg">DÉJÀ
 }
 var img=x.image?'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(thumb(x.image))+'" data-o="'+esc(x.image)+'" alt="" onerror="if(this.dataset.o&&this.src!==this.dataset.o){this.src=this.dataset.o;this.dataset.o=\'\'}else{this.style.visibility=\'hidden\'}">':'<div class="ph"></div>';
 var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
-return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'" style="--i:'+((i||0)%12)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
+return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'" style="--i:'+((i||0)%8)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
 }
 function render(){
 var shown=L.slice(0,PER);
@@ -695,79 +734,9 @@ alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class=
 var hist="";
 if(x.prec!=null&&x.chg)hist+='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
 if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
-if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
-var small=thumb(x.image),big=thumb(x.image,700);
-var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="lbl">Tailles disponibles</div><div class="pills">'+tl+'</div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
-$("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
-if(x.image&&big&&big!==small){
-var im=new Image();
-im.referrerPolicy="no-referrer";
-im.onload=function(){var el=$("shImg");if(el&&cur===l)el.src=big};
-im.src=big;
-}
-}
-function hideSheet(){
-$("sheet").className="";
-document.body.style.overflow="";
-cur=null;
-if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
-else syncFavs();
-}
-function closeSheet(){
-hideSheet();
-popO();
-}
-function shareCur(){
-var x=M[cur]||FAV[cur];
-if(!x)return;
-var txt=x.nom+" — "+f(x.prix)+" (−"+x.remise+" %) chez "+x.boutique;
-if(navigator.share){
-navigator.share({title:x.nom,text:txt,url:x.lien}).catch(function(){});
-}else if(navigator.clipboard){
-navigator.clipboard.writeText(txt+" "+x.lien).then(function(){var b=$("shShare");if(b)b.textContent="Copié ✓"}).catch(function(){});
-}
-}
-$("g").addEventListener("click",function(e){
-var btn=e.target.closest(".fav");
-if(btn){
-var l=btn.getAttribute("data-l");
-toggleFavL(l);
-if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
-else{
-btn.className="fav"+(FAV[l]?" on":"");
-btn.textContent=FAV[l]?"♥":"♡";
-btn.classList.add("pop");
-setTimeout(function(){btn.classList.remove("pop")},420);
-}
-return;
-}
-var a=e.target.closest(".card a");
-if(a){
-e.preventDefault();
-if(picking)return;
-picking=true;
-var c=a.closest(".card");
-var id=c.getAttribute("data-l");
-c.classList.add("pick");
-setTimeout(function(){
-c.classList.remove("pick");
-picking=false;
-openSheet(id);
-},110);
-}
-});
-window.addEventListener("scroll",function(){
-if(raf)return;
-raf=requestAnimationFrame(function(){
-raf=0;
-var s=window.scrollY>700;
-if(s!==topOn){topOn=s;$("top").style.display=s?"block":"none"}
-});
-},{passive:true});
-if("serviceWorker" in navigator){
-window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
-}
+if(x.pmin&&x.pmin<x.pr
+
+Error from Claude:
+Error Domain=NSURLErrorDomain Code=-1005 "The network connection was lost." UserInfo={_kCFStreamErrorCodeKey=53, NSUnderlyingError=0x11bfdc1b0 {Error Domain=kCFErrorDomainCFNetwork Code=-1005 "(null)" UserInfo={NSErrorPeerAddressKey=<CFData 0x1162b2670 [0x1e4465fb8]>{length = 16, capacity = 16, bytes = 0x100201bba04f680a0000000000000000}, _kCFStreamErrorCodeKey=53, _kCFStreamErrorDomainKey=1}}, _NSURLErrorFailingURLSessionTaskErrorKey=LocalDataTask <17503626-AF94-412E-848F-7281549E9888>.<24>, _NSURLErrorRelatedURLSessionTaskErrorKey=(
+    "LocalDataTask <17503626-AF94-412E-848F-7281549E9888>.<24>"
+), NSLocalizedDescription=The network connection was lost., NSErrorFailingURLStringKey=https://api.anthropic.com/v1/messages, NSErrorFailingURLKey=https://api.anthropic.com/v1/messages, _kCFStreamErrorDomainKey=1}
