@@ -13,7 +13,11 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
     items = []
     for page in range(1, maxpages + 1):
         url = base + collection + "/products.json?limit=250&page=" + str(page)
-        prods = json.loads(fetch(url))["products"]
+        try:
+            res = fetch(url)
+            prods = json.loads(res)["products"]
+        except Exception:
+            break
         if not prods:
             break
         for p in prods:
@@ -115,7 +119,7 @@ SOURCES = [
     ("Starcow Paris", lambda: shopify("Starcow Paris", "https://www.starcowparis.com", "/collections/outlet", "https://www.starcowparis.com/products/")),
     ("END.", lambda: shopify("END.", "https://www.endclothing.com", "/en-eu/collections/sale", "https://www.endclothing.com/en-eu/products/")),
     ("Footshop", footshop),
-    ("Laced Run", lambda: shopify("Laced Run", "https://lacedrun.com", ".myshopify.com", "/collections/soldes-2026", "https://lacedrun.com/products/")),
+    ("Laced Run", lambda: shopify("Laced Run", "https://lacedrun.com", "/collections/soldes-2026", "https://lacedrun.com/products/")),
     ("Dimension Stores", lambda: shopify("Dimension Stores", "https://dimension-stores.com", "/collections/good-deals", "https://dimension-stores.com/products/")),
 ]
 
@@ -133,7 +137,7 @@ jour = now.strftime("%Y-%m-%d")
 ancien = charger("data/promos.json", {})
 anciens_items = ancien.get("items", [])
 ancien_statut = ancien.get("statut", {})
-histo = charger("data/history.json", {})
+history = charger("data/history.json", {})
 
 items = []
 statut = {}
@@ -155,7 +159,7 @@ for nom, fn in SOURCES:
         statut[nom] = {"ok": False, "n": len(reprise), "depuis": depuis}
 
 for x in items:
-    h = histo.setdefault(x["lien"], {"h": []})
+    h = history.setdefault(x["lien"], {"h": []})
     serie = h["h"]
     prix = round(x["prix"], 2)
     anc = round(x["ancien_prix"], 2)
@@ -184,11 +188,11 @@ for x in items:
             x["inf"] = bas
 
 limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
-histo = {k: v for k, v in histo.items() if v.get("v", jour) >= limite}
+history = {k: v for k, v in history.items() if v.get("v", jour) >= limite}
 
 os.makedirs("data", exist_ok=True)
 with open("data/promos.json", "w", encoding="utf-8") as f:
     json.dump({"maj": maj, "statut": statut, "items": items}, f, ensure_ascii=False, separators=(",", ":"))
 with open("data/history.json", "w", encoding="utf-8") as f:
-    json.dump(histo, f, ensure_ascii=False, separators=(",", ":"))
+    json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
 print("TOTAL", len(items))
