@@ -1,4 +1,5 @@
 var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var RE_OK=["Laced Run"];
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["sub","Sous-vêtements"],["acc","Accessoires"]];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
@@ -116,7 +117,7 @@ function fill(id,label,arr){
 var el=$(id);
 if(!arr.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="";
-el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
+el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs tabs-h">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
 }
 function pruneSZBR(){
 var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
@@ -153,12 +154,28 @@ function buildBrands(){
 var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
 var c={},name={};
 items.forEach(function(x){var k=bkey(x);if(!k)return;c[k]=(c[k]||0)+1;name[k]=brandOf(x)});
-var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]}).slice(0,30);
+var ks=Object.keys(c);
 Object.keys(BR).forEach(function(k){if(ks.indexOf(k)<0&&c[k])ks.push(k)});
+BRLIST=ks;BRNAME=name;BRCNT=c;
 var el=$("brands");
 if(!ks.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="";
-el.innerHTML='<div class="lbl">Marques</div><div class="tabs">'+ks.map(function(k){return '<button class="chip br'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'">'+esc(name[k])+' ('+c[k]+')</button>'}).join("")+'</div>';
+el.innerHTML='<div class="lbl">Marques</div><input id="brandSearch" placeholder="Rechercher une marque…" value="'+esc(BRQ||"")+'"><div class="brand-list" id="brandList"></div>';
+renderBrandList();
+}
+function renderBrandList(){
+var box=$("brandList");
+if(!box)return;
+var q=(BRQ||"").toLowerCase().trim();
+var ks=BRLIST.filter(function(k){return !q||k.indexOf(q)>=0});
+ks=ks.slice().sort(function(a,b){
+var sa=BR[a]?1:0,sb=BR[b]?1:0;
+if(sa!==sb)return sb-sa;
+return (BRCNT[b]||0)-(BRCNT[a]||0);
+});
+box.innerHTML=ks.length?ks.map(function(k){
+return '<div class="brand-row'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'"><span>'+esc(BRNAME[k]||k)+'</span><span class="cnt">'+(BRCNT[k]||0)+'</span></div>';
+}).join(""):'<div class="s">Aucune marque trouvée</div>';
 }
 function buildDup(){
 var T={},N={};
@@ -475,7 +492,7 @@ function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
 syncChips();
 renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
 }
@@ -521,14 +538,21 @@ var k=s.getAttribute("data-s");
 if(SZ[k]){delete SZ[k];s.classList.remove("on")}else{SZ[k]=1;s.classList.add("on")}
 apply();return;
 }
-var br=e.target.closest(".br");
+var br=e.target.closest(".brand-row");
 if(br){
 var bk=br.getAttribute("data-b");
-if(BR[bk]){delete BR[bk];br.classList.remove("on")}else{BR[bk]=1;br.classList.add("on")}
+if(BR[bk]){delete BR[bk]}else{BR[bk]=1}
+renderBrandList();
 apply();return;
 }
 var y=e.target.closest(".sys");
 if(y){SYS=y.getAttribute("data-y");buildSizes();}
+});
+$("panel").addEventListener("input",function(e){
+if(e.target.id==="brandSearch"){
+BRQ=e.target.value;
+renderBrandList();
+}
 });
 function curF(){
 var pm=parseFloat($("pmax").value);
