@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,hs=0,ign=false,raf=0,topOn=false,picking=false;
+var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var RE_OK=["Laced Run"];
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["sub","Sous-vêtements"],["acc","Accessoires"]];
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
@@ -232,11 +232,12 @@ setBd("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?
 setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
 renderPills();
 }
-function keepView(){
+function keepView(force){
 var el=$("n");
 if(!el)return;
 var top=el.getBoundingClientRect().top+window.scrollY-$("bar").offsetHeight-6;
-if(window.scrollY>top)window.scrollTo(0,Math.max(0,top));
+if(top<0)top=0;
+if(force||window.scrollY>top)window.scrollTo(0,top);
 }
 function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
@@ -265,7 +266,12 @@ function hidePanel(){
 $("drawer").className="";
 document.body.style.overflow="";
 updBtn();
-if(dirty){dirty=false;render();keepView()}
+if(dirty){
+var fz=dirtyF;
+dirty=false;dirtyF=false;
+render();
+keepView(fz);
+}
 }
 function closePanel(){
 hidePanel();
@@ -325,10 +331,77 @@ if(e.key==="Escape"){if(sheetOpen())closeSheet();else if(drawerOpen())closePanel
 });
 })();
 
+(function(){
+var sb=$("shBody"),y0=0,dy=0,on=false;
+sb.addEventListener("touchstart",function(e){
+if(sb.scrollTop<=0){y0=e.touches[0].clientY;dy=0;on=true}else on=false;
+},{passive:true});
+sb.addEventListener("touchmove",function(e){
+if(!on)return;
+var d=e.touches[0].clientY-y0;
+if(d>0&&sb.scrollTop<=0){
+dy=d;
+sb.style.transition="none";
+sb.style.transform="translateY("+d+"px)";
+if(e.cancelable)e.preventDefault();
+}else if(d<=0&&dy===0){on=false}
+},{passive:false});
+sb.addEventListener("touchend",function(){
+if(!on)return;
+on=false;
+if(dy>110){
+sb.style.transition="transform .2s ease";
+sb.style.transform="translateY(100%)";
+setTimeout(function(){closeSheet();sb.style.transition="";sb.style.transform=""},200);
+}else{
+sb.style.transition="";
+sb.style.transform="";
+}
+dy=0;
+});
+})();
+
+function setDens(d){
+DENS=d;
+ls("dens",d);
+document.body.classList.toggle("dense",d===3);
+Array.prototype.forEach.call(document.querySelectorAll(".dn"),function(b){
+b.className="chip dn"+(+b.getAttribute("data-d")===d?" on":"");
+});
+}
+(function(){
+var dr=document.createElement("div");
+dr.innerHTML='<div class="lbl" style="margin-top:4px">Affichage</div><div class="tabs"><button class="chip dn" data-d="2">▦ 2 colonnes</button><button class="chip dn" data-d="3">▩ Compact (3)</button></div>';
+var pn=$("panel");
+pn.insertBefore(dr,pn.firstChild);
+dr.addEventListener("click",function(e){
+var b=e.target.closest(".dn");
+if(b)setDens(+b.getAttribute("data-d"));
+});
+setDens(ls("dens")===3?3:2);
+})();
+
 $("g").innerHTML=Array(9).join('<div class="card sk"><div class="ph"></div><div class="in"><div class="skl"></div><div class="skl s2"></div></div></div>');
+
+function sig(){return JSON.stringify([curF(),onlyFav,onlyNew,onlyDrop,onlyTop,$("tri").value])}
+function saveView(){
+if(!MAJ)return;
+ls("view",{t:Date.now(),y:window.scrollY,n:shownN,s:sig(),m:MAJ});
+}
+document.addEventListener("visibilitychange",function(){if(document.visibilityState==="hidden")saveView()});
+window.addEventListener("pagehide",saveView);
+function restoreView(){
+var v=ls("view");
+if(!v||Date.now()-v.t>1800000||v.m!==MAJ||v.s!==sig())return;
+if(!(v.y>300))return;
+var guard=0;
+while(shownN<v.n&&shownN<L.length&&guard<60){more();guard++}
+setTimeout(function(){window.scrollTo(0,v.y)},80);
+}
 
 fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
 D=j.items;
+MAJ=j.maj;
 CNT={all:D.length,vet:0,chau:0,tee:0,sub:0,acc:0};
 D.forEach(function(x){M[x.lien]=x;CNT[catOf(x)]++;BRN[bkey(x)]=brandOf(x)});
 buildDup();
@@ -349,13 +422,14 @@ bs.forEach(function(b){var o=document.createElement("option");o.value=b;o.textCo
 if(!hasNew)$("cNew").style.display="none";
 showWarn(j);
 loadPrefs();
-renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
+renderGens();renderCats();buildSizes();buildBrands();favCount();apply(true);
 updBell();
+restoreView();
 }).catch(function(){$("g").innerHTML="";$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
 
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
-function onSearch(){clearTimeout(tm);tm=setTimeout(apply,120)}
-function apply(){updBtn();savePrefs();draw()}
+function onSearch(){clearTimeout(tm);tm=setTimeout(function(){apply(true)},120)}
+function apply(soft){updBtn();savePrefs();draw(soft)}
 function toggleFav2(){onlyFav=!onlyFav;favCount();apply()}
 function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
 function toggleDrop(){onlyDrop=!onlyDrop;syncChips();apply()}
@@ -476,12 +550,16 @@ function updRes(){
 var sr=$("showRes");
 if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
 }
-function draw(){
+function draw(soft){
 compute();
 updRes();
-if(drawerOpen()){dirty=true;return}
+if(drawerOpen()){
+dirty=true;
+if(!soft)dirtyF=true;
+return;
+}
 render();
-keepView();
+keepView(!soft);
 }
 function cardHtml(x,i){
 var fv=FAV[x.lien];
@@ -636,7 +714,7 @@ function hideSheet(){
 $("sheet").className="";
 document.body.style.overflow="";
 cur=null;
-if(onlyFav){var y=window.scrollY;draw();window.scrollTo(0,y)}
+if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else syncFavs();
 }
 function closeSheet(){
@@ -658,7 +736,7 @@ var btn=e.target.closest(".fav");
 if(btn){
 var l=btn.getAttribute("data-l");
 toggleFavL(l);
-if(onlyFav){var y=window.scrollY;draw();window.scrollTo(0,y)}
+if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else{
 btn.className="fav"+(FAV[l]?" on":"");
 btn.textContent=FAV[l]?"♥":"♡";
