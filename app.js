@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var RE_OK=["Laced Run"];
 var CATS=[["all","Tout"],["vet","Vêtements"],["chau","Chaussures"],["tee","T-shirts"],["sub","Sous-vêtements"],["acc","Accessoires"]];
@@ -51,7 +51,7 @@ var p=ls("prefs");
 if(!p)return;
 if(["all","h","f"].indexOf(p.gen)>=0)GEN=p.gen;
 if(["all","vet","chau","tee","sub","acc"].indexOf(p.cat)>=0)CAT=p.cat;
-if(["remise","prix","prixd"].indexOf(p.tri)>=0)$("tri").value=p.tri;
+if(["remise","prix","prixd","pepite"].indexOf(p.tri)>=0)$("tri").value=p.tri;
 }
 function catOf(x){
 if(x._c)return x._c;
@@ -207,7 +207,13 @@ return '<button class="chip qgen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g
 var cHtml=CATS.map(function(c){
 return '<button class="chip qcat'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
 }).join("");
-qn.innerHTML=gHtml+'<span class="qsep"></span>'+cHtml;
+var curShop=$("boutique").value;
+var shops=[];
+D.forEach(function(x){if(shops.indexOf(x.boutique)<0)shops.push(x.boutique)});
+var sHtml=shops.map(function(b){
+return '<button class="chip qshop'+(curShop===b?" on":"")+'" data-shop="'+esc(b)+'">'+esc(b)+'</button>';
+}).join("");
+qn.innerHTML=gHtml+'<span class="qsep"></span>'+cHtml+'<span class="qsep"></span>'+sHtml;
 }
 function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
@@ -359,6 +365,28 @@ var drop=document.createElement("button");drop.className="chip";drop.id="cDrop";
 var nb=$("cNew");nb.parentNode.insertBefore(drop,nb);
 var w=document.createElement("div");w.id="warn";w.style.display="none";
 var n=$("n");n.parentNode.insertBefore(w,n);
+
+// Profil Tailles Rapide dans le menu
+var profSec=document.createElement("details");
+profSec.className="sec";
+profSec.innerHTML='<summary><span>👤 Mon profil tailles (Sauvegarde)</span></summary><div class="sec-body"><div class="lbl">Pointure sneakers / Chaussures</div><input id="profSz" placeholder="Ex: 42 ou 42.5" style="margin-bottom:8px"><div class="prow"><button class="chip" id="saveProf">Enregistrer ma taille</button><button class="chip" id="clearProf">Effacer</button></div></div>';
+var drawerPanel=$("panel");
+drawerPanel.insertBefore(profSec,drawerPanel.firstChild);
+
+drawerPanel.addEventListener("click",function(e){
+if(e.target.closest("#saveProf")){
+var valS=$("profSz").value.trim();
+if(valS){ SZ[valS]=1; ls("mySz",valS); buildSizes(); apply(); hidePanel(); }
+}
+if(e.target.closest("#clearProf")){
+$("profSz").value="";
+ls("mySz","");
+SZ={}; buildSizes(); apply();
+}
+});
+var savedSz=ls("mySz");
+if(savedSz){ SZ[savedSz]=1; }
+
 var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.18);border:1px solid #4fb0bd;color:#d8f2f4;border-radius:6px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
 w.parentNode.insertBefore(gb,n);
 gb.addEventListener("click",function(e){
@@ -524,6 +552,15 @@ var c=e.target.closest(".qcat");
 if(c){
 CAT=c.getAttribute("data-c");
 pruneSZBR();renderCats();buildSizes();buildBrands();apply();
+return;
+}
+var sh=e.target.closest(".qshop");
+if(sh){
+var valSh=sh.getAttribute("data-shop");
+var curB=$("boutique").value;
+$("boutique").value=(curB===valSh)?"":valSh;
+renderQuickNav();
+apply();
 }
 });
 $("pills").addEventListener("click",function(e){
@@ -632,6 +669,12 @@ if(onlyTop&&x.inf)return false;
 return pass(x,F);
 });
 L.sort(function(a,c){
+if(tri==="pepite"){
+// Score Pépite = % de remise élevé + prix bas intelligent
+var scoreA = a.remise * 1.5 - (a.prix / 10);
+var scoreC = c.remise * 1.5 - (c.prix / 10);
+return scoreC - scoreA;
+}
 if(onlyTop)return c.remise-a.remise;
 if(tri==="prix")return a.prix-c.prix;
 if(tri==="prixd")return c.prix-a.prix;
