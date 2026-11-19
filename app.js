@@ -765,4 +765,285 @@ var pm=parseFloat($("pmax").value);
 return {q:$("q").value.toLowerCase().trim(),gen:GEN,cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
 function pass(x,F){
-if(F.cat!=="all"&&catOf(x)!
+if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
+if(!genOkG(x,F.gen))return false;
+if(F.b&&x.boutique!==F.b)return false;
+if(x.remise<F.r)return false;
+if(F.pm!=null&&x.prix>F.pm)return false;
+if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
+if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
+if(F.sz.length){
+var t=getT(x);
+if(!F.sz.some(function(s){return t.indexOf(s)>=0}))return false;
+}
+if(F.q){
+var txt=x._s||(x._s=((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||"")).toLowerCase());
+if(!F.q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0}))return false;
+}
+return true;
+}
+function applyF(F){
+$("q").value=F.q||"";
+$("pmax").value=F.pm==null?"":F.pm;
+$("boutique").value=F.b||"";
+$("remise").value=String(F.r||0);
+GEN=F.gen||"all";CAT=F.cat||"all";
+SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
+BR={};(F.br||[]).forEach(function(b){BR[b]=1});
+onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
+syncChips();
+renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
+}
+function compute(){
+var F=curF();
+var tri=$("tri").value;
+var base;
+if(onlyFav){
+base=Object.keys(FAV).map(function(l){return M[l]||Object.assign({},FAV[l],{gone:true})});
+}else{base=D}
+L=base.filter(function(x){
+if(onlyNew&&!NEWS[x.lien])return false;
+if(onlyDrop&&!isDrop(x))return false;
+if(onlyTop&&x.inf)return false;
+return pass(x,F);
+});
+L.sort(function(a,c){
+if(tri==="pepite"){
+var scoreA = a.remise * 1.5 - (a.prix / 10);
+var scoreC = c.remise * 1.5 - (c.prix / 10);
+return scoreC - scoreA;
+}
+if(onlyTop)return c.remise-a.remise;
+if(tri==="prix")return a.prix-c.prix;
+if(tri==="prixd")return c.prix-a.prix;
+return c.remise-a.remise;
+});
+if(onlyTop)L=L.slice(0,30);
+}
+function updRes(){
+var sr=$("showRes");
+if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
+}
+function draw(soft,forceTop){
+compute();
+updRes();
+if(drawerOpen()){
+dirty=true;
+if(!soft)dirtyF=true;
+return;
+}
+render();
+if(forceTop)scrollToTopResults();
+else keepView(!soft);
+}
+function cardHtml(x,i){
+var fv=FAV[x.lien];
+var tags="";
+if(NEWS[x.lien])tags+='<span class="tag tn">NOUVEAU</span>';
+if(x.gone)tags+='<span class="tag tg">PLUS EN PROMO</span>';
+else{
+if(isDrop(x))tags+='<span class="tag td">↓ −'+f(x.prec-x.prix)+'</span>';
+if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+' depuis l’ajout</span>';
+if(x._alt)tags+=x._best?'<span class="tag tb">MEILLEUR PRIX</span>':'<span class="tag tg">MOINS CHER AILLEURS</span>';
+if(x.inf)tags+='<span class="tag tg">PRIX BARRÉ ?</span>';
+else if(catOf(x)!=="chau"&&x.pmin&&x.pmin<x.prix-0.5&&!isDrop(x))tags+='<span class="tag tg">DÉJÀ À '+f(x.pmin)+'</span>';
+}
+var uSizes=uniqueRawSizes(x);
+var img=x.image?'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(thumb(x.image))+'" data-o="'+esc(x.image)+'" alt="" onerror="if(this.dataset.o&&this.src!==this.dataset.o){this.src=this.dataset.o;this.dataset.o=\'\'}else{this.style.visibility=\'hidden\'}">':'<div class="ph"></div>';
+var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
+return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'" style="--i:'+((i||0)%12)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+priceDisplay(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc(uSizes.join(", "))+'</div>'+tags+'</div></a></div>';
+}
+function render(){
+var shown=L.slice(0,PER);
+shownN=shown.length;
+var parts=[];
+if(GEN!=="all")parts.push(GL[GEN]);
+if(CAT!=="all")parts.push(CL[CAT]);
+if($("boutique").value)parts.push($("boutique").value);
+if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
+if(onlyFav)parts.push("Favoris");
+if(onlyNew)parts.push("Nouveautés");
+if(onlyDrop)parts.push("Baisses");
+if(onlyTop)parts.push("Top 30");
+if(onlyRE)parts.push("La Réunion");
+var note="";
+if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
+if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
+$("n").textContent=L.length+" article"+(L.length>1?"s":"")+(parts.length?" · "+parts.join(" · "):"")+note;
+updRes();
+$("g").innerHTML=shown.map(function(x,i){return cardHtml(x,i)}).join("");
+setMore();
+}
+function setMore(){
+var rest=L.length-shownN;
+$("moreWrap").innerHTML=rest>0?'<div id="sentinel" class="sentinel">Chargement…</div>':"";
+watch();
+}
+function more(){
+if(shownN>=L.length)return;
+var next=L.slice(shownN,shownN+PER);
+$("g").insertAdjacentHTML("beforeend",next.map(function(x,i){return cardHtml(x,i)}).join(""));
+shownN+=next.length;
+setMore();
+}
+function watch(){
+var s=$("sentinel");
+if(!s)return;
+if(!("IntersectionObserver" in window)){
+s.outerHTML='<button class="more" onclick="more()">Voir plus</button>';
+return;
+}
+if(!io)io=new IntersectionObserver(function(en){if(en[0].isIntersecting)more()},{rootMargin:"1200px"});
+io.disconnect();
+io.observe(s);
+}
+function toggleFavL(l){
+if(!l)return;
+if(FAV[l]){delete FAV[l]}
+else if(M[l]){FAV[l]=Object.assign({},M[l])}
+ls("fav",FAV);favCount();updGoneBanner();
+}
+function syncFavs(){
+Array.prototype.forEach.call(document.querySelectorAll("#g .fav"),function(b){
+var on=!!FAV[b.getAttribute("data-l")];
+b.className="fav"+(on?" on":"");
+b.textContent=on?"♥":"♡";
+});
+}
+function alertName(F){
+var p=[];
+if(F.q)p.push(F.q);
+if(F.gen!=="all")p.push(GL[F.gen]);
+if(F.cat!=="all")p.push(CL[F.cat]);
+if(F.br.length)p.push(F.br.map(function(k){return BRN[k]||k}).join("/"));
+if(F.sz.length)p.push("taille "+F.sz.join("/"));
+if(F.b)p.push(F.b);
+if(F.pm!=null)p.push("≤ "+F.pm+" €");
+if(F.r)p.push("−"+F.r+" %+");
+if(F.re)p.push("La Réunion");
+return p.length?p.join(" · "):"Toutes les promos";
+}
+function updBell(){
+var A=ls("alerts")||[];
+var n=0;
+A.forEach(function(a){
+D.forEach(function(x){if((NEWS[x.lien]||isDrop(x))&&pass(x,a.f))n++});
+});
+$("cBell").textContent="🔔"+(n?" "+n:"");
+$("cBell").className="fbtn"+(n?" on":"");
+}
+function saveAlert(){
+var A=ls("alerts")||[];
+var btn=$("cSave");
+if(A.length>=10){btn.textContent="10 alertes maximum";return}
+var F=curF();
+A.push({name:alertName(F),f:F});
+ls("alerts",A);
+updBell();
+btn.textContent="Alerte enregistrée ✓";
+setTimeout(function(){btn.textContent="🔔 Enregistrer cette recherche"},2200);
+}
+function openAlerts(){
+var A=ls("alerts")||[];
+var h='<button class="sh-x" onclick="closeSheet()">✕</button><div class="sh-t">🔔 Mes alertes</div>';
+if(!A.length)h+='<div class="s">Aucune alerte pour l’instant. Réglez vos filtres, puis touchez « Enregistrer cette recherche » dans le menu ☰.</div>';
+A.forEach(function(a,i){
+var tot=0,nw=0;
+D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
+h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
+});
+cur=null;
+$("shBody").innerHTML=h;
+$("shBody").scrollTop=0;
+$("sheet").className="open";
+document.body.style.overflow="hidden";
+if(hs===0)pushO();
+}
+function openSheet(l){
+var x=M[l]||FAV[l];
+if(!x)return;
+cur=l;
+var uSizes=uniqueRawSizes(x);
+var tl=uSizes.map(function(t){return '<span class="sz-pill">'+esc(t)+'</span>'}).join("");
+var alt="";
+if(M[l]&&x._alt){
+alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
+}
+var hist="";
+if(x.prec!=null&&x.chg)hist+='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
+if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
+var small=thumb(x.image),big=thumb(x.image,700);
+var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
+$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceDisplay(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="sz-pick-wrap"><div class="lbl" style="margin-top:0">Tailles disponibles ('+uSizes.length+')</div><div class="sz-scroll">'+tl+'</div></div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+$("shBody").scrollTop=0;
+$("sheet").className="open";
+document.body.style.overflow="hidden";
+if(hs===0)pushO();
+if(x.image&&big&&big!==small){
+var im=new Image();
+im.referrerPolicy="no-referrer";
+im.onload=function(){var el=$("shImg");if(el&&cur===l)el.src=big};
+im.src=big;
+}
+}
+function hideSheet(){
+$("sheet").className="";
+document.body.style.overflow="";
+cur=null;
+if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
+else syncFavs();
+}
+function closeSheet(){
+hideSheet();
+popO();
+}
+function shareCur(){
+var x=M[cur]||FAV[cur];
+if(!x)return;
+var txt=x.nom+" — "+priceDisplay(x)+" (−"+x.remise+" %) chez "+x.boutique;
+if(navigator.share){
+navigator.share({title:x.nom,text:txt,url:x.lien}).catch(function(){});
+}else if(navigator.clipboard){
+navigator.clipboard.writeText(txt+" "+x.lien).then(function(){var b=$("shShare");if(b)b.textContent="Copié ✓"}).catch(function(){});
+}
+}
+$("g").addEventListener("click",function(e){
+var btn=e.target.closest(".fav");
+if(btn){
+var l=btn.getAttribute("data-l");
+toggleFavL(l);
+if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
+else{
+btn.className="fav"+(FAV[l]?" on":"");
+btn.textContent=FAV[l]?"♥":"♡";
+btn.classList.add("pop");
+setTimeout(function(){btn.classList.remove("pop")},380);
+}
+return;
+}
+var a=e.target.closest(".card a");
+if(a){
+e.preventDefault();
+if(picking)return;
+picking=true;
+var c=a.closest(".card");
+var id=c.getAttribute("data-l");
+c.classList.add("pick");
+setTimeout(function(){
+c.classList.remove("pick");
+picking=false;
+openSheet(id);
+},140);
+}
+});
+window.addEventListener("scroll",function(){
+if(raf)return;
+raf=requestAnimationFrame(function(){
+raf=0;
+var s=window.scrollY>700;
+if(s!==topOn){topOn=s;$("top").style.display=s?"block":"none"}
+});
+},{passive:true});
+if("serviceWorker" in navigator){
+window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
+}
