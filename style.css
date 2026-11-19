@@ -6,8 +6,24 @@ body{margin:0;min-height:100vh;color:var(--text);font-family:-apple-system,syste
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px);opacity:.65;animation:scanlineMove 8s linear infinite}
 @keyframes scanlineMove{0%{background-position:0 0}100%{background-position:0 60px}}
 
-.stars{animation:starTwinkle 3s ease-in-out infinite alternate}
-@keyframes starTwinkle{0%{opacity:.4}100%{opacity:1}}
+.stars-a{animation:starTwinkleA 3.2s ease-in-out infinite alternate}
+.stars-b{animation:starTwinkleB 4.4s ease-in-out infinite alternate}
+@keyframes starTwinkleA{0%{opacity:.35}100%{opacity:1}}
+@keyframes starTwinkleB{0%{opacity:.95}100%{opacity:.3}}
+
+.bg-glow{animation:horizonBreath 6s ease-in-out infinite alternate}
+@keyframes horizonBreath{0%{opacity:.75}100%{opacity:1}}
+
+.bg-clouds{animation:cloudDrift 28s linear infinite alternate}
+@keyframes cloudDrift{0%{transform:translateX(-8px)}100%{transform:translateX(10px)}}
+
+.bg-grid{animation:gridPulse 5s ease-in-out infinite alternate}
+@keyframes gridPulse{0%{opacity:.12}100%{opacity:.24}}
+
+.palm-sway-a{transform-origin:54px 765px;animation:palmSwayA 7s ease-in-out infinite alternate}
+.palm-sway-b{transform-origin:340px 780px;animation:palmSwayB 8.5s ease-in-out infinite alternate}
+@keyframes palmSwayA{0%{transform:rotate(-1.2deg)}100%{transform:rotate(1.4deg)}}
+@keyframes palmSwayB{0%{transform:rotate(1.2deg)}100%{transform:rotate(-1.3deg)}}
 
 .anim-sun{animation:sunPulse 4s ease-in-out infinite alternate}
 @keyframes sunPulse{0%{transform:scale(1);filter:drop-shadow(0 0 10px rgba(255,79,139,.4))}100%{transform:scale(1.02);filter:drop-shadow(0 0 25px rgba(255,225,140,.7))}}
@@ -48,9 +64,8 @@ input:focus,select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 
 .pl2.clr{border-color:#ff5c93;background:rgba(180,35,95,.35);color:#ffe0ec}
 .pl2.clr::after{content:""}
 
-/* NOUVEAU DESIGN DE CATÉGORIES MINIMALISTE ET FLUIDE */
 .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:4px}
-.cat-btn{display:flex;align-items:center;justify-content:between;padding:12px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden}
+.cat-btn{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:8px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:13px;font-weight:600;cursor:pointer;transition:all .18s ease;position:relative;overflow:hidden}
 .cat-btn .cat-ico{font-size:16px;margin-right:8px}
 .cat-btn .cat-name{flex:1;text-align:left}
 .cat-btn .cat-cnt{font-size:11px;color:var(--muted);background:rgba(255,255,255,.06);padding:2px 6px;border-radius:4px;font-weight:700}
