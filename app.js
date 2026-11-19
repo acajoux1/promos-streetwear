@@ -1,6 +1,6 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,curSz=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
-var PROF_KIND="chau",PROF_Q="";
+var PROF_KIND="haut",PROF_SYS="EU";
 var RE_OK=["Laced Run"];
 var CATS=[
   ["all","Tout","⚡"],
@@ -13,7 +13,13 @@ var CATS=[
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
 var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
-var SHOE_PRESETS=["38","39","40","40.5","41","42","42.5","43","44","44.5","45","46"];
+var TOP_SIZES=["XS","S","M","L","XL","XXL"];
+var PANT_SIZES={
+  EU:["34","36","38","40","42","44","46","48","50","52"],
+  UK:["6","8","10","12","14","16","18","20"],
+  US:["26","28","29","30","31","32","33","34","36","38","40"]
+};
+var SHOE_SIZES=["36","37","38","39","40","40.5","41","42","42.5","43","44","44.5","45","46","47"];
 var LM={"xxs":"XXS","x-small":"XS","xs":"XS","extra small":"XS","small":"S","s":"S","medium":"M","m":"M","large":"L","l":"L","x-large":"XL","xl":"XL","extra large":"XL","xx-large":"XXL","xxl":"XXL","2xl":"XXL","xxx-large":"XXXL","xxxl":"XXXL","3xl":"XXXL"};
 var SUB=/\b(boxers?|briefs?|thongs?|tanga|culottes?|caleçons?|calecons?|underwear|undies|lingerie|bras?|bralettes?|soutien[\s-]?gorges?|sous[\s-]?v[eê]tements?|panties)\b/;
 var TEE=/\b(t[\s-]?shirts?|tees?|tshirts?)\b/;
@@ -120,6 +126,27 @@ return null;
 function getT(x){
 if(!x._t){x._t=[];(x.tailles||[]).forEach(function(s){var n=norm(s);if(n&&x._t.indexOf(n)<0)x._t.push(n)})}
 return x._t;
+}
+function uniqueRawSizes(x){
+if(x._ur)return x._ur;
+var seen={},out=[];
+(x.tailles||[]).forEach(function(s){
+var raw=String(s||"").trim();
+if(!raw)return;
+var key=(norm(raw)||raw).toUpperCase();
+if(!seen[key]){
+seen[key]=1;
+out.push(norm(raw)||raw);
+}
+});
+x._ur=out;
+return out;
+}
+function priceDisplay(x){
+if(catOf(x)==="chau"&&x.pmin&&x.pmin>0&&x.pmin<x.prix-0.01){
+return f(x.pmin)+" – "+f(x.prix);
+}
+return f(x.prix);
 }
 function val(t){var n=parseFloat(t.replace(/^[A-Z]+\s*/,""));if(t.indexOf("1/3")>=0)n+=.33;if(t.indexOf("2/3")>=0)n+=.67;return n}
 function fill(id,label,arr){
@@ -377,37 +404,52 @@ el.innerHTML="";
 }
 }
 
+function getProfData(){
+var p=ls("myProf2");
+if(p&&typeof p==="object")return {haut:p.haut||"",bas:p.bas||"",chau:p.chau||""};
+return {haut:"",bas:"",chau:""};
+}
+
 function renderProfileSection(){
 var sec=$("profSec");
 if(!sec)return;
-var saved=ls("myProf")||{chau:"",vet:""};
-var q=(PROF_Q||"").toLowerCase().trim();
-var list=(PROF_KIND==="chau"?SHOE_PRESETS:LET).filter(function(item){
-return !q||item.toLowerCase().indexOf(q)>=0;
-});
+var wasOpen=sec.open;
+var saved=getProfData();
+var list=PROF_KIND==="haut"?TOP_SIZES:(PROF_KIND==="bas"?PANT_SIZES[PROF_SYS]:SHOE_SIZES);
 var activeVal=saved[PROF_KIND]||"";
-var activeSummary=[];
-if(saved.chau)activeSummary.push("Pointure "+saved.chau);
-if(saved.vet)activeSummary.push("Taille "+saved.vet);
 
-sec.innerHTML='<summary><span>👤 Mon profil tailles'+(activeSummary.length?' <i class="bdg">'+esc(activeSummary.join(" · "))+'</i>':'')+'</span></summary>'+
+var badges=[];
+if(saved.haut)badges.push("Haut "+saved.haut);
+if(saved.bas)badges.push("Bas "+saved.bas);
+if(saved.chau)badges.push("Chaussures "+saved.chau);
+
+var sysHtml="";
+if(PROF_KIND==="bas"){
+sysHtml='<div class="prof-sys-tabs">'+
+["EU","UK","US"].map(function(sys){
+return '<button type="button" class="chip'+(PROF_SYS===sys?" on":"")+'" data-psys="'+sys+'">'+sys+'</button>';
+}).join("")+
+'</div>';
+}
+
+sec.innerHTML='<summary><span>👤 Mon profil tailles'+(badges.length?' <i class="bdg">'+esc(badges.join(" · "))+'</i>':'')+'</span></summary>'+
 '<div class="sec-body">'+
 '<div class="prof-sub-tabs">'+
-'<button type="button" class="chip'+(PROF_KIND==="chau"?" on":"")+'" data-pkind="chau">👟 Pointures</button>'+
-'<button type="button" class="chip'+(PROF_KIND==="vet"?" on":"")+'" data-pkind="vet">🧥 Tailles</button>'+
+'<button type="button" class="chip'+(PROF_KIND==="haut"?" on":"")+'" data-pkind="haut">👕 Hauts</button>'+
+'<button type="button" class="chip'+(PROF_KIND==="bas"?" on":"")+'" data-pkind="bas">👖 Bas</button>'+
+'<button type="button" class="chip'+(PROF_KIND==="chau"?" on":"")+'" data-pkind="chau">👟 Chaussures</button>'+
 '</div>'+
-'<input id="profSearch" placeholder="'+(PROF_KIND==="chau"?"Rechercher une pointure (ex: 42, 42.5)…":"Rechercher une taille (ex: M, L, XL)…")+'" value="'+esc(PROF_Q||"")+'">'+
+sysHtml+
 '<div class="prof-presets">'+
 list.map(function(v){
-return '<button type="button" class="chip'+(activeVal===v?" on":"")+'" data-pval="'+esc(v)+'">'+esc(v)+'</button>';
+var fullVal=(PROF_KIND==="bas"&&PROF_SYS!=="EU")?(PROF_SYS+" "+v):v;
+var isOn=(activeVal===fullVal||activeVal===v);
+return '<button type="button" class="chip'+(isOn?" on":"")+'" data-pval="'+esc(fullVal)+'">'+esc(v)+'</button>';
 }).join("")+
 '</div>'+
-'<input id="profSz" placeholder="'+(PROF_KIND==="chau"?"Pointure personnalisée (ex: 42.5)":"Taille personnalisée (ex: XL)")+'" value="'+esc(activeVal)+'">'+
-'<div class="prow">'+
-'<button type="button" class="chip" id="saveProf">Enregistrer</button>'+
-'<button type="button" class="chip" id="clearProf">Effacer '+(PROF_KIND==="chau"?"pointure":"taille")+'</button>'+
-'</div>'+
+(activeVal?'<div class="prow"><button type="button" class="chip" id="clearProf">Effacer ('+esc(activeVal)+')</button></div>':'')+
 '</div>';
+if(wasOpen)sec.open=true;
 }
 
 (function(){
@@ -423,68 +465,55 @@ var drawerPanel=$("panel");
 drawerPanel.insertBefore(profSec,drawerPanel.firstChild);
 renderProfileSection();
 
-drawerPanel.addEventListener("input",function(e){
-if(e.target.id==="profSearch"){
-PROF_Q=e.target.value;
-renderProfileSection();
-}
-});
-
 drawerPanel.addEventListener("click",function(e){
 var pk=e.target.closest("[data-pkind]");
 if(pk){
 PROF_KIND=pk.getAttribute("data-pkind");
-PROF_Q="";
+renderProfileSection();
+return;
+}
+var ps=e.target.closest("[data-psys]");
+if(ps){
+PROF_SYS=ps.getAttribute("data-psys");
 renderProfileSection();
 return;
 }
 var pv=e.target.closest("[data-pval]");
 if(pv){
 var valP=pv.getAttribute("data-pval");
-var prof=ls("myProf")||{chau:"",vet:""};
-prof[PROF_KIND]=valP;
-ls("myProf",prof);
+var prof=getProfData();
+var same=(prof[PROF_KIND]===valP);
+prof[PROF_KIND]=same?"":valP;
+ls("myProf2",prof);
+SZ={};
+if(!same){
 var normP=norm(valP)||valP;
-SZ={};SZ[normP]=1;
+SZ[normP]=1;
 if(PROF_KIND==="chau")CAT="chau";
-else if(CAT==="chau")CAT="vet";
+else if(PROF_KIND==="haut"&&CAT==="chau")CAT="vet";
+else if(PROF_KIND==="bas"&&CAT==="chau")CAT="vet";
+}
 buildSizes();renderCats();renderProfileSection();apply();
 return;
 }
-if(e.target.closest("#saveProf")){
-var inp=$("profSz");
-var valS=inp?inp.value.trim():"";
-var prof=ls("myProf")||{chau:"",vet:""};
-prof[PROF_KIND]=valS;
-ls("myProf",prof);
-SZ={};
-if(valS){
-var normS=norm(valS)||valS;
-SZ[normS]=1;
-}
-buildSizes();renderProfileSection();apply();
-return;
-}
 if(e.target.closest("#clearProf")){
-var prof=ls("myProf")||{chau:"",vet:""};
+var prof=getProfData();
 var prevVal=prof[PROF_KIND];
 prof[PROF_KIND]="";
-ls("myProf",prof);
+ls("myProf2",prof);
 if(prevVal){
 delete SZ[prevVal];
 var np=norm(prevVal);
 if(np)delete SZ[np];
 }
-PROF_Q="";
 buildSizes();renderProfileSection();apply();
 }
 });
 
-var savedProf=ls("myProf");
-if(savedProf){
+var savedProf=getProfData();
 if(savedProf.chau){var nc=norm(savedProf.chau)||savedProf.chau;SZ[nc]=1}
-if(savedProf.vet){var nv=norm(savedProf.vet)||savedProf.vet;SZ[nv]=1}
-}
+if(savedProf.haut){var nh=norm(savedProf.haut)||savedProf.haut;SZ[nh]=1}
+if(savedProf.bas){var nb=norm(savedProf.bas)||savedProf.bas;SZ[nb]=1}
 
 var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.14);border:1px solid rgba(79,176,189,.45);color:#d8f2f4;border-radius:8px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
 w.parentNode.insertBefore(gb,n);
@@ -505,13 +534,6 @@ if(bt){bt.textContent=FAV[cur]?"♥":"♡";bt.classList.add("pop");setTimeout(fu
 return;
 }
 if(e.target.closest("#shShare")){shareCur();return}
-var szBtn=e.target.closest(".sz-pick-btn");
-if(szBtn){
-var chosen=szBtn.getAttribute("data-sz");
-curSz=(curSz===chosen)?null:chosen;
-refreshSheetSizeState();
-return;
-}
 var g=e.target.closest(".al-go");
 if(g){
 var A=ls("alerts")||[];
@@ -644,7 +666,7 @@ function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";PROF_Q="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
 syncChips();
 renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
@@ -743,307 +765,4 @@ var pm=parseFloat($("pmax").value);
 return {q:$("q").value.toLowerCase().trim(),gen:GEN,cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
 function pass(x,F){
-if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
-if(!genOkG(x,F.gen))return false;
-if(F.b&&x.boutique!==F.b)return false;
-if(x.remise<F.r)return false;
-if(F.pm!=null&&x.prix>F.pm)return false;
-if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
-if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
-if(F.sz.length){
-var t=getT(x);
-if(!F.sz.some(function(s){return t.indexOf(s)>=0}))return false;
-}
-if(F.q){
-var txt=x._s||(x._s=((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||"")).toLowerCase());
-if(!F.q.split(/\s+/).every(function(w){return txt.indexOf(w)>=0}))return false;
-}
-return true;
-}
-function applyF(F){
-$("q").value=F.q||"";
-$("pmax").value=F.pm==null?"":F.pm;
-$("boutique").value=F.b||"";
-$("remise").value=String(F.r||0);
-GEN=F.gen||"all";CAT=F.cat||"all";
-SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
-BR={};(F.br||[]).forEach(function(b){BR[b]=1});
-onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
-syncChips();
-renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
-}
-function compute(){
-var F=curF();
-var tri=$("tri").value;
-var base;
-if(onlyFav){
-base=Object.keys(FAV).map(function(l){return M[l]||Object.assign({},FAV[l],{gone:true})});
-}else{base=D}
-L=base.filter(function(x){
-if(onlyNew&&!NEWS[x.lien])return false;
-if(onlyDrop&&!isDrop(x))return false;
-if(onlyTop&&x.inf)return false;
-return pass(x,F);
-});
-L.sort(function(a,c){
-if(tri==="pepite"){
-var scoreA = a.remise * 1.5 - (a.prix / 10);
-var scoreC = c.remise * 1.5 - (c.prix / 10);
-return scoreC - scoreA;
-}
-if(onlyTop)return c.remise-a.remise;
-if(tri==="prix")return a.prix-c.prix;
-if(tri==="prixd")return c.prix-a.prix;
-return c.remise-a.remise;
-});
-if(onlyTop)L=L.slice(0,30);
-}
-function updRes(){
-var sr=$("showRes");
-if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
-}
-function draw(soft,forceTop){
-compute();
-updRes();
-if(drawerOpen()){
-dirty=true;
-if(!soft)dirtyF=true;
-return;
-}
-render();
-if(forceTop)scrollToTopResults();
-else keepView(!soft);
-}
-function cardHtml(x,i){
-var fv=FAV[x.lien];
-var tags="";
-if(NEWS[x.lien])tags+='<span class="tag tn">NOUVEAU</span>';
-if(x.gone)tags+='<span class="tag tg">PLUS EN PROMO</span>';
-else{
-if(isDrop(x))tags+='<span class="tag td">↓ −'+f(x.prec-x.prix)+'</span>';
-if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+' depuis l’ajout</span>';
-if(x._alt)tags+=x._best?'<span class="tag tb">MEILLEUR PRIX</span>':'<span class="tag tg">MOINS CHER AILLEURS</span>';
-if(x.inf)tags+='<span class="tag tg">PRIX BARRÉ ?</span>';
-else if(x.pmin&&x.pmin<x.prix-0.5&&!isDrop(x))tags+='<span class="tag tg">DÉJÀ À '+f(x.pmin)+'</span>';
-}
-var img=x.image?'<img loading="lazy" decoding="async" referrerpolicy="no-referrer" src="'+esc(thumb(x.image))+'" data-o="'+esc(x.image)+'" alt="" onerror="if(this.dataset.o&&this.src!==this.dataset.o){this.src=this.dataset.o;this.dataset.o=\'\'}else{this.style.visibility=\'hidden\'}">':'<div class="ph"></div>';
-var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
-return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'" style="--i:'+((i||0)%12)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a href="'+href+'" target="_blank" rel="noopener">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'<div class="in"><div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc((x.tailles||[]).join(", "))+'</div>'+tags+'</div></a></div>';
-}
-function render(){
-var shown=L.slice(0,PER);
-shownN=shown.length;
-var parts=[];
-if(GEN!=="all")parts.push(GL[GEN]);
-if(CAT!=="all")parts.push(CL[CAT]);
-if($("boutique").value)parts.push($("boutique").value);
-if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
-if(onlyFav)parts.push("Favoris");
-if(onlyNew)parts.push("Nouveautés");
-if(onlyDrop)parts.push("Baisses");
-if(onlyTop)parts.push("Top 30");
-if(onlyRE)parts.push("La Réunion");
-var note="";
-if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
-if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
-$("n").textContent=L.length+" article"+(L.length>1?"s":"")+(parts.length?" · "+parts.join(" · "):"")+note;
-updRes();
-$("g").innerHTML=shown.map(function(x,i){return cardHtml(x,i)}).join("");
-setMore();
-}
-function setMore(){
-var rest=L.length-shownN;
-$("moreWrap").innerHTML=rest>0?'<div id="sentinel" class="sentinel">Chargement…</div>':"";
-watch();
-}
-function more(){
-if(shownN>=L.length)return;
-var next=L.slice(shownN,shownN+PER);
-$("g").insertAdjacentHTML("beforeend",next.map(function(x,i){return cardHtml(x,i)}).join(""));
-shownN+=next.length;
-setMore();
-}
-function watch(){
-var s=$("sentinel");
-if(!s)return;
-if(!("IntersectionObserver" in window)){
-s.outerHTML='<button class="more" onclick="more()">Voir plus</button>';
-return;
-}
-if(!io)io=new IntersectionObserver(function(en){if(en[0].isIntersecting)more()},{rootMargin:"1200px"});
-io.disconnect();
-io.observe(s);
-}
-function toggleFavL(l){
-if(!l)return;
-if(FAV[l]){delete FAV[l]}
-else if(M[l]){FAV[l]=Object.assign({},M[l])}
-ls("fav",FAV);favCount();updGoneBanner();
-}
-function syncFavs(){
-Array.prototype.forEach.call(document.querySelectorAll("#g .fav"),function(b){
-var on=!!FAV[b.getAttribute("data-l")];
-b.className="fav"+(on?" on":"");
-b.textContent=on?"♥":"♡";
-});
-}
-function alertName(F){
-var p=[];
-if(F.q)p.push(F.q);
-if(F.gen!=="all")p.push(GL[F.gen]);
-if(F.cat!=="all")p.push(CL[F.cat]);
-if(F.br.length)p.push(F.br.map(function(k){return BRN[k]||k}).join("/"));
-if(F.sz.length)p.push("taille "+F.sz.join("/"));
-if(F.b)p.push(F.b);
-if(F.pm!=null)p.push("≤ "+F.pm+" €");
-if(F.r)p.push("−"+F.r+" %+");
-if(F.re)p.push("La Réunion");
-return p.length?p.join(" · "):"Toutes les promos";
-}
-function updBell(){
-var A=ls("alerts")||[];
-var n=0;
-A.forEach(function(a){
-D.forEach(function(x){if((NEWS[x.lien]||isDrop(x))&&pass(x,a.f))n++});
-});
-$("cBell").textContent="🔔"+(n?" "+n:"");
-$("cBell").className="fbtn"+(n?" on":"");
-}
-function saveAlert(){
-var A=ls("alerts")||[];
-var btn=$("cSave");
-if(A.length>=10){btn.textContent="10 alertes maximum";return}
-var F=curF();
-A.push({name:alertName(F),f:F});
-ls("alerts",A);
-updBell();
-btn.textContent="Alerte enregistrée ✓";
-setTimeout(function(){btn.textContent="🔔 Enregistrer cette recherche"},2200);
-}
-function openAlerts(){
-var A=ls("alerts")||[];
-var h='<button class="sh-x" onclick="closeSheet()">✕</button><div class="sh-t">🔔 Mes alertes</div>';
-if(!A.length)h+='<div class="s">Aucune alerte pour l’instant. Réglez vos filtres, puis touchez « Enregistrer cette recherche » dans le menu ☰.</div>';
-A.forEach(function(a,i){
-var tot=0,nw=0;
-D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
-h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
-});
-cur=null;curSz=null;
-$("shBody").innerHTML=h;
-$("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
-}
-function refreshSheetSizeState(){
-var x=M[cur]||FAV[cur];
-if(!x)return;
-Array.prototype.forEach.call(document.querySelectorAll(".sz-pick-btn"),function(b){
-var v=b.getAttribute("data-sz");
-b.className="sz-pick-btn"+(curSz===v?" on":"");
-});
-var note=$("szPriceNote");
-if(!note)return;
-if(!curSz){
-note.innerHTML='Prix relevé : <strong>'+f(x.prix)+'</strong> <span class="old">'+f(x.ancien_prix)+'</span> · Faites défiler les tailles et touchez-en une.';
-return;
-}
-var baseNote='Taille <strong>'+esc(curSz)+'</strong> · Prix relevé : <strong>'+f(x.prix)+'</strong>';
-if(x.pmin&&x.pmin<x.prix-0.5){
-baseNote+=' (déjà vu à '+f(x.pmin)+' selon variante).';
-}else{
-baseNote+=' (vérifiez le prix exact de cette taille sur la boutique).';
-}
-note.innerHTML=baseNote;
-}
-function openSheet(l){
-var x=M[l]||FAV[l];
-if(!x)return;
-cur=l;
-curSz=(x.tailles&&x.tailles.length===1)?x.tailles[0]:null;
-var tl=(x.tailles||[]).map(function(t){return '<button type="button" class="sz-pick-btn'+(curSz===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+'</button>'}).join("");
-var alt="";
-if(M[l]&&x._alt){
-alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
-}
-var hist="";
-if(x.prec!=null&&x.chg)hist+='<div class="s">Prix précédent : '+f(x.prec)+' (changé le '+fdate(x.chg)+')</div>';
-if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirmer : il était à '+f(x.inf)+' lors d’un relevé précédent, il affiche '+f(x.ancien_prix)+' aujourd’hui.</div>';
-if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
-var small=thumb(x.image),big=thumb(x.image,700);
-var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="sz-pick-wrap"><div class="lbl" style="margin-top:0">Tailles disponibles ('+(x.tailles||[]).length+')</div><div class="sz-scroll">'+tl+'</div><div class="sz-price-note" id="szPriceNote"></div></div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
-refreshSheetSizeState();
-$("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
-if(x.image&&big&&big!==small){
-var im=new Image();
-im.referrerPolicy="no-referrer";
-im.onload=function(){var el=$("shImg");if(el&&cur===l)el.src=big};
-im.src=big;
-}
-}
-function hideSheet(){
-$("sheet").className="";
-document.body.style.overflow="";
-cur=null;curSz=null;
-if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
-else syncFavs();
-}
-function closeSheet(){
-hideSheet();
-popO();
-}
-function shareCur(){
-var x=M[cur]||FAV[cur];
-if(!x)return;
-var txt=x.nom+" — "+f(x.prix)+" (−"+x.remise+" %) chez "+x.boutique;
-if(navigator.share){
-navigator.share({title:x.nom,text:txt,url:x.lien}).catch(function(){});
-}else if(navigator.clipboard){
-navigator.clipboard.writeText(txt+" "+x.lien).then(function(){var b=$("shShare");if(b)b.textContent="Copié ✓"}).catch(function(){});
-}
-}
-$("g").addEventListener("click",function(e){
-var btn=e.target.closest(".fav");
-if(btn){
-var l=btn.getAttribute("data-l");
-toggleFavL(l);
-if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
-else{
-btn.className="fav"+(FAV[l]?" on":"");
-btn.textContent=FAV[l]?"♥":"♡";
-btn.classList.add("pop");
-setTimeout(function(){btn.classList.remove("pop")},380);
-}
-return;
-}
-var a=e.target.closest(".card a");
-if(a){
-e.preventDefault();
-if(picking)return;
-picking=true;
-var c=a.closest(".card");
-var id=c.getAttribute("data-l");
-c.classList.add("pick");
-setTimeout(function(){
-c.classList.remove("pick");
-picking=false;
-openSheet(id);
-},140);
-}
-});
-window.addEventListener("scroll",function(){
-if(raf)return;
-raf=requestAnimationFrame(function(){
-raf=0;
-var s=window.scrollY>700;
-if(s!==topOn){topOn=s;$("top").style.display=s?"block":"none"}
-});
-},{passive:true});
-if("serviceWorker" in navigator){
-window.addEventListener("load",function(){navigator.serviceWorker.register("sw.js").catch(function(){})});
-}
+if(F.cat!=="all"&&catOf(x)!
