@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var PROF_KIND="haut",PROF_SYS="EU";
 var RE_OK=["Laced Run"];
@@ -128,64 +128,70 @@ if(u)return u[1].toUpperCase()+" "+u[2];
 return null;
 }
 function getT(x){
-if(!x._t){x._t=[];(x.tailles||[]).forEach(function(s){var n=norm(s);if(n&&x._t.indexOf(n)<0)x._t.push(n)})}
+if(!x._t){x._t=[];uniqueRawSizes(x).forEach(function(s){var n=norm(s)||s;if(x._t.indexOf(n)<0)x._t.push(n)})}
 return x._t;
 }
 function uniqueRawSizes(x){
 if(x._ur)return x._ur;
 var seen={},out=[];
-(x.tailles||[]).forEach(function(s){
+var extra=SZ_MAP[x.lien];
+var src=(extra&&Array.isArray(extra.tailles)&&extra.tailles.length)?extra.tailles:(x.tailles||[]);
+src.forEach(function(s){
 var raw=String(s||"").trim();
 if(!raw)return;
-var valNorm=norm(raw)||raw;
+var valNorm=norm(raw)||raw.toUpperCase();
 var key=valNorm.toUpperCase();
 if(!seen[key]){seen[key]=1;out.push(valNorm)}
 });
 x._ur=out;
 return out;
 }
-
-function shoePriceBounds(x){
-if(x._sb)return x._sb;
-var nums=[];
-function pushNum(v){
-var n=Number(v);
-if(!isNaN(n)&&n>0)nums.push(n);
-}
-pushNum(x.prix);
-pushNum(x.pmin);
-pushNum(x.pmax);
-pushNum(x.prix_min);
-pushNum(x.prix_max);
-if(Array.isArray(x.prix_tailles)){
-x.prix_tailles.forEach(function(v){
-if(typeof v==="number")pushNum(v);
-else if(v&&typeof v==="object")pushNum(v.prix||v.price);
+function sizePriceMap(x){
+if(x._spm)return x._spm;
+var map={};
+var extra=SZ_MAP[x.lien];
+if(extra&&extra.prix_par_taille&&typeof extra.prix_par_taille==="object"){
+Object.keys(extra.prix_par_taille).forEach(function(k){
+var nk=norm(k)||String(k).toUpperCase();
+var pv=Number(extra.prix_par_taille[k]);
+if(!isNaN(pv)&&pv>0)map[nk]=pv;
 });
 }
 if(x.prix_par_taille&&typeof x.prix_par_taille==="object"){
-Object.keys(x.prix_par_taille).forEach(function(k){pushNum(x.prix_par_taille[k])});
+Object.keys(x.prix_par_taille).forEach(function(k){
+var nk=norm(k)||String(k).toUpperCase();
+var pv=Number(x.prix_par_taille[k]);
+if(!isNaN(pv)&&pv>0&&map[nk]==null)map[nk]=pv;
+});
 }
-if(Array.isArray(x.variantes)){
-x.variantes.forEach(function(v){if(v&&typeof v==="object")pushNum(v.prix||v.price)});
+uniqueRawSizes(x).forEach(function(sz){
+if(map[sz]==null&&typeof x.prix==="number"&&x.prix>0)map[sz]=x.prix;
+});
+x._spm=map;
+return map;
 }
+function shoePriceBounds(x){
+if(x._sb)return x._sb;
+var nums=[];
+function pushNum(v){var n=Number(v);if(!isNaN(n)&&n>0)nums.push(n)}
+var extra=SZ_MAP[x.lien];
+if(extra){pushNum(extra.prix_min);pushNum(extra.prix_max)}
+var spm=sizePriceMap(x);
+Object.keys(spm).forEach(function(k){pushNum(spm[k])});
+pushNum(x.prix);pushNum(x.pmin);pushNum(x.pmax);
 var min=nums.length?Math.min.apply(null,nums):Number(x.prix||0);
 var max=nums.length?Math.max.apply(null,nums):Number(x.prix||0);
 x._sb={min:min,max:max};
 return x._sb;
 }
-
 function priceRangeLabel(x){
 if(catOf(x)==="chau"){
 var b=shoePriceBounds(x);
-if(b.max>b.min+0.01){
-return f(b.min)+" – "+f(b.max);
-}
+if(b.max>b.min+0.01)return f(b.min)+" – "+f(b.max);
 return f(b.min);
 }
 return f(x.prix);
 }
-
 function val(t){var n=parseFloat(t.replace(/^[A-Z]+\s*/,""));if(t.indexOf("1/3")>=0)n+=.33;if(t.indexOf("2/3")>=0)n+=.67;return n}
 function fill(id,label,arr){
 var el=$(id);
@@ -331,6 +337,13 @@ if(!a.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="flex";
 el.innerHTML='<button class="pl2 clr" data-k="all">✕ Tout effacer</button>'+a.map(function(p){return '<button class="pl2" data-k="'+p[0]+'" data-v="'+esc(p[1])+'">'+esc(p[2])+'</button>'}).join("");
 }
+function updHomeBtn(){
+var hb=$("hBtn");
+if(!hb)return;
+var hasAct=actives().length>0||$("tri").value!=="remise";
+hb.className="fbtn"+(hasAct?" on":"");
+hb.title=hasAct?"Réinitialiser et revenir en haut":"Revenir en haut";
+}
 function updBtn(){
 var n=0;
 if(GEN!=="all")n++;
@@ -352,6 +365,16 @@ setBd("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0));
 setBd("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
 setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
 renderPills();
+updHomeBtn();
+}
+function smartHome(){
+if(sheetOpen())closeSheet();
+if(drawerOpen())closePanel();
+var hasAct=actives().length>0||$("tri").value!=="remise";
+if(hasAct){
+resetAll();
+}
+window.scrollTo({top:0,behavior:"smooth"});
 }
 function keepView(force){
 var el=$("n");
@@ -511,17 +534,9 @@ renderProfileSection();
 
 drawerPanel.addEventListener("click",function(e){
 var pk=e.target.closest("[data-pkind]");
-if(pk){
-PROF_KIND=pk.getAttribute("data-pkind");
-renderProfileSection();
-return;
-}
+if(pk){PROF_KIND=pk.getAttribute("data-pkind");renderProfileSection();return}
 var ps=e.target.closest("[data-psys]");
-if(ps){
-PROF_SYS=ps.getAttribute("data-psys");
-renderProfileSection();
-return;
-}
+if(ps){PROF_SYS=ps.getAttribute("data-psys");renderProfileSection();return}
 var pv=e.target.closest("[data-pval]");
 if(pv){
 var valP=pv.getAttribute("data-pval");
@@ -559,12 +574,8 @@ if(savedProf.haut){var nh=norm(savedProf.haut)||savedProf.haut;SZ[nh]=1}
 if(savedProf.bas){var nb=norm(savedProf.bas)||savedProf.bas;SZ[nb]=1}
 
 $("newsBubble").addEventListener("click",function(e){
-if(e.target.closest("#nbNew")){
-onlyNew=true;onlyFav=false;syncChips();favCount();apply(true,true);
-}
-if(e.target.closest("#nbGone")){
-onlyFav=true;onlyNew=false;syncChips();favCount();apply(true,true);
-}
+if(e.target.closest("#nbNew")){onlyNew=true;onlyFav=false;syncChips();favCount();apply(true,true)}
+if(e.target.closest("#nbGone")){onlyFav=true;onlyNew=false;syncChips();favCount();apply(true,true)}
 });
 
 var s=document.createElement("div");s.id="sheet";
@@ -572,6 +583,13 @@ s.innerHTML='<div class="sh-bg"></div><div class="sh-body" id="shBody"></div>';
 document.body.appendChild(s);
 s.querySelector(".sh-bg").addEventListener("click",closeSheet);
 s.addEventListener("click",function(e){
+var szBtn=e.target.closest(".sz-item");
+if(szBtn){
+var t=szBtn.getAttribute("data-sz");
+pickedSize=(pickedSize===t)?"":t;
+renderPickedSizePrice();
+return;
+}
 if(e.target.closest("#shFav")){
 toggleFavL(cur);
 var bt=$("shFav");
@@ -638,6 +656,22 @@ while(shownN<v.n&&shownN<L.length&&guard<60){more();guard++}
 setTimeout(function(){window.scrollTo(0,v.y)},80);
 }
 
+function loadSizePrices(){
+return fetch("data/prix_tailles.json?"+Date.now()).then(function(r){
+if(!r.ok)return {};
+return r.json();
+}).then(function(j){
+SZ_MAP={};
+if(j&&j.by_link&&typeof j.by_link==="object"){
+SZ_MAP=j.by_link;
+}else if(j&&Array.isArray(j.articles)){
+j.articles.forEach(function(a){if(a&&a.lien)SZ_MAP[a.lien]=a});
+}
+D.forEach(function(x){delete x._ur;delete x._spm;delete x._sb;delete x._t});
+return SZ_MAP;
+}).catch(function(){return {}});
+}
+
 function loadPromos(isAuto){
 return fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).then(function(j){
 var changed=!MAJ||MAJ!==j.maj;
@@ -652,6 +686,7 @@ BRN[bkey(x)]=brandOf(x);
 x._titleClean=cleanSearchStr((x.marque||"")+" "+(x.nom||""));
 x._allClean=cleanSearchStr((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||"")+" "+((x.cat||[]).join(" ")));
 });
+return loadSizePrices().then(function(){
 buildDup();
 FAV=ls("fav")||{};
 var snap=ls("snap");
@@ -678,6 +713,7 @@ renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favC
 if(changed||!isAuto)apply(true);
 updBell();
 if(!isAuto)restoreView();
+});
 });
 }
 
@@ -1026,7 +1062,7 @@ var tot=0,nw=0;
 D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
 h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
 });
-cur=null;
+cur=null;pickedSize="";
 $("shBody").innerHTML=h;
 $("shBody").scrollTop=0;
 $("sheet").className="open";
@@ -1034,12 +1070,28 @@ document.body.style.overflow="hidden";
 if(hs===0)pushO();
 }
 
+function renderPickedSizePrice(){
+var x=M[cur]||FAV[cur];
+var box=$("szPickBox");
+Array.prototype.forEach.call(document.querySelectorAll("#shBody .sz-item"),function(el){
+el.classList.toggle("on",el.getAttribute("data-sz")===pickedSize);
+});
+if(!box)return;
+if(!x||!pickedSize){box.style.display="none";box.innerHTML="";return}
+var spm=sizePriceMap(x);
+var pr=spm[pickedSize];
+var priceTxt=(typeof pr==="number"&&pr>0)?f(pr):priceRangeLabel(x);
+box.style.display="";
+box.innerHTML="Taille <b>"+esc(pickedSize)+"</b> · Prix site : <b>"+esc(priceTxt)+"</b>";
+}
+
 function openSheet(l){
 var x=M[l]||FAV[l];
 if(!x)return;
 cur=l;
+pickedSize="";
 var uSizes=uniqueRawSizes(x);
-var szHtml=uSizes.length?'<div class="lbl">Tailles disponibles</div><div class="sz-list">'+uSizes.map(function(t){return '<span class="sz-item">'+esc(t)+'</span>'}).join("")+'</div>':'';
+var szHtml=uSizes.length?'<div class="lbl">Tailles disponibles</div><div class="sz-list">'+uSizes.map(function(t){return '<button type="button" class="sz-item" data-sz="'+esc(t)+'">'+esc(t)+'</button>'}).join("")+'</div><div id="szPickBox" class="sz-pick-price" style="display:none"></div>':'';
 var alt="";
 if(M[l]&&x._alt){
 alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
@@ -1062,7 +1114,7 @@ im.src=big;
 function hideSheet(){
 $("sheet").className="";
 document.body.style.overflow="";
-cur=null;
+cur=null;pickedSize="";
 if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else syncFavs();
 }
