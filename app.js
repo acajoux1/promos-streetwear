@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,curSz=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var RE_OK=["Laced Run"];
 var CATS=[
@@ -402,7 +402,7 @@ SZ={}; buildSizes(); apply();
 var savedSz=ls("mySz");
 if(savedSz){ SZ[savedSz]=1; }
 
-var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.18);border:1px solid #4fb0bd;color:#d8f2f4;border-radius:6px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
+var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.14);border:1px solid rgba(79,176,189,.45);color:#d8f2f4;border-radius:8px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
 w.parentNode.insertBefore(gb,n);
 gb.addEventListener("click",function(e){
 if(e.target.closest("#goneGo")){
@@ -417,10 +417,17 @@ s.addEventListener("click",function(e){
 if(e.target.closest("#shFav")){
 toggleFavL(cur);
 var bt=$("shFav");
-if(bt){bt.textContent=FAV[cur]?"♥":"♡";bt.classList.add("pop");setTimeout(function(){bt.classList.remove("pop")},420)}
+if(bt){bt.textContent=FAV[cur]?"♥":"♡";bt.classList.add("pop");setTimeout(function(){bt.classList.remove("pop")},360)}
 return;
 }
 if(e.target.closest("#shShare")){shareCur();return}
+var szBtn=e.target.closest(".sz-pick-btn");
+if(szBtn){
+var chosen=szBtn.getAttribute("data-sz");
+curSz=(curSz===chosen)?null:chosen;
+refreshSheetSizeState();
+return;
+}
 var g=e.target.closest(".al-go");
 if(g){
 var A=ls("alerts")||[];
@@ -462,12 +469,14 @@ sb.addEventListener("touchend",function(){
 if(!on)return;
 on=false;
 if(dy>110){
-sb.style.transition="transform .2s ease";
+sb.style.transition="transform .24s ease, opacity .24s ease";
 sb.style.transform="translateY(100%)";
-setTimeout(function(){closeSheet();sb.style.transition="";sb.style.transform=""},200);
+sb.style.opacity="0";
+setTimeout(function(){closeSheet();sb.style.transition="";sb.style.transform="";sb.style.opacity=""},240);
 }else{
 sb.style.transition="";
 sb.style.transform="";
+sb.style.opacity="";
 }
 dy=0;
 });
@@ -836,18 +845,40 @@ var tot=0,nw=0;
 D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
 h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
 });
-cur=null;
+cur=null;curSz=null;
 $("shBody").innerHTML=h;
 $("shBody").scrollTop=0;
 $("sheet").className="open";
 document.body.style.overflow="hidden";
 if(hs===0)pushO();
 }
+function refreshSheetSizeState(){
+var x=M[cur]||FAV[cur];
+if(!x)return;
+Array.prototype.forEach.call(document.querySelectorAll(".sz-pick-btn"),function(b){
+var v=b.getAttribute("data-sz");
+b.className="sz-pick-btn"+(curSz===v?" on":"");
+});
+var note=$("szPriceNote");
+if(!note)return;
+if(!curSz){
+note.innerHTML='Prix relevé : <strong>'+f(x.prix)+'</strong> <span class="old">'+f(x.ancien_prix)+'</span> · Touchez une taille pour vérifier l’estimation de variante.';
+return;
+}
+var baseNote='Taille sélectionnée : <strong>'+esc(curSz)+'</strong> · Prix relevé : <strong>'+f(x.prix)+'</strong>';
+if(x.pmin&&x.pmin<x.prix-0.5){
+baseNote+=' (déjà vu à '+f(x.pmin)+' selon variante).';
+}else{
+baseNote+=' (le prix exact par taille est confirmé sur la fiche du site).';
+}
+note.innerHTML=baseNote;
+}
 function openSheet(l){
 var x=M[l]||FAV[l];
 if(!x)return;
 cur=l;
-var tl=(x.tailles||[]).map(function(t){return '<span class="pill">'+esc(t)+'</span>'}).join("");
+curSz=(x.tailles&&x.tailles.length===1)?x.tailles[0]:null;
+var tl=(x.tailles||[]).map(function(t){return '<button type="button" class="sz-pick-btn'+(curSz===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+'</button>'}).join("");
 var alt="";
 if(M[l]&&x._alt){
 alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
@@ -858,7 +889,8 @@ if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirme
 if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
 var small=thumb(x.image),big=thumb(x.image,700);
 var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="lbl">Tailles disponibles</div><div class="pills">'+tl+'</div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="sz-pick-wrap"><div class="lbl">Choisir une taille</div><div class="pills">'+tl+'</div><div class="sz-price-note" id="szPriceNote"></div></div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+refreshSheetSizeState();
 $("shBody").scrollTop=0;
 $("sheet").className="open";
 document.body.style.overflow="hidden";
@@ -873,7 +905,7 @@ im.src=big;
 function hideSheet(){
 $("sheet").className="";
 document.body.style.overflow="";
-cur=null;
+cur=null;curSz=null;
 if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else syncFavs();
 }
@@ -901,7 +933,7 @@ else{
 btn.className="fav"+(FAV[l]?" on":"");
 btn.textContent=FAV[l]?"♥":"♡";
 btn.classList.add("pop");
-setTimeout(function(){btn.classList.remove("pop")},420);
+setTimeout(function(){btn.classList.remove("pop")},360);
 }
 return;
 }
@@ -917,7 +949,7 @@ setTimeout(function(){
 c.classList.remove("pick");
 picking=false;
 openSheet(id);
-},110);
+},40);
 }
 });
 window.addEventListener("scroll",function(){
