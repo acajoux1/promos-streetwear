@@ -1,0 +1,135 @@
+import json
+import os
+import tempfile
+import unittest
+from unittest.mock import patch
+
+from size_prices import (
+    collect_article_prices,
+    deduplicate_entries,
+    extract_from_html_page,
+    extract_from_shopify_js,
+    extract_variant_id,
+    norm_size_key,
+    parse_price,
+    run_size_prices,
+)
+
+
+class TestGeneralSizePrices(unittest.TestCase):
+    def test_parse_price_formats(self):
+        self.assertEqual(parse_price("299,00 €"), 299.0)
+        self.assertEqual(parse_price("1 989,00 €"), 1989.0)
+        self.assertEqual(parse_price("59.5"), 59.5)
+        self.assertEqual(parse_price(29900), 299.0)
+        self.assertIsNone(parse_price(None))
+        self.assertIsNone(parse_price(0))
+        self.assertIsNone(parse_price("abc"))
+
+    def test_norm_size_key_and_deduplication(self):
+        self.assertEqual(norm_size_key("42 EU"), "42")
+        self.assertEqual(norm_size_key("40.5"), "40.5")
+        self.assertEqual(norm_size_key("medium"), "M")
+        self.assertEqual(norm_size_key("UK 8.5"), "UK 8.5")
+
+        entries = [
+            {"taille": "42", "variant_id": "1", "prix": 250.0, "ancien_prix": 300.0, "disponible": True},
+            {"taille": "42", "variant_id": "2", "prix": 199.0, "ancien_prix": 300.0, "disponible": True},
+            {"taille": "43", "variant_id": "3", "prix": 220.0, "ancien_prix": None, "disponible": False},
+        ]
+        deduped = deduplicate_entries(entries)
+        by_sz = {e["taille"]: e for e in deduped}
+        self.assertEqual(len(deduped), 2)
+        self.assertEqual(by_sz["42"]["prix"], 199.0)
+
+    def test_extract_variant_id_and_html_price(self):
+        url = "https://dimension-stores.com/products/fb9927-200?variant=53467188199752"
+        self.assertEqual(extract_variant_id(url), "53467188199752")
+
+        html = (
+            '<meta property="product:price:amount" content="249.00">'
+            '<script>{"id": 53467188199752, "price": "249.00"}</script>'
+        )
+        info = extract_from_html_page(html, target_variant_id="53467188199752")
+        self.assertEqual(info["page_price"], 249.0)
+        self.assertEqual(info["variant_prices"].get("53467188199752"), 249.0)
+
+    def test_extract_from_shopify_js(self):
+        payload = {
+            "variants": [
+                {"id": 101, "title": "41 EU", "price": "189.00", "compare_at_price": "220.00", "available": True},
+                {"id": 102, "title": "42 EU", "price": "219.00", "compare_at_price": "220.00", "available": False},
+            ]
+        }
+        res = extract_from_shopify_js(payload)
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0]["taille"], "41")
+        self.assertEqual(res[0]["prix"], 189.0)
+        self.assertFalse(res[1]["disponible"])
+
+    def test_collect_article_prices_with_mocks(self):
+        item = {
+            "lien": "https://dimension-stores.com/products/fb9927-200?variant=53467188199752",
+            "nom": "Air Jordan 4 Retro SE Craft Olive",
+            "marque": "Jordan",
+            "boutique": "Dimension Stores",
+            "prix": 299.0,
+            "tailles": ["41", "42"],
+        }
+        fake_js = {
+            "variants": [
+                {"id": 53467188199751, "title": "41", "price": "230.00", "available": True},
+                {"id": 53467188199752, "title": "42", "price": "299.00", "available": True},
+            ]
+        }
+        fake_html = '<script>{"id": 53467188199752, "price": "259.00"}</script>'
+
+        with patch("size_prices.fetch_json", return_value=fake_js), patch(
+            "size_prices.fetch_text", return_value=fake_html
+        ):
+            rec = collect_article_prices(item, fetch_remote_shopify=True, delay=0)
+
+        self.assertEqual(rec["variant_cible"], "53467188199752")
+        self.assertEqual(rec["prix_min"], 230.0)
+        self.assertEqual(rec["prix_max"], 259.0)
+        self.assertEqual(rec["prix_par_taille"]["41"], 230.0)
+        self.assertEqual(rec["prix_par_taille"]["42"], 259.0)
+
+    def test_run_size_prices_end_to_end(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            in_path = os.path.join(tmpdir, "promos.json")
+            out_path = os.path.join(tmpdir, "prix_tailles.json")
+
+            sample = {
+                "maj": "2026-11-19T23:00:00+04:00",
+                "items": [
+                    {
+                        "lien": "https://shop-a.test/products/item-1",
+                        "prix": 99.0,
+                        "tailles": ["S", "M"],
+                    },
+                    {
+                        "lien": "https://shop-b.test/item-2",
+                        "prix": 149.0,
+                        "prix_par_taille": {"L": 149.0, "XL": 169.0},
+                    },
+                ],
+            }
+            with open(in_path, "w", encoding="utf-8") as f:
+                json.dump(sample, f)
+
+            result = run_size_prices(
+                input_path=in_path,
+                output_path=out_path,
+                fetch_remote_shopify=False,
+                delay=0,
+            )
+
+            self.assertTrue(os.path.exists(out_path))
+            self.assertEqual(result["total"], 2)
+            self.assertIn("https://shop-a.test/products/item-1", result["by_link"])
+            self.assertEqual(result["by_link"]["https://shop-b.test/item-2"]["prix_max"], 169.0)
+
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)
