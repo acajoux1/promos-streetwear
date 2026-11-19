@@ -1,5 +1,6 @@
 var PER=48,D=[],M={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,onlyPepite=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,curSz=null,io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
+var PROF_KIND="chau",PROF_Q="";
 var RE_OK=["Laced Run"];
 var CATS=[
   ["all","Tout","⚡"],
@@ -12,6 +13,7 @@ var CATS=[
 var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
 var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
+var SHOE_PRESETS=["38","39","40","40.5","41","42","42.5","43","44","44.5","45","46"];
 var LM={"xxs":"XXS","x-small":"XS","xs":"XS","extra small":"XS","small":"S","s":"S","medium":"M","m":"M","large":"L","l":"L","x-large":"XL","xl":"XL","extra large":"XL","xx-large":"XXL","xxl":"XXL","2xl":"XXL","xxx-large":"XXXL","xxxl":"XXXL","3xl":"XXXL"};
 var SUB=/\b(boxers?|briefs?|thongs?|tanga|culottes?|caleçons?|calecons?|underwear|undies|lingerie|bras?|bralettes?|soutien[\s-]?gorges?|sous[\s-]?v[eê]tements?|panties)\b/;
 var TEE=/\b(t[\s-]?shirts?|tees?|tshirts?)\b/;
@@ -322,6 +324,7 @@ function togglePanel(){
 $("drawer").className="open";
 document.body.style.overflow="hidden";
 $("panel").scrollTop=0;
+renderProfileSection();
 updBtn();
 if(hs===0)pushO();
 }
@@ -374,33 +377,114 @@ el.innerHTML="";
 }
 }
 
+function renderProfileSection(){
+var sec=$("profSec");
+if(!sec)return;
+var saved=ls("myProf")||{chau:"",vet:""};
+var q=(PROF_Q||"").toLowerCase().trim();
+var list=(PROF_KIND==="chau"?SHOE_PRESETS:LET).filter(function(item){
+return !q||item.toLowerCase().indexOf(q)>=0;
+});
+var activeVal=saved[PROF_KIND]||"";
+var activeSummary=[];
+if(saved.chau)activeSummary.push("Pointure "+saved.chau);
+if(saved.vet)activeSummary.push("Taille "+saved.vet);
+
+sec.innerHTML='<summary><span>👤 Mon profil tailles'+(activeSummary.length?' <i class="bdg">'+esc(activeSummary.join(" · "))+'</i>':'')+'</span></summary>'+
+'<div class="sec-body">'+
+'<div class="prof-sub-tabs">'+
+'<button type="button" class="chip'+(PROF_KIND==="chau"?" on":"")+'" data-pkind="chau">👟 Pointures</button>'+
+'<button type="button" class="chip'+(PROF_KIND==="vet"?" on":"")+'" data-pkind="vet">🧥 Tailles</button>'+
+'</div>'+
+'<input id="profSearch" placeholder="'+(PROF_KIND==="chau"?"Rechercher une pointure (ex: 42, 42.5)…":"Rechercher une taille (ex: M, L, XL)…")+'" value="'+esc(PROF_Q||"")+'">'+
+'<div class="prof-presets">'+
+list.map(function(v){
+return '<button type="button" class="chip'+(activeVal===v?" on":"")+'" data-pval="'+esc(v)+'">'+esc(v)+'</button>';
+}).join("")+
+'</div>'+
+'<input id="profSz" placeholder="'+(PROF_KIND==="chau"?"Pointure personnalisée (ex: 42.5)":"Taille personnalisée (ex: XL)")+'" value="'+esc(activeVal)+'">'+
+'<div class="prow">'+
+'<button type="button" class="chip" id="saveProf">Enregistrer</button>'+
+'<button type="button" class="chip" id="clearProf">Effacer '+(PROF_KIND==="chau"?"pointure":"taille")+'</button>'+
+'</div>'+
+'</div>';
+}
+
 (function(){
 var b=document.createElement("div");b.id="brands";
 var sz=$("szLet");sz.parentNode.insertBefore(b,sz);
-var drop=document.createElement("button");drop.className="chip";drop.id="cDrop";drop.textContent="↓ Baisses récentes";drop.onclick=toggleDrop;
-var nb=$("cNew");nb.parentNode.insertBefore(drop,nb);
 var w=document.createElement("div");w.id="warn";w.style.display="none";
 var n=$("n");n.parentNode.insertBefore(w,n);
 
 var profSec=document.createElement("details");
 profSec.className="sec";
-profSec.innerHTML='<summary><span>👤 Mon profil tailles (Sauvegarde)</span></summary><div class="sec-body"><div class="lbl">Pointure sneakers / Chaussures</div><input id="profSz" placeholder="Ex: 42 ou 42.5" style="margin-bottom:8px"><div class="prow"><button class="chip" id="saveProf">Enregistrer ma taille</button><button class="chip" id="clearProf">Effacer</button></div></div>';
+profSec.id="profSec";
 var drawerPanel=$("panel");
 drawerPanel.insertBefore(profSec,drawerPanel.firstChild);
+renderProfileSection();
 
-drawerPanel.addEventListener("click",function(e){
-if(e.target.closest("#saveProf")){
-var valS=$("profSz").value.trim();
-if(valS){ SZ[valS]=1; ls("mySz",valS); buildSizes(); apply(); hidePanel(); }
-}
-if(e.target.closest("#clearProf")){
-$("profSz").value="";
-ls("mySz","");
-SZ={}; buildSizes(); apply();
+drawerPanel.addEventListener("input",function(e){
+if(e.target.id==="profSearch"){
+PROF_Q=e.target.value;
+renderProfileSection();
 }
 });
-var savedSz=ls("mySz");
-if(savedSz){ SZ[savedSz]=1; }
+
+drawerPanel.addEventListener("click",function(e){
+var pk=e.target.closest("[data-pkind]");
+if(pk){
+PROF_KIND=pk.getAttribute("data-pkind");
+PROF_Q="";
+renderProfileSection();
+return;
+}
+var pv=e.target.closest("[data-pval]");
+if(pv){
+var valP=pv.getAttribute("data-pval");
+var prof=ls("myProf")||{chau:"",vet:""};
+prof[PROF_KIND]=valP;
+ls("myProf",prof);
+var normP=norm(valP)||valP;
+SZ={};SZ[normP]=1;
+if(PROF_KIND==="chau")CAT="chau";
+else if(CAT==="chau")CAT="vet";
+buildSizes();renderCats();renderProfileSection();apply();
+return;
+}
+if(e.target.closest("#saveProf")){
+var inp=$("profSz");
+var valS=inp?inp.value.trim():"";
+var prof=ls("myProf")||{chau:"",vet:""};
+prof[PROF_KIND]=valS;
+ls("myProf",prof);
+SZ={};
+if(valS){
+var normS=norm(valS)||valS;
+SZ[normS]=1;
+}
+buildSizes();renderProfileSection();apply();
+return;
+}
+if(e.target.closest("#clearProf")){
+var prof=ls("myProf")||{chau:"",vet:""};
+var prevVal=prof[PROF_KIND];
+prof[PROF_KIND]="";
+ls("myProf",prof);
+if(prevVal){
+delete SZ[prevVal];
+var np=norm(prevVal);
+if(np)delete SZ[np];
+}
+PROF_Q="";
+buildSizes();renderProfileSection();apply();
+}
+});
+
+var savedProf=ls("myProf");
+if(savedProf){
+if(savedProf.chau){var nc=norm(savedProf.chau)||savedProf.chau;SZ[nc]=1}
+if(savedProf.vet){var nv=norm(savedProf.vet)||savedProf.vet;SZ[nv]=1}
+}
 
 var gb=document.createElement("div");gb.id="goneBar";gb.style.display="none";gb.style.cssText="background:rgba(79,176,189,.14);border:1px solid rgba(79,176,189,.45);color:#d8f2f4;border-radius:8px;padding:8px 10px;font-size:12px;margin:0 0 8px;line-height:1.5;display:flex;align-items:center;justify-content:space-between;gap:8px";
 w.parentNode.insertBefore(gb,n);
@@ -417,7 +501,7 @@ s.addEventListener("click",function(e){
 if(e.target.closest("#shFav")){
 toggleFavL(cur);
 var bt=$("shFav");
-if(bt){bt.textContent=FAV[cur]?"♥":"♡";bt.classList.add("pop");setTimeout(function(){bt.classList.remove("pop")},360)}
+if(bt){bt.textContent=FAV[cur]?"♥":"♡";bt.classList.add("pop");setTimeout(function(){bt.classList.remove("pop")},380)}
 return;
 }
 if(e.target.closest("#shShare")){shareCur();return}
@@ -469,10 +553,10 @@ sb.addEventListener("touchend",function(){
 if(!on)return;
 on=false;
 if(dy>110){
-sb.style.transition="transform .24s ease, opacity .24s ease";
+sb.style.transition="transform .28s ease, opacity .28s ease";
 sb.style.transform="translateY(100%)";
 sb.style.opacity="0";
-setTimeout(function(){closeSheet();sb.style.transition="";sb.style.transform="";sb.style.opacity=""},240);
+setTimeout(function(){closeSheet();sb.style.transition="";sb.style.transform="";sb.style.opacity=""},280);
 }else{
 sb.style.transition="";
 sb.style.transform="";
@@ -544,7 +628,7 @@ if(!hasNew)$("cNew").style.display="none";
 showWarn(j);
 updGoneBanner();
 loadPrefs();
-renderGens();renderCats();buildSizes();buildBrands();favCount();apply(true);
+renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply(true);
 updBell();
 restoreView();
 }).catch(function(){$("g").innerHTML="";$("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions."});
@@ -560,9 +644,9 @@ function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";PROF_Q="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
 syncChips();
-renderGens();renderCats();buildSizes();buildBrands();favCount();
+renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
 dirty=true;dirtyF=true;
 updBtn();savePrefs();compute();updRes();
@@ -686,7 +770,7 @@ SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
 BR={};(F.br||[]).forEach(function(b){BR[b]=1});
 onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
 syncChips();
-renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
+renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
 }
 function compute(){
 var F=curF();
@@ -862,14 +946,14 @@ b.className="sz-pick-btn"+(curSz===v?" on":"");
 var note=$("szPriceNote");
 if(!note)return;
 if(!curSz){
-note.innerHTML='Prix relevé : <strong>'+f(x.prix)+'</strong> <span class="old">'+f(x.ancien_prix)+'</span> · Touchez une taille pour vérifier l’estimation de variante.';
+note.innerHTML='Prix relevé : <strong>'+f(x.prix)+'</strong> <span class="old">'+f(x.ancien_prix)+'</span> · Faites défiler les tailles et touchez-en une.';
 return;
 }
-var baseNote='Taille sélectionnée : <strong>'+esc(curSz)+'</strong> · Prix relevé : <strong>'+f(x.prix)+'</strong>';
+var baseNote='Taille <strong>'+esc(curSz)+'</strong> · Prix relevé : <strong>'+f(x.prix)+'</strong>';
 if(x.pmin&&x.pmin<x.prix-0.5){
 baseNote+=' (déjà vu à '+f(x.pmin)+' selon variante).';
 }else{
-baseNote+=' (le prix exact par taille est confirmé sur la fiche du site).';
+baseNote+=' (vérifiez le prix exact de cette taille sur la boutique).';
 }
 note.innerHTML=baseNote;
 }
@@ -889,7 +973,7 @@ if(x.inf)hist+='<div class="s" style="color:#f0a8bc">⚠ Prix barré à confirme
 if(x.pmin&&x.pmin<x.prix-0.5)hist+='<div class="s">Déjà vu à '+f(x.pmin)+' lors d’un relevé précédent (taille différente possible).</div>';
 var small=thumb(x.image),big=thumb(x.image,700);
 var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="sz-pick-wrap"><div class="lbl">Choisir une taille</div><div class="pills">'+tl+'</div><div class="sz-price-note" id="szPriceNote"></div></div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+f(x.prix)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+hist+(tl?'<div class="sz-pick-wrap"><div class="lbl" style="margin-top:0">Tailles disponibles ('+(x.tailles||[]).length+')</div><div class="sz-scroll">'+tl+'</div><div class="sz-price-note" id="szPriceNote"></div></div>':'')+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
 refreshSheetSizeState();
 $("shBody").scrollTop=0;
 $("sheet").className="open";
@@ -933,7 +1017,7 @@ else{
 btn.className="fav"+(FAV[l]?" on":"");
 btn.textContent=FAV[l]?"♥":"♡";
 btn.classList.add("pop");
-setTimeout(function(){btn.classList.remove("pop")},360);
+setTimeout(function(){btn.classList.remove("pop")},380);
 }
 return;
 }
@@ -949,7 +1033,7 @@ setTimeout(function(){
 c.classList.remove("pick");
 picking=false;
 openSheet(id);
-},40);
+},140);
 }
 });
 window.addEventListener("scroll",function(){
