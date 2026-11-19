@@ -16,7 +16,7 @@ var LM={"xxs":"XXS","x-small":"XS","xs":"XS","extra small":"XS","small":"S","s":
 var SUB=/\b(boxers?|briefs?|thongs?|tanga|culottes?|caleçons?|calecons?|underwear|undies|lingerie|bras?|bralettes?|soutien[\s-]?gorges?|sous[\s-]?v[eê]tements?|panties)\b/;
 var TEE=/\b(t[\s-]?shirts?|tees?|tshirts?)\b/;
 var ACC=/\b(bags?|backpack|sacs?|tote|caps?|hats?|beanie|bonnet|casquette|bob|scarf|echarpe|écharpe|gloves?|gants?|socks?|chaussettes?|belt|ceinture|wallet|portefeuille|keyring|sunglasses|lunettes|watch|montre|bottle|towel|serviette|hip ?bag|pouch|trousse|lanyard|laces|lacets|cardholder|headband|bandana)\b/;
-var SHOE=/\b(sneakers?|shoes?|boots?|sandals?|sandales?|slides?|clogs?|loafers?|trainers?|mules?|chaussures?|baskets?|footwear|air (max|force|jordan|liquid|rift|zoom|presto|vapormax)|jordan \d+|dunk|samba|gazelle|campus|superstar|stan smith|yeezy|ultraboost|chuck|old skool|sk8|authentic|slip[\s-]?on|runner|cortez|vomero|pegasus|clifton|bondi|speedcross|xt[\s-]?6|gel[\s-]\w+|boston|arizona|birki|new balance \d)\b/;
+var SHOE=/\b(sneakers?|shoes?|boots?|sandals?|sandales?|slides?|clogs?|loafers?|trainers?|mules?|chaussures?|baskets?|footwear|air (max|force|jordan|liquid|rift|zoom|presto|vapormax)|jordan \d+|dunk|samba|gazelle|campus|superstar|stan smith|yeezy|ultraboost|chuck|old skool|sk8|authentic|slip[\s-]?on|runner|cortez|vomero|pegasus|clifton|bondi|speedcross|xt[\s]?6|gel[\s-]\w+|boston|arizona|birki|new balance \d)\b/;
 var APP=/\b(hoodies?|hoody|sweats?|sweatshirts?|jackets?|vestes?|pants?|pantalons?|shorts?|jeans?|joggers?|cargos?|coats?|manteaux?|parkas?|fleeces?|shirts?|chemises?|polos?|dress|robes?|skirts?|jupes?|leggings?|tights|tops?|jumpers?|knits?|pulls?|cardigans?|vests?|gilets?|bombers?|windbreakers?|anoraks?|tracksuits?|crewnecks?|pullovers?|trousers?|denim|overshirts?|shackets?|swim|maillot|bodysuit|jersey|sweatpants?|chinos?|overalls?|dungarees?)\b/;
 var SHOEB=/\b(birkenstock|crocs|vans|converse|hoka|salomon|asics|saucony|mizuno|dr\.? martens|clarks)\b/;
 function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k))}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
@@ -296,6 +296,12 @@ var top=el.getBoundingClientRect().top+window.scrollY-$("bar").offsetHeight-6;
 if(top<0)top=0;
 if(force||window.scrollY>top)window.scrollTo(0,top);
 }
+function scrollToTopResults(){
+try{localStorage.removeItem("view")}catch(e){}
+var el=$("bar");
+var target=el?Math.max(0,el.offsetTop-4):0;
+window.scrollTo({top:target,behavior:"instant"});
+}
 function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
 function pushO(){try{history.pushState({o:1},"");hs=1}catch(e){}}
@@ -319,15 +325,18 @@ $("panel").scrollTop=0;
 updBtn();
 if(hs===0)pushO();
 }
-function hidePanel(){
+function hidePanel(forceTop){
 $("drawer").className="";
 document.body.style.overflow="";
 updBtn();
 if(dirty){
-var fz=dirtyF;
+var fz=dirtyF||!!forceTop;
 dirty=false;dirtyF=false;
 render();
-keepView(fz);
+if(forceTop)scrollToTopResults();
+else keepView(fz);
+}else if(forceTop){
+scrollToTopResults();
 }
 }
 function closePanel(){
@@ -533,7 +542,7 @@ restoreView();
 
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
 function onSearch(){clearTimeout(tm);tm=setTimeout(function(){apply(true)},120)}
-function apply(soft){updBtn();savePrefs();draw(soft)}
+function apply(soft,forceTop){updBtn();savePrefs();draw(soft,forceTop)}
 function toggleFav2(){onlyFav=!onlyFav;favCount();apply()}
 function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
 function toggleDrop(){onlyDrop=!onlyDrop;syncChips();apply()}
@@ -544,7 +553,16 @@ $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
 SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
 syncChips();
-renderGens();renderCats();buildSizes();buildBrands();favCount();apply();
+renderGens();renderCats();buildSizes();buildBrands();favCount();
+if(drawerOpen()){
+dirty=true;dirtyF=true;
+updBtn();savePrefs();compute();updRes();
+hidePanel(true);
+popO();
+}else{
+apply(true,true);
+scrollToTopResults();
+}
 }
 $("quickNav").addEventListener("click",function(e){
 var g=e.target.closest(".qgen");
@@ -691,7 +709,7 @@ function updRes(){
 var sr=$("showRes");
 if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
 }
-function draw(soft){
+function draw(soft,forceTop){
 compute();
 updRes();
 if(drawerOpen()){
@@ -700,7 +718,8 @@ if(!soft)dirtyF=true;
 return;
 }
 render();
-keepView(!soft);
+if(forceTop)scrollToTopResults();
+else keepView(!soft);
 }
 function cardHtml(x,i){
 var fv=FAV[x.lien];
