@@ -144,12 +144,48 @@ if(!seen[key]){seen[key]=1;out.push(valNorm)}
 x._ur=out;
 return out;
 }
+
+function shoePriceBounds(x){
+if(x._sb)return x._sb;
+var nums=[];
+function pushNum(v){
+var n=Number(v);
+if(!isNaN(n)&&n>0)nums.push(n);
+}
+pushNum(x.prix);
+pushNum(x.pmin);
+pushNum(x.pmax);
+pushNum(x.prix_min);
+pushNum(x.prix_max);
+if(Array.isArray(x.prix_tailles)){
+x.prix_tailles.forEach(function(v){
+if(typeof v==="number")pushNum(v);
+else if(v&&typeof v==="object")pushNum(v.prix||v.price);
+});
+}
+if(x.prix_par_taille&&typeof x.prix_par_taille==="object"){
+Object.keys(x.prix_par_taille).forEach(function(k){pushNum(x.prix_par_taille[k])});
+}
+if(Array.isArray(x.variantes)){
+x.variantes.forEach(function(v){if(v&&typeof v==="object")pushNum(v.prix||v.price)});
+}
+var min=nums.length?Math.min.apply(null,nums):Number(x.prix||0);
+var max=nums.length?Math.max.apply(null,nums):Number(x.prix||0);
+x._sb={min:min,max:max};
+return x._sb;
+}
+
 function priceRangeLabel(x){
-if(catOf(x)==="chau"&&x.pmin&&x.pmin>0&&x.pmin<x.prix-0.01){
-return f(x.pmin)+" – "+f(x.prix);
+if(catOf(x)==="chau"){
+var b=shoePriceBounds(x);
+if(b.max>b.min+0.01){
+return f(b.min)+" – "+f(b.max);
+}
+return f(b.min);
 }
 return f(x.prix);
 }
+
 function val(t){var n=parseFloat(t.replace(/^[A-Z]+\s*/,""));if(t.indexOf("1/3")>=0)n+=.33;if(t.indexOf("2/3")>=0)n+=.67;return n}
 function fill(id,label,arr){
 var el=$(id);
@@ -760,7 +796,6 @@ renderBrandList();
 }
 });
 
-// Recherche intelligente : score de précision sur les termes normalisés
 function searchScore(x,rawQ){
 var cq=cleanSearchStr(rawQ);
 if(!cq)return 1;
@@ -792,7 +827,10 @@ if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
 if(!genOkG(x,F.gen))return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
-if(F.pm!=null&&x.prix>F.pm)return false;
+if(F.pm!=null){
+var minP=(catOf(x)==="chau")?shoePriceBounds(x).min:x.prix;
+if(minP>F.pm)return false;
+}
 if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
 if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
 if(F.sz.length){
@@ -838,8 +876,16 @@ if(tri==="pepite"){
 return (c.remise*1.5-(c.prix/10))-(a.remise*1.5-(a.prix/10));
 }
 if(onlyTop)return c.remise-a.remise;
-if(tri==="prix")return a.prix-c.prix;
-if(tri==="prixd")return c.prix-a.prix;
+if(tri==="prix"){
+var pa=(catOf(a)==="chau")?shoePriceBounds(a).min:a.prix;
+var pc=(catOf(c)==="chau")?shoePriceBounds(c).min:c.prix;
+return pa-pc;
+}
+if(tri==="prixd"){
+var pa2=(catOf(a)==="chau")?shoePriceBounds(a).max:a.prix;
+var pc2=(catOf(c)==="chau")?shoePriceBounds(c).max:c.prix;
+return pc2-pa2;
+}
 return c.remise-a.remise;
 });
 if(onlyTop)L=L.slice(0,30);
