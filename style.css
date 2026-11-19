@@ -46,7 +46,7 @@ input:focus,select:focus{outline:none;border-color:var(--teal)}
 .fbtn{flex:0 0 auto;padding:0 13px;height:42px;border-radius:8px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:background .2s ease,border-color .2s ease,opacity .2s ease}
 .fbtn.on{background:var(--acc);border-color:var(--teal);color:#fff}
 
-.quick-nav{display:flex;gap:6px;overflow-x:auto;padding:8px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;align-items:center;scroll-snap-type:x proximity}
+.quick-nav{display:flex;gap:6px;overflow-x:auto;padding:7px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch;align-items:center;scroll-snap-type:x proximity}
 .quick-nav::-webkit-scrollbar{display:none}
 .quick-nav .chip{scroll-snap-align:start}
 .qsep{width:1px;height:16px;background:var(--line);flex:0 0 auto;margin:0 2px}
@@ -151,14 +151,8 @@ details.sec[open]>summary::after{content:"–"}
 .big{font-size:22px}
 .pct2{background:rgba(255,92,147,.16);border:1px solid rgba(255,92,147,.5);color:#ff9ac0;font-size:12px;font-weight:800;padding:3px 8px;border-radius:6px;margin-left:8px;vertical-align:middle}
 
-.sz-table-wrap{margin-top:12px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:rgba(255,255,255,.02)}
-.sz-table{width:100%;border-collapse:collapse;font-size:12px}
-.sz-table th,.sz-table td{padding:8px 10px;text-align:left;border-bottom:1px solid rgba(255,255,255,.06)}
-.sz-table th{color:var(--gold);font-size:11px;text-transform:uppercase;letter-spacing:.5px;background:rgba(255,255,255,.03)}
-.sz-table tr:last-child td{border-bottom:none}
-
-.bot-box{border:1px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;background:rgba(255,255,255,.025)}
-.bot-reply{margin-top:10px;padding:10px 12px;border-radius:8px;border:1px solid rgba(79,224,214,.35);background:rgba(79,224,214,.08);font-size:12px;line-height:1.5}
+.sz-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.sz-item{border:1px solid var(--line);border-radius:7px;padding:6px 10px;font-size:12px;font-weight:700;background:var(--ctl);color:var(--text)}
 
 .altl{display:flex;justify-content:space-between;padding:10px 12px;border:1.5px solid var(--line);border-radius:8px;margin-top:6px;color:var(--text);text-decoration:none;background:var(--ctl)}
 .alrt{border:1.5px solid var(--line);border-radius:10px;padding:12px;margin-top:10px;background:var(--ctl);clear:both}
