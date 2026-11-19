@@ -1,5 +1,7 @@
-var V="promos-v18";
-var SHELL=["./","index.html","app.js","style.css","manifest.json","data/promos.json","data/prix_tailles.json"];
+var V="promos-v19";
+// Ne pas précacher les gros JSON : l’installation du service worker ne doit pas
+// échouer lorsque les données produits dépassent le quota de cache disponible.
+var SHELL=["./","index.html","app.js","style.css","manifest.json"];
 
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(V).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
@@ -17,28 +19,33 @@ self.addEventListener("fetch",function(e){
   var u=new URL(r.url);
   if(u.origin!==location.origin)return;
 
-  if(/promos\.json|prix_tailles\.json/.test(u.pathname)){
+  // Les JSON sont toujours demandés au réseau en premier. En cas d'échec,
+  // utiliser la dernière copie effectivement mise en cache.
+  if(/(?:promos|prix_tailles)\.json$/.test(u.pathname)){
     e.respondWith(
       Promise.race([
-        fetch(r),
-        new Promise(function(_,reject){setTimeout(function(){reject(new Error("timeout"));},4000);})
+        fetch(r,{cache:"no-store"}),
+        new Promise(function(_,reject){setTimeout(function(){reject(new Error("timeout"));},10000);})
       ]).then(function(res){
+        if(!res.ok)throw new Error("HTTP "+res.status);
         var copy=res.clone();
-        caches.open(V).then(function(c){c.put(r,copy);});
+        caches.open(V).then(function(c){c.put(u.pathname,copy);});
         return res;
       }).catch(function(){
-        return caches.match(r,{ignoreSearch:true});
+        return caches.match(u.pathname).then(function(hit){
+          return hit||new Response("Données hors ligne indisponibles",{
+            status:503,headers:{"Content-Type":"text/plain; charset=utf-8"}
+          });
+        });
       })
     );
     return;
   }
 
-  e.respondWith(caches.match(r,{ignoreSearch:true}).then(function(hit){
-    var network=fetch(r,{cache:"no-cache"}).then(function(res){
-      var copy=res.clone();
-      caches.open(V).then(function(c){c.put(r,copy);});
-      return res;
-    }).catch(function(){return hit;});
-    return hit||network;
-  }));
+  // Réseau d'abord pour les fichiers de l'application afin qu'une mise à jour
+  // soit visible dès que GitHub Pages sert la nouvelle version.
+  e.respondWith(fetch(r,{cache:"no-cache"}).then(function(res){
+    if(res.ok){var copy=res.clone();caches.open(V).then(function(c){c.put(r,copy);});}
+    return res;
+  }).catch(function(){return caches.match(r,{ignoreSearch:true});}));
 });
