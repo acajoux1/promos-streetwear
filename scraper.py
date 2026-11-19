@@ -31,7 +31,16 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
                 continue
             tags = [t for t in p.get("tags", []) if t.startswith(("cat_", "gender:"))]
             tags.append(p.get("product_type", ""))
-            items.append({
+            pt = {}
+            for v in dispo:
+                k = v.get("option1")
+                if not k:
+                    continue
+                vp = float(v["price"])
+                vc = float(v["compare_at_price"]) if v.get("compare_at_price") else 0
+                if k not in pt or vp < pt[k][0]:
+                    pt[k] = [vp, vc]
+            it = {
                 "boutique": boutique,
                 "marque": p["vendor"],
                 "nom": p["title"],
@@ -42,7 +51,10 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
                 "image": p["images"][0]["src"] if p["images"] else "",
                 "lien": prod_base + p["handle"],
                 "cat": tags,
-            })
+            }
+            if len(set(a for a, b in pt.values())) > 1:
+                it["pt"] = pt
+            items.append(it)
         time.sleep(0.5)
     return items
 
