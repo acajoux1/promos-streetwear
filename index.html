@@ -169,8 +169,7 @@
 <div id="bar">
 <div class="row">
 <button class="fbtn" id="fBtn" onclick="togglePanel()" aria-label="Menu">☰</button>
-<input id="q" placeholder="Rechercher marque, modèle, boutique…" oninput="onSearch()">
-<button class="fbtn" id="cBot" onclick="openBot()" aria-label="Bot">🤖</button>
+<input id="q" placeholder="Recherche précise : modèle, marque, coloris…" oninput="onSearch()">
 <button class="fbtn" id="cBell" onclick="openAlerts()" aria-label="Alertes">🔔</button>
 <button class="fbtn" id="cFav" onclick="toggleFav2()">♥ 0</button>
 </div>
@@ -242,11 +241,10 @@
 </div>
 </details>
 <details class="sec">
-<summary><span>Bot &amp; alertes</span></summary>
+<summary><span>Alertes</span></summary>
 <div class="sec-body">
 <div class="prow">
-<button class="chip" onclick="openBotFromPanel()">🤖 Ouvrir le Bot</button>
-<button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer</button>
+<button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer cette recherche</button>
 <button class="chip" onclick="openAlertsFromPanel()">Mes alertes</button>
 </div>
 </div>
