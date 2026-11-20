@@ -1,35 +1,16 @@
-import hashlib, json, os, re, time, datetime, urllib.error, urllib.request
+import json, os, re, time, datetime, urllib.error, urllib.request
 
 H = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
     "Accept-Language": "fr-FR,fr;q=0.9",
 }
 
-CACHE = os.environ.get("PROMOS_CACHE")
-
-
-def cache_path(url):
-    return os.path.join(CACHE, hashlib.sha1(url.encode("utf-8")).hexdigest() + ".txt")
-
-
 def fetch(url, essais=4):
-    if CACHE:
-        # Mode rejeu : les pages déjà téléchargées sont relues localement.
-        chemin = cache_path(url)
-        if not os.path.exists(chemin):
-            raise FileNotFoundError(url)
-        with open(chemin, encoding="utf-8") as fichier:
-            return fichier.read()
     derniere = None
     for i in range(essais):
         try:
             req = urllib.request.Request(url, headers=H)
-            texte = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "ignore")
-            if CACHE:
-                os.makedirs(CACHE, exist_ok=True)
-                with open(cache_path(url), "w", encoding="utf-8") as fichier:
-                    fichier.write(texte)
-            return texte
+            return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "ignore")
         except urllib.error.HTTPError as e:
             derniere = e
             if e.code not in (429, 500, 502, 503, 504):

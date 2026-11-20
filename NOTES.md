@@ -14,7 +14,6 @@
   et index léger consommé au démarrage (`data/tailles_index.json` : bornes + prix mini par taille).
   Il affiche aussi le nombre de variantes à prix aberrant (>= 1500 €) par boutique.
   Pour ne régénérer que l'index sans refaire de réseau : `python3 size_prices.py --index-seulement`
-  Pour rejouer une collecte depuis des pages déjà téléchargées : `PROMOS_CACHE=<dossier> python3 scraper.py`
 - Prix par taille : `size_prices.py` lit `data/variantes.json` en priorité ; chaque taille garde le prix
   de ses propres variantes (chez Dimension Stores, chaque pointure est une pièce unique avec son prix).
   Les variantes indisponibles sont ignorées pour les bornes (repli sur toutes si aucune n'est disponible) ;
