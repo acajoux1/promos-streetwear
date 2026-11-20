@@ -141,11 +141,16 @@ details.sec[open]>summary::after{content:"–"}
 #sheet{position:fixed;inset:0;z-index:40;visibility:hidden;pointer-events:none;transition:visibility 0s linear .36s}
 #sheet.open{visibility:visible;pointer-events:auto;transition-delay:0s}
 .sh-bg{position:absolute;inset:0;background:rgba(0,0,0,.64);opacity:0;transition:opacity .34s ease}
-.sh-body{position:absolute;left:0;right:0;bottom:0;max-height:88vh;overflow-y:auto;background:#110c26;border-top:1.5px solid rgba(79,224,214,.5);border-radius:14px 14px 0 0;padding:16px 18px calc(22px + env(safe-area-inset-bottom));max-width:720px;margin:0 auto;transform:translateY(18px);opacity:0;transition:transform .36s cubic-bezier(.22,.8,.36,1),opacity .32s ease;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sh-panel{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;max-height:88vh;max-width:720px;margin:0 auto;background:#110c26;border-top:1.5px solid rgba(79,224,214,.5);border-radius:14px 14px 0 0;transform:translateY(18px);opacity:0;transition:transform .36s cubic-bezier(.22,.8,.36,1),opacity .32s ease;overflow:hidden}
 #sheet.open .sh-bg{opacity:1}
-#sheet.open .sh-body{transform:translateY(0);opacity:1}
-.sh-x{float:right;width:36px;height:36px;border-radius:8px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:16px;cursor:pointer}
-.sh-img{clear:both;width:100%;aspect-ratio:1/1;max-height:260px;object-fit:cover;border-radius:10px;margin:8px 0 12px;display:block;background:linear-gradient(135deg,#2a1a4a,#120c26);border:1px solid var(--line)}
+#sheet.open .sh-panel{transform:translateY(0);opacity:1}
+/* Barre haute fixe : la fermeture reste atteignable même quand la fiche défile. */
+.sh-top{flex:0 0 auto;display:flex;align-items:center;justify-content:flex-end;padding:8px 10px 0}
+.sh-body{flex:1 1 auto;min-height:0;overflow-y:auto;padding:2px 18px calc(22px + env(safe-area-inset-bottom));overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+.sh-x{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:46px;height:46px;padding:0;border-radius:10px;border:1.5px solid var(--line);background:var(--ctl);color:var(--text);font-size:19px;line-height:1;cursor:pointer}
+.sh-x:active{opacity:.82}
+.sh-x:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+.sh-img{width:100%;aspect-ratio:1/1;max-height:260px;object-fit:cover;border-radius:10px;margin:2px 0 12px;display:block;background:linear-gradient(135deg,#2a1a4a,#120c26);border:1px solid var(--line)}
 .sh-t{font-size:18px;font-weight:800;margin:4px 0 8px;line-height:1.3}
 .big{font-size:22px}
 .pct2{background:rgba(255,92,147,.16);border:1px solid rgba(255,92,147,.5);color:#ff9ac0;font-size:12px;font-weight:800;padding:3px 8px;border-radius:6px;margin-left:8px;vertical-align:middle}
@@ -198,8 +203,9 @@ details.sec[open]>summary::after{content:"–"}
 .dense .grid{grid-template-columns:repeat(6,1fr);gap:10px}
 .card:hover{border-color:rgba(79,224,214,.5)}
 .chip:hover,.fbtn:hover,.altl:hover{border-color:rgba(79,224,214,.5)}
-.sh-body{bottom:auto;top:50%;left:50%;right:auto;width:min(92vw,640px);max-height:86vh;border-radius:12px;border:1.5px solid rgba(79,224,214,.5);transform:translate(-50%,-49%);opacity:0;transition:transform .32s ease,opacity .3s ease;box-shadow:0 20px 50px rgba(0,0,0,.68)}
-#sheet.open .sh-body{transform:translate(-50%,-50%);opacity:1}
+.sh-panel{bottom:auto;top:50%;left:50%;right:auto;width:min(92vw,640px);max-height:86vh;border-radius:12px;border:1.5px solid rgba(79,224,214,.5);transform:translate(-50%,-49%);opacity:0;transition:transform .32s ease,opacity .3s ease;box-shadow:0 20px 50px rgba(0,0,0,.68)}
+#sheet.open .sh-panel{transform:translate(-50%,-50%);opacity:1}
+.sh-top{padding:10px 12px 0}
 .sh-img{max-height:300px;object-fit:contain;background:#0d0920}
 }
 @media(min-width:1200px){
@@ -213,3 +219,50 @@ details.sec[open]>summary::after{content:"–"}
 .brand-row.on{border-color:var(--teal);background:var(--acc);color:#fff;font-weight:700}
 .brand-row .cnt{color:var(--muted);font-size:12px}
 .brand-row.on .cnt{color:#fff}
+
+/* --- Habillage pixel art ------------------------------------------------- */
+
+/* Accroche et note du héro (auparavant dans lightbeam.css) */
+.hero-in .hero-eyebrow{margin:0 0 5px;color:#b7eee8;font-size:10px;font-weight:800;letter-spacing:2px;text-transform:uppercase;text-shadow:0 1px 5px rgba(8,5,20,.8)}
+.hero-eyebrow::after{content:"▮";margin-left:6px;color:var(--teal);animation:cursorBlink 1.1s steps(1,end) infinite}
+@keyframes cursorBlink{0%,49%{opacity:1}50%,100%{opacity:0}}
+.hero-actions{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:15px}
+.hero-note{color:#f0dce8;font-size:12px;text-shadow:0 1px 5px rgba(8,5,20,.9)}
+
+/* Étoiles filantes */
+.shoot-a{animation:shootA 13s linear infinite}
+.shoot-b{animation:shootB 17s linear 6s infinite}
+@keyframes shootA{0%,84%{transform:translate(-70px,60px);opacity:0}85%{opacity:1}93%{transform:translate(290px,250px);opacity:.9}94%,100%{transform:translate(320px,276px);opacity:0}}
+@keyframes shootB{0%,88%{transform:translate(430px,40px);opacity:0}89%{opacity:.85}97%{transform:translate(110px,190px);opacity:.7}98%,100%{transform:translate(80px,214px);opacity:0}}
+
+/* Nuages, lucioles, lumières de la ville et oiseaux */
+.bg-clouds.c2{opacity:.07;animation:cloudDrift2 48s linear infinite alternate}
+@keyframes cloudDrift2{0%{transform:translateX(12px)}100%{transform:translateX(-14px)}}
+.spark-px{animation:sparkPx 4.2s ease-in-out infinite}
+.spark-px.d1{animation-delay:.6s}
+.spark-px.d2{animation-delay:1.4s}
+.spark-px.d3{animation-delay:2.3s}
+@keyframes sparkPx{0%,100%{opacity:.15}45%{opacity:.9}}
+.city-win{animation:cityWin 5.5s steps(1,end) infinite}
+.city-win.w1{animation-delay:1.2s}
+.city-win.w2{animation-delay:2.7s}
+.city-win.w3{animation-delay:3.9s}
+@keyframes cityWin{0%,72%{opacity:.15}73%,100%{opacity:.85}}
+.hero-birds{animation:birdsDrift 22s ease-in-out infinite alternate}
+@keyframes birdsDrift{0%{transform:translate(-24px,4px)}100%{transform:translate(26px,-6px)}}
+
+/* Lignes de balayage, effet écran cathodique */
+body::after{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:repeating-linear-gradient(180deg,rgba(8,5,20,0) 0 2px,rgba(4,2,12,.22) 2px 4px);opacity:.45}
+
+/* Coins pixel et relief 8 bits */
+.card{transition:border-color .25s ease,box-shadow .25s ease,opacity .25s ease,transform .2s ease}
+.card::before,.card::after{content:"";position:absolute;width:10px;height:10px;pointer-events:none;z-index:2;opacity:.6}
+.card::before{top:5px;left:5px;border-top:2px solid var(--teal);border-left:2px solid var(--teal)}
+.card::after{bottom:5px;right:5px;border-bottom:2px solid var(--rose);border-right:2px solid var(--rose)}
+.card:hover{transform:translateY(-2px);box-shadow:0 5px 0 -1px rgba(6,4,16,.9),0 10px 22px rgba(0,0,0,.5)}
+.fbtn,.chip,.shop-tab,.go,.more{box-shadow:2px 2px 0 rgba(6,4,16,.9)}
+.chip:active,.fbtn:active,.shop-tab:active,.go:active,.more:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(6,4,16,.9)}
+.pct{animation:pctGlow 5s ease-in-out infinite}
+@keyframes pctGlow{0%,100%{box-shadow:0 0 0 rgba(255,92,147,0)}50%{box-shadow:0 0 10px rgba(255,92,147,.4)}}
+
+@media(min-width:600px){.hero-in .hero-eyebrow{font-size:11px}.hero-actions{margin-top:18px}}

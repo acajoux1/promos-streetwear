@@ -20,11 +20,12 @@
   le prix barré vient toujours de la même variante soldée (`choisir_offre`) et n'est retenu que s'il est
   supérieur au prix payé. Le réseau n'est sollicité que pour les fiches sans instantané (Footshop,
   dont la page liste ne donne qu'un prix unique par produit).
-- Version du cache du service worker : `promos-v22` (`sw.js`)
+- Feuilles de style : tout est dans `style.css` (base, fiches, héro, habillage pixel art).
+- Version du cache du service worker : `promos-v24` (`sw.js`)
 
 ## Tests
 
-`python -m unittest discover -p 'test*.py'` couvre :
+`python -m unittest discover -p 'test*.py'` (lancé par le workflow horaire) couvre :
 - les prix par taille (`test_size_prices.py`)
 - le choix d'offre et les marques du scraper (`test_scraper.py`)
 - l'intégrité des JSON livrés : bornes = variantes disponibles, `articles`/`by_link` cohérents,
@@ -38,6 +39,10 @@
   de tailles : `min`/`max` de l'index = minimum et maximum du bloc.
 - Fiche produit : tailles et prix, offres par état (neuf / reconditionné), historique de prix,
   alerte de prix barré peu crédible, lien profond partageable `#p=<lien>&t=<taille>`.
+- Fermeture d'une fiche : bouton ✕ de 46 × 46 px dans une barre haute qui ne défile pas
+  (le contenu défile dessous), plus le fond assombri et la touche Échap.
+- Décor : ciel pixel art animé (étoiles filantes, nuages, ville, lucioles), lignes de balayage
+  et coins pixel sur les cartes. Tout est désactivé par `prefers-reduced-motion`.
 - Filtres, budget rapide (≤ 100/150/200 €) et tailles choisies sont mémorisés dans `localStorage`.
 - Dédoublonnage : un même modèle vendu par plusieurs boutiques n'apparaît qu'une fois
   (désactivable via « 🧩 Regrouper les doublons »).

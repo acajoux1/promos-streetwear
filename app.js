@@ -472,6 +472,18 @@ window.scrollTo({top:target,behavior:"instant"});
 }
 function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
+// Ouvre la fiche : le focus part sur le bouton de fermeture, toujours visible.
+function showSheet(label){
+var s=$("sheet");
+s.setAttribute("role","dialog");
+s.setAttribute("aria-modal","true");
+s.setAttribute("aria-label",label||"Fenêtre");
+s.className="open";
+document.body.style.overflow="hidden";
+var bx=$("shClose");
+if(bx&&bx.focus){try{bx.focus({preventScroll:true})}catch(e){}}
+if(hs===0)pushO();
+}
 function pushO(){try{history.pushState({o:1},"");hs=1}catch(e){}}
 function popO(){
 if(hs>0){
@@ -660,7 +672,7 @@ if(e.target.closest("#nbGone")){onlyFav=true;onlyNew=false;syncChips();favCount(
 });
 
 var s=document.createElement("div");s.id="sheet";
-s.innerHTML='<div class="sh-bg"></div><div class="sh-body" id="shBody"></div>';
+s.innerHTML='<div class="sh-bg"></div><div class="sh-panel"><div class="sh-top"><button type="button" class="sh-x" id="shClose" aria-label="Fermer" onclick="closeSheet()">✕</button></div><div class="sh-body" id="shBody"></div></div>';
 document.body.appendChild(s);
 s.querySelector(".sh-bg").addEventListener("click",closeSheet);
 s.addEventListener("click",function(e){
@@ -1186,7 +1198,7 @@ setTimeout(function(){btn.textContent="🔔 Enregistrer cette recherche"},2000);
 }
 function openAlerts(){
 var A=ls("alerts")||[];
-var h='<button class="sh-x" onclick="closeSheet()">✕</button><div class="sh-t">🔔 Mes alertes</div>';
+var h='<div class="sh-t">🔔 Mes alertes</div>';
 if(!A.length)h+='<div class="s">Aucune alerte enregistrée.</div>';
 A.forEach(function(a,i){
 var tot=0,nw=0;
@@ -1196,9 +1208,7 @@ h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+to
 cur=null;pickedSize="";
 $("shBody").innerHTML=h;
 $("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
+showSheet("Mes alertes");
 }
 
 function openShops(){
@@ -1206,7 +1216,7 @@ var counts={},shops=[];
 D.forEach(function(x){if(shops.indexOf(x.boutique)<0)shops.push(x.boutique);counts[x.boutique]=(counts[x.boutique]||0)+1});
 shops.sort(function(a,b){return (counts[b]||0)-(counts[a]||0)});
 var curB=$("boutique").value;
-var h='<button class="sh-x" onclick="closeSheet()">✕</button><div class="sh-t">🏬 Boutiques</div><div class="s">Choisir une boutique, ou toutes.</div><div class="shop-list">';
+var h='<div class="sh-t">🏬 Boutiques</div><div class="s">Choisir une boutique, ou toutes.</div><div class="shop-list">';
 h+='<button type="button" class="shop-row'+(curB?"":" on")+'" data-shop=""><span>Toutes les boutiques</span><b>'+D.length+'</b></button>';
 shops.forEach(function(b){
 h+='<button type="button" class="shop-row'+(curB===b?" on":"")+'" data-shop="'+esc(b)+'"><span>'+esc(b)+'</span><b>'+(counts[b]||0)+'</b></button>';
@@ -1215,9 +1225,7 @@ h+='</div>';
 cur=null;pickedSize="";
 $("shBody").innerHTML=h;
 $("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
+showSheet("Boutiques");
 }
 
 function szBlockHtml(x){
@@ -1318,11 +1326,9 @@ alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class=
 }
 var small=thumb(x.image),big=thumb(x.image,700);
 var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+szHtml+'<div id="histWrap" class="hist"></div>'+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+$("shBody").innerHTML=img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+szHtml+'<div id="histWrap" class="hist"></div>'+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
 $("shBody").scrollTop=0;
-$("sheet").className="open";
-document.body.style.overflow="hidden";
-if(hs===0)pushO();
+showSheet("Fiche produit");
 setHash(l,"");
 loadHistory().then(function(){if(cur===l)renderHistBlock(M[l]||FAV[l])});
 if(!DETAIL_LOADED)loadSizeDetail().then(function(){if(cur===l)renderSheetSizes()});
