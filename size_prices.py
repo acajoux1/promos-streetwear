@@ -199,6 +199,8 @@ def extract_from_shopify_js(data: dict) -> list:
         label = (var.get("title") or var.get("option1") or "").strip()
         price = parse_price(var.get("price"))
         compare_at = parse_price(var.get("compare_at_price"))
+        if compare_at is not None and price is not None and compare_at <= price:
+            compare_at = None
         if price is not None:
             entries.append({
                 "taille": norm_size_key(label),
@@ -279,11 +281,34 @@ def deduplicate_entries(entries: list) -> list:
     return list(by_size.values())
 
 
-def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay: float = 0.12) -> dict:
+def entries_from_variant_snapshot(variants: list) -> list:
+    """Convertit l'instantané de variantes du scraper (prix par taille réels)."""
+    entries = []
+    for variant in variants or []:
+        if not isinstance(variant, dict):
+            continue
+        price = parse_price(variant.get("prix"))
+        if price is None:
+            continue
+        label = variant.get("taille") or ""
+        entries.append({
+            "taille": norm_size_key(label),
+            "variant_id": str(variant["variant_id"]) if variant.get("variant_id") is not None else None,
+            "prix": price,
+            "ancien_prix": parse_price(variant.get("ancien_prix")),
+            "disponible": variant.get("disponible", True) is not False,
+        })
+    return entries
+
+
+def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay: float = 0.12,
+                          variantes: list = None) -> dict:
     link = item.get("lien") or ""
-    entries = extract_from_generic_fields(item)
+    entries = entries_from_variant_snapshot(variantes) if variantes else []
+    if not entries:
+        entries = extract_from_generic_fields(item)
     target_id = extract_variant_id(link)
-    if fetch_remote_shopify and "/products/" in link:
+    if fetch_remote_shopify and not variantes and "/products/" in link:
         js_url = shopify_product_json_url(link)
         if js_url:
             try:
@@ -330,15 +355,28 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
     }
 
 
+def charger_variantes(chemin: str) -> dict:
+    """Instantané de variantes produit par lien, écrit par scraper.py."""
+    try:
+        with open(chemin, "r", encoding="utf-8") as fichier:
+            data = json.load(fichier)
+    except (OSError, ValueError):
+        return {}
+    by_link = data.get("by_link") if isinstance(data, dict) else None
+    return by_link if isinstance(by_link, dict) else {}
+
+
 def run_size_prices(input_path: str = "data/promos.json", output_path: str = "data/prix_tailles.json",
                     fetch_remote_shopify: bool = True, delay: float = 0.12,
-                    index_path: str = None) -> dict:
+                    index_path: str = None, variants_path: str = "data/variantes.json") -> dict:
     with open(input_path, "r", encoding="utf-8") as source_file:
         source = json.load(source_file)
     items = source.get("items") if isinstance(source, dict) and "items" in source else source
     if not isinstance(items, list):
         items = []
-    records = [collect_article_prices(item, fetch_remote_shopify, delay)
+    snapshot = charger_variantes(variants_path) if variants_path else {}
+    records = [collect_article_prices(item, fetch_remote_shopify, delay,
+                                      snapshot.get(item.get("lien")) or item.get("variantes"))
                for item in items if isinstance(item, dict)]
     by_link = {record["lien"]: record for record in records if record["lien"]}
     payload = {"maj": source.get("maj") if isinstance(source, dict) else None,

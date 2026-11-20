@@ -115,6 +115,37 @@ class TestGeneralSizePrices(unittest.TestCase):
         self.assertEqual(rec["prix_min"], 199.0)
         self.assertEqual(rec["prix_max"], 199.0)
 
+    def test_instantane_variantes_prix_par_taille(self):
+        item = {
+            "lien": "https://dimension-stores.com/products/dh3114-001",
+            "prix": 149.0,
+            "tailles": ["36", "39", "41", "44,5"],
+        }
+        snapshot = [
+            {"taille": "36 / RECONDITIONNÉ / OM-1", "variant_id": "1", "prix": 149.0, "ancien_prix": 249.0, "disponible": True},
+            {"taille": "39 / RECONDITIONNÉ / OM-2", "variant_id": "2", "prix": 199.0, "ancien_prix": 249.0, "disponible": True},
+            {"taille": "41 / RECONDITIONNÉ / OM-3", "variant_id": "3", "prix": 189.0, "ancien_prix": 249.0, "disponible": True},
+            {"taille": "41 / RECONDITIONNÉ / OM-4", "variant_id": "4", "prix": 159.0, "ancien_prix": 249.0, "disponible": True},
+            {"taille": "44,5 / RECONDITIONNÉ / OM-5", "variant_id": "5", "prix": 179.0, "ancien_prix": 249.0, "disponible": False},
+        ]
+
+        rec = collect_article_prices(item, fetch_remote_shopify=False, delay=0, variantes=snapshot)
+
+        self.assertEqual(rec["prix_par_taille"]["36 / RECONDITIONNÉ / OM-1"], 149.0)
+        self.assertEqual(rec["prix_par_taille"]["39 / RECONDITIONNÉ / OM-2"], 199.0)
+        self.assertEqual(rec["prix_par_taille"]["41 / RECONDITIONNÉ / OM-3"], 189.0)
+        self.assertEqual(rec["prix_par_taille"]["41 / RECONDITIONNÉ / OM-4"], 159.0)
+        self.assertEqual(rec["prix_min"], 149.0)
+        self.assertEqual(rec["prix_max"], 199.0)
+        self.assertEqual(rec["tailles"], ["36 / RECONDITIONNÉ / OM-1", "39 / RECONDITIONNÉ / OM-2",
+                                          "41 / RECONDITIONNÉ / OM-3", "41 / RECONDITIONNÉ / OM-4"])
+
+    def test_ancien_prix_inferieur_ignore(self):
+        entries = extract_from_shopify_js({"variants": [
+            {"id": 1, "title": "43", "price": "799.00", "compare_at_price": "400.00", "available": True},
+        ]})
+        self.assertIsNone(entries[0]["ancien_prix"])
+
     def test_run_size_prices_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             in_path = os.path.join(tmpdir, "promos.json")

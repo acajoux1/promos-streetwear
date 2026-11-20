@@ -1,13 +1,97 @@
-import json, os, re, time, datetime, urllib.request
+import hashlib, json, os, re, time, datetime, urllib.error, urllib.request
 
 H = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120 Safari/537.36",
     "Accept-Language": "fr-FR,fr;q=0.9",
 }
 
-def fetch(url):
-    req = urllib.request.Request(url, headers=H)
-    return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "ignore")
+CACHE = os.environ.get("PROMOS_CACHE")
+
+
+def cache_path(url):
+    return os.path.join(CACHE, hashlib.sha1(url.encode("utf-8")).hexdigest() + ".txt")
+
+
+def fetch(url, essais=4):
+    if CACHE:
+        # Mode rejeu : les pages déjà téléchargées sont relues localement.
+        chemin = cache_path(url)
+        if not os.path.exists(chemin):
+            raise FileNotFoundError(url)
+        with open(chemin, encoding="utf-8") as fichier:
+            return fichier.read()
+    derniere = None
+    for i in range(essais):
+        try:
+            req = urllib.request.Request(url, headers=H)
+            texte = urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "ignore")
+            if CACHE:
+                os.makedirs(CACHE, exist_ok=True)
+                with open(cache_path(url), "w", encoding="utf-8") as fichier:
+                    fichier.write(texte)
+            return texte
+        except urllib.error.HTTPError as e:
+            derniere = e
+            if e.code not in (429, 500, 502, 503, 504):
+                break
+            time.sleep(2 + 3 * i)
+        except Exception as e:
+            derniere = e
+            time.sleep(1 + i)
+    raise derniere
+
+TAILLE_RE = re.compile(
+    r"^(?:(?:eu|fr|uk|us)\s*)?(?:xxs|xs|s|m|l|xl|xxl|2xl|3xl|xxxl|tu|unique|[2-5]\d(?:[.,]5)?(?:\s*(?:1/3|2/3))?)$",
+    re.I,
+)
+
+
+def taille_variante(v):
+    """Libellé de taille d'une variante, même quand l'option 1 est un coloris.
+
+    Dimension Stores encode la pointure, l'état et le numéro de pièce dans la
+    même option ("43 / RECONDITIONNÉ / RD172") : on garde le libellé entier
+    pour ne pas perdre l'état, le découpage est fait plus tard.
+    """
+    for cle in ("option1", "option2", "option3"):
+        libelle = str(v.get(cle) or "").strip()
+        if not libelle:
+            continue
+        base = re.split(r"\s*/\s*", libelle)[0].strip()
+        if TAILLE_RE.match(base):
+            return libelle
+    return str(v.get("title") or v.get("option1") or "").strip()
+
+
+def variantes_shopify(produit):
+    """Instantané prix/disponibilité de chaque variante, pris dans products.json.
+
+    C'est la seule source fiable pour les prix par taille : le flux de
+    collection les donne déjà, alors que les requêtes produit individuellement
+    sont limitées (429) et renvoyaient un prix unique pour toutes les tailles.
+    """
+    sortie = []
+    for v in produit.get("variants") or []:
+        taille = taille_variante(v)
+        try:
+            prix = round(float(v["price"]), 2)
+        except (KeyError, TypeError, ValueError):
+            continue
+        brut = v.get("compare_at_price")
+        try:
+            ancien = round(float(brut), 2) if brut else None
+        except (TypeError, ValueError):
+            ancien = None
+        if ancien is not None and ancien <= prix:
+            ancien = None
+        sortie.append({
+            "taille": taille,
+            "variant_id": str(v.get("id")) if v.get("id") is not None else None,
+            "prix": prix,
+            "ancien_prix": ancien,
+            "disponible": bool(v.get("available")),
+        })
+    return sortie
 
 def choisir_offre(variantes):
     """Retourne (prix, ancien_prix) pris sur une même variante soldée.
@@ -53,6 +137,7 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
                 continue
             tags = [t for t in p.get("tags", []) if t.startswith(("cat_", "gender:"))]
             tags.append(p.get("product_type", ""))
+            variantes = variantes_shopify(p)
             pt = {}
             for v in dispo:
                 k = v.get("option1")
@@ -76,6 +161,8 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
             }
             if len(set(a for a, b in pt.values())) > 1:
                 it["pt"] = pt
+            if variantes:
+                it["_variantes"] = variantes
             items.append(it)
         time.sleep(0.5)
     return items
@@ -194,6 +281,7 @@ def main():
 
     items = []
     statut = {}
+    variantes = charger("data/variantes.json", {}).get("by_link", {})
     for nom, fn in SOURCES:
         try:
             r = fn()
@@ -210,6 +298,14 @@ def main():
             items += reprise
             depuis = ancien_statut.get(nom, {}).get("depuis", ancien.get("maj", maj))
             statut[nom] = {"ok": False, "n": len(reprise), "depuis": depuis}
+
+    liens = set()
+    for x in items:
+        liens.add(x["lien"])
+        v = x.pop("_variantes", None)
+        if v:
+            variantes[x["lien"]] = v
+    variantes = {k: v for k, v in variantes.items() if k in liens}
 
     for x in items:
         h = history.setdefault(x["lien"], {"h": []})
@@ -252,6 +348,8 @@ def main():
         json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
     with open("data/sante.json", "w", encoding="utf-8") as f:
         json.dump({"maj": maj, "boutiques": sante}, f, ensure_ascii=False, separators=(",", ":"))
+    with open("data/variantes.json", "w", encoding="utf-8") as f:
+        json.dump({"maj": maj, "by_link": variantes}, f, ensure_ascii=False, separators=(",", ":"))
     print("TOTAL", len(items))
     return items
 
