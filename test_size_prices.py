@@ -89,11 +89,10 @@ class TestGeneralSizePrices(unittest.TestCase):
         ):
             rec = collect_article_prices(item, fetch_remote_shopify=True, delay=0)
 
-        self.assertEqual(rec["variant_cible"], "53467188199752")
+        par_taille = {v["taille"]: v["prix"] for v in rec["variantes"]}
+        self.assertEqual(par_taille, {"41": 230.0, "42": 259.0})
         self.assertEqual(rec["prix_min"], 230.0)
         self.assertEqual(rec["prix_max"], 259.0)
-        self.assertEqual(rec["prix_par_taille"]["41"], 230.0)
-        self.assertEqual(rec["prix_par_taille"]["42"], 259.0)
 
     def test_bornes_ignorent_variantes_indisponibles(self):
         item = {
@@ -131,14 +130,13 @@ class TestGeneralSizePrices(unittest.TestCase):
 
         rec = collect_article_prices(item, fetch_remote_shopify=False, delay=0, variantes=snapshot)
 
-        self.assertEqual(rec["prix_par_taille"]["36 / RECONDITIONNÉ / OM-1"], 149.0)
-        self.assertEqual(rec["prix_par_taille"]["39 / RECONDITIONNÉ / OM-2"], 199.0)
-        self.assertEqual(rec["prix_par_taille"]["41 / RECONDITIONNÉ / OM-3"], 189.0)
-        self.assertEqual(rec["prix_par_taille"]["41 / RECONDITIONNÉ / OM-4"], 159.0)
+        # Une seule offre par taille et état, au prix le plus bas disponible.
+        par_taille = {v["taille"]: v["prix"] for v in rec["variantes"]}
+        self.assertEqual(par_taille, {"36 / RECONDITIONNÉ": 149.0,
+                                      "39 / RECONDITIONNÉ": 199.0,
+                                      "41 / RECONDITIONNÉ": 159.0})
         self.assertEqual(rec["prix_min"], 149.0)
         self.assertEqual(rec["prix_max"], 199.0)
-        self.assertEqual(rec["tailles"], ["36 / RECONDITIONNÉ / OM-1", "39 / RECONDITIONNÉ / OM-2",
-                                          "41 / RECONDITIONNÉ / OM-3", "41 / RECONDITIONNÉ / OM-4"])
 
     def test_ancien_prix_inferieur_ignore(self):
         entries = extract_from_shopify_js({"variants": [

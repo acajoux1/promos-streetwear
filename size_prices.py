@@ -119,11 +119,15 @@ def _size_sort_key(key: str):
 def build_size_index(payload: dict) -> dict:
     """Index léger consommé par l'interface : bornes et prix mini par taille."""
     by_link = {}
-    for record in payload.get("articles") or []:
+    records = payload.get("by_link")
+    if isinstance(records, dict):
+        records = records.values()
+    elif not isinstance(records, list):
+        records = payload.get("articles") or []
+    for record in records:
         if not isinstance(record, dict) or not record.get("lien"):
             continue
         prices = {}
-        toutes = []
         for variant in record.get("variantes") or []:
             if not isinstance(variant, dict) or variant.get("disponible") is False:
                 continue
@@ -131,7 +135,6 @@ def build_size_index(payload: dict) -> dict:
             if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
                 continue
             value = round(float(price), 2)
-            toutes.append(value)
             key = offer_size_key(variant.get("taille"))
             if not key:
                 continue
@@ -145,8 +148,9 @@ def build_size_index(payload: dict) -> dict:
                 if key and (key not in prices or price < prices[key]):
                     prices[key] = round(float(price), 2)
         sizes = sorted(prices, key=_size_sort_key)
-        minimum = min(toutes) if toutes else record.get("prix_min")
-        maximum = max(toutes) if toutes else record.get("prix_max")
+        # La fourchette de la fiche doit être exactement celle du bloc de prix par taille.
+        minimum = min(prices.values()) if prices else record.get("prix_min")
+        maximum = max(prices.values()) if prices else record.get("prix_max")
         by_link[record["lien"]] = {"min": minimum, "max": maximum,
                                    "t": sizes, "p": prices}
     return {"maj": payload.get("maj"), "total": len(by_link), "by_link": by_link}
@@ -301,6 +305,34 @@ def entries_from_variant_snapshot(variants: list) -> list:
     return entries
 
 
+def display_entries(entries: list) -> list:
+    """Réduit les variantes à ce que la fiche affiche : une offre par taille et état.
+
+    Dimension Stores crée une variante par pièce (même pointure, prix différents) :
+    seule la moins chère disponible est utile à l'interface.
+    """
+    by_key = {}
+    for entry in entries:
+        if entry.get("disponible") is False:
+            continue
+        price = entry.get("prix")
+        if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+            continue
+        base, state = split_size_label(entry.get("taille"))
+        key = (offer_size_key(base), state)
+        if key in by_key and by_key[key]["prix"] <= price:
+            continue
+        old = entry.get("ancien_prix")
+        if not isinstance(old, (int, float)) or isinstance(old, bool) or old <= price:
+            old = None
+        by_key[key] = {
+            "taille": base + (" / " + state if state else ""),
+            "prix": round(float(price), 2),
+            "ancien_prix": round(float(old), 2) if old is not None else None,
+        }
+    return list(by_key.values())
+
+
 def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay: float = 0.12,
                           variantes: list = None) -> dict:
     link = item.get("lien") or ""
@@ -337,20 +369,20 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
                 time.sleep(delay)
         except (URLError, HTTPError, TimeoutError, ValueError, json.JSONDecodeError):
             pass
-    entries = deduplicate_entries(entries)
-    prices = [e["prix"] for e in entries
-              if isinstance(e.get("prix"), (int, float)) and e.get("disponible", True)]
-    if not prices:
-        prices = [e["prix"] for e in entries if isinstance(e.get("prix"), (int, float))]
+    entries = display_entries(entries)
+    # Bornes = celles du bloc de tailles : prix mini de chaque pointure, tous états confondus.
+    par_taille = {}
+    for entry in entries:
+        key = offer_size_key(entry["taille"])
+        if key and (key not in par_taille or entry["prix"] < par_taille[key]):
+            par_taille[key] = entry["prix"]
+    prices = list(par_taille.values())
     fallback = parse_price(item.get("prix"))
     prices = prices or ([fallback] if fallback is not None else [])
     return {
         "lien": link,
-        "variant_cible": str(target_id) if target_id else None,
         "prix_min": min(prices) if prices else None,
         "prix_max": max(prices) if prices else None,
-        "tailles": [e["taille"] for e in entries if e.get("disponible", True)],
-        "prix_par_taille": {e["taille"]: e["prix"] for e in entries},
         "variantes": entries,
     }
 
@@ -380,9 +412,9 @@ def run_size_prices(input_path: str = "data/promos.json", output_path: str = "da
                for item in items if isinstance(item, dict)]
     by_link = {record["lien"]: record for record in records if record["lien"]}
     payload = {"maj": source.get("maj") if isinstance(source, dict) else None,
-               "total": len(records), "by_link": by_link, "articles": records}
+               "total": len(records), "by_link": by_link}
     with open(output_path, "w", encoding="utf-8") as output_file:
-        json.dump(payload, output_file, ensure_ascii=False, indent=2)
+        json.dump(payload, output_file, ensure_ascii=False, separators=(",", ":"))
     if index_path:
         index = build_size_index(payload)
         with open(index_path, "w", encoding="utf-8") as index_file:

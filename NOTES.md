@@ -7,7 +7,9 @@
 - `scraper.py` : collecte les promos (`data/promos.json`), l'historique de prix (`data/history.json`),
   la santé par boutique (`data/sante.json`, alerte si une boutique perd plus de la moitié de ses articles)
   et l'instantané des variantes (`data/variantes.json` : prix et disponibilité réels de chaque taille,
-  lus dans le flux `products.json` des boutiques Shopify, donc sans requête produit individuelle)
+  lus dans le flux `products.json` des boutiques Shopify, donc sans requête produit individuelle).
+  Cet instantané est un fichier de travail ignoré par Git : il ne sert qu'à `size_prices.py`
+  dans la même exécution et n'alourdit pas le dépôt.
 - `size_prices.py` : prix et disponibilité par taille (`data/prix_tailles.json`, détaillé)
   et index léger consommé au démarrage (`data/tailles_index.json` : bornes + prix mini par taille).
   Il affiche aussi le nombre de variantes à prix aberrant (>= 1500 €) par boutique.
@@ -32,7 +34,9 @@
 ## Interface
 
 - Démarrage : `index.html` + `data/promos.json` + `data/tailles_index.json` (~0,8 Mo) ;
-  `data/prix_tailles.json` (10,6 Mo) n'est chargé qu'à l'ouverture d'une fiche produit.
+  `data/prix_tailles.json` (une offre par taille et état) n'est chargé qu'à l'ouverture d'une fiche produit.
+- La fourchette affichée en haut d'une fiche est calculée à partir des mêmes prix par taille que le bloc
+  de tailles : `min`/`max` de l'index = minimum et maximum du bloc.
 - Fiche produit : tailles et prix, offres par état (neuf / reconditionné), historique de prix,
   alerte de prix barré peu crédible, lien profond partageable `#p=<lien>&t=<taille>`.
 - Filtres, budget rapide (≤ 100/150/200 €) et tailles choisies sont mémorisés dans `localStorage`.
