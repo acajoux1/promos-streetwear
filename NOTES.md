@@ -20,8 +20,10 @@
   le prix barré vient toujours de la même variante soldée (`choisir_offre`) et n'est retenu que s'il est
   supérieur au prix payé. Le réseau n'est sollicité que pour les fiches sans instantané (Footshop,
   dont la page liste ne donne qu'un prix unique par produit).
-- Feuilles de style : tout est dans `style.css` (base, fiches, héro, habillage pixel art).
-- Version du cache du service worker : `promos-v24` (`sw.js`)
+- Feuilles de style : tout est dans `style.css` (papier chaud, sérif Newsreader, mono Courier Prime,
+  filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi ni dégradé).
+- Polices : chargées depuis Google Fonts ; repli Georgia / Courier New hors ligne.
+- Version du cache du service worker : `promos-v25` (`sw.js`)
 
 ## Tests
 
@@ -39,12 +41,21 @@
   de tailles : `min`/`max` de l'index = minimum et maximum du bloc.
 - Fiche produit : tailles et prix, offres par état (neuf / reconditionné), historique de prix,
   alerte de prix barré peu crédible, lien profond partageable `#p=<lien>&t=<taille>`.
-- Fermeture d'une fiche : bouton ✕ de 46 × 46 px dans une barre haute qui ne défile pas
-  (le contenu défile dessous), plus le fond assombri et la touche Échap.
-- Décor : ciel pixel art animé (étoiles filantes, nuages, ville, lucioles), lignes de balayage
-  et coins pixel sur les cartes. Tout est désactivé par `prefers-reduced-motion`.
-- Filtres, budget rapide (≤ 100/150/200 €) et tailles choisies sont mémorisés dans `localStorage`.
+- Fermeture d'une fiche : bouton ✕ de 42 × 42 px dans une barre haute ancrée au panneau (hors flux,
+  fond papier + filet), donc toujours atteignable même avec des centaines de tailles. Le panneau est
+  borné à `88dvh` (repli `88vh`) : il ne peut plus dépasser l'écran visible des navigateurs mobiles.
+  Le contenu défile dessous ; le fond assombri et la touche Échap ferment aussi la fiche.
+- Bandeau : 58 px, wordmark sérif, liens mono (favoris, alertes, boutiques) et un carré « filtres ».
+  Recherche et tri sur une ligne fine, pastilles de filtres actifs en soulignement bleu.
+- Héro : accroche mono, titre sérif avec une phrase italique bleue, deux boutons, bandeau de
+  spécifications et wordmark étalé lettre par lettre, rogné par le bas du cadre.
+- Produit voyageur : un seul article (le premier résultat avec image) fixé en `position:fixed`, déplacé
+  et estompé au défilement, en `mix-blend-mode:multiply` pour détacher la photo blanche du papier.
+  Masqué sous 900 px et sous `prefers-reduced-motion`.
+- Historique : la courbe est tracée à l'ouverture (`strokeDashoffset` animé ~2 s).
+- Filtres : catégories, collections, prix/boutique, tailles & marques, alertes. Le filtre de genre
+  a été retiré (peu utile, les articles sont majoritairement unisexes).
 - Dédoublonnage : un même modèle vendu par plusieurs boutiques n'apparaît qu'une fois
-  (désactivable via « 🧩 Regrouper les doublons »).
+  (désactivable via « Regrouper les doublons »).
 - Mes alertes : recherches enregistrées localement, avec le nombre d'articles et de nouveautés.
   Aucune notification système : rien ne s'affiche lorsque l'application est fermée.
