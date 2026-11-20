@@ -1,4 +1,5 @@
 var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2;
+var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true,BUDGETS=[100,150,200];
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var PROF_KIND="haut",PROF_SYS="EU";
 var RE_OK=["Laced Run"];
@@ -65,13 +66,21 @@ var o=[];
 m.forEach(function(t){if(/[a-z]/.test(t)&&/\d/.test(t)&&o.indexOf(t)<0)o.push(t)});
 return o;
 }
-function savePrefs(){ls("prefs",{gen:GEN,cat:CAT,tri:$("tri").value})}
+function savePrefs(){ls("prefs",{gen:GEN,cat:CAT,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
 function loadPrefs(){
 var p=ls("prefs");
 if(!p)return;
 if(["all","h","f"].indexOf(p.gen)>=0)GEN=p.gen;
 if(["all","vet","chau","tee","sub","acc"].indexOf(p.cat)>=0)CAT=p.cat;
 if(["remise","prix","prixd","pepite"].indexOf(p.tri)>=0)$("tri").value=p.tri;
+(p.sz||[]).forEach(function(s){SZ[s]=1});
+(p.br||[]).forEach(function(b){BR[b]=1});
+if(typeof p.b==="string")$("boutique").value=p.b;
+if(p.r)$("remise").value=String(p.r);
+if(p.pm!==undefined&&p.pm!==null)$("pmax").value=p.pm;
+onlyRE=!!p.re;onlyNew=!!p.new;onlyDrop=!!p.drop;onlyTop=!!p.top;
+if(typeof p.dup==="boolean")DEDUP=p.dup;
+syncChips();
 }
 function catOf(x){
 if(x._c)return x._c;
@@ -155,7 +164,8 @@ function uniqueRawSizes(x){
 if(x._ur)return x._ur;
 var seen={},out=[];
 var extra=SZ_MAP[x.lien];
-var src=(extra&&Array.isArray(extra.tailles)&&extra.tailles.length)?extra.tailles:(x.tailles||[]);
+var idx=IDX[x.lien];
+var src=(extra&&Array.isArray(extra.tailles)&&extra.tailles.length)?extra.tailles:((idx&&Array.isArray(idx.t)&&idx.t.length)?idx.t:(x.tailles||[]));
 src.forEach(function(s){
 var raw=String(s||"").trim();
 if(!raw)return;
@@ -192,6 +202,9 @@ Object.keys(extra.prix_par_taille).forEach(function(k){if(add(k,extra.prix_par_t
 if(!got&&x.prix_par_taille&&typeof x.prix_par_taille==="object"){
 Object.keys(x.prix_par_taille).forEach(function(k){add(k,x.prix_par_taille[k],null)});
 }
+if(!got&&IDX[x.lien]&&IDX[x.lien].p&&typeof IDX[x.lien].p==="object"){
+Object.keys(IDX[x.lien].p).forEach(function(k){add(k,IDX[x.lien].p[k],null)});
+}
 Object.keys(by).forEach(function(k){by[k].sort(function(a,b){return a.prix-b.prix})});
 x._sol=by;
 return by;
@@ -223,6 +236,11 @@ return String(a).localeCompare(String(b));
 }
 function shoePriceBounds(x){
 if(x._sb)return x._sb;
+var idx=IDX[x.lien];
+if(idx&&typeof idx.min==="number"&&typeof idx.max==="number"&&idx.min>0){
+x._sb={min:idx.min,max:idx.max};
+return x._sb;
+}
 var min=0,max=0,has=false;
 var by=sizeOfferList(x);
 Object.keys(by).forEach(function(k){
@@ -243,12 +261,9 @@ x._sb={min:min,max:max};
 return x._sb;
 }
 function priceRangeLabel(x){
-if(catOf(x)==="chau"){
 var b=shoePriceBounds(x);
 if(b.max>b.min+0.01)return f(b.min)+" – "+f(b.max);
 return f(b.min);
-}
-return f(x.prix);
 }
 function val(t){var n=parseFloat(t.replace(/^[A-Z]+\s*/,""));if(t.indexOf("1/3")>=0)n+=.33;if(t.indexOf("2/3")>=0)n+=.67;return n}
 function fill(id,label,arr){
@@ -335,6 +350,21 @@ var min=Math.min.apply(null,alt.map(function(y){return y.prix}));
 x._best=x.prix<=min;
 }
 });
+var G={};
+D.forEach(function(x){
+x._gid="";
+var k=nkey(x);
+if(k.length>=12&&bkey(x))(G[bkey(x)+"|"+k]=G[bkey(x)+"|"+k]||[]).push(x);
+});
+Object.keys(G).forEach(function(k){
+var grp=G[k];
+if(grp.length<2)return;
+var shops={};
+grp.forEach(function(y){shops[y.boutique]=1});
+if(Object.keys(shops).length<2)return;
+var min=Math.min.apply(null,grp.map(function(y){return shoePriceBounds(y).min}));
+grp.forEach(function(y){y._gid=k;y._grpN=Object.keys(shops).length;y._grpMin=min});
+});
 }
 function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
@@ -351,7 +381,10 @@ $("cNew").className="chip"+(onlyNew?" on":"");
 $("cDrop").className="chip"+(onlyDrop?" on":"");
 $("cTop").className="chip"+(onlyTop?" on":"");
 $("cRE").className="chip"+(onlyRE?" on":"");
+var cd=$("cDup");
+if(cd)cd.className="chip"+(DEDUP?" on":"");
 }
+function toggleDup(){DEDUP=!DEDUP;syncChips();apply()}
 function setBd(id,n){var e=$(id);if(!e)return;e.textContent=n;e.style.display=n?"":"none"}
 function actives(){
 var a=[];
@@ -413,6 +446,7 @@ setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
 updShopTab();
 renderPills();
 updHomeBtn();
+renderBudget();
 }
 function smartHome(){
 if(sheetOpen())closeSheet();
@@ -634,8 +668,9 @@ var szBtn=e.target.closest(".sz-item");
 if(szBtn){
 var t=szBtn.getAttribute("data-sz");
 pickedSize=(pickedSize===t)?"":t;
-renderPickedSizePrice();
-return;
+  renderPickedSizePrice();
+  if(cur)setHash(cur,pickedSize);
+  return;
 }
 var shopRow=e.target.closest(".shop-row");
 if(shopRow){
@@ -710,9 +745,22 @@ while(shownN<v.n&&shownN<L.length&&guard<60){more();guard++}
 setTimeout(function(){window.scrollTo(0,v.y)},80);
 }
 
-function loadSizePrices(){
-return fetch("data/prix_tailles.json?"+Date.now()).then(function(r){
+function loadSizeIndex(){
+return fetch("data/tailles_index.json?"+Date.now()).then(function(r){
 if(!r.ok)return {};
+return r.json();
+}).then(function(j){
+IDX={};
+if(j&&j.by_link&&typeof j.by_link==="object")IDX=j.by_link;
+D.forEach(function(x){delete x._ur;delete x._spm;delete x._sb;delete x._t;delete x._sol});
+return IDX;
+}).catch(function(){return {}});
+}
+
+function loadSizeDetail(){
+if(DETAIL_P)return DETAIL_P;
+DETAIL_P=fetch("data/prix_tailles.json?"+Date.now()).then(function(r){
+if(!r.ok)throw new Error("HTTP "+r.status);
 return r.json();
 }).then(function(j){
 SZ_MAP={};
@@ -721,9 +769,23 @@ SZ_MAP=j.by_link;
 }else if(j&&Array.isArray(j.articles)){
 j.articles.forEach(function(a){if(a&&a.lien)SZ_MAP[a.lien]=a});
 }
-D.forEach(function(x){delete x._ur;delete x._spm;delete x._sb;delete x._t;delete x._sol});
+DETAIL_LOADED=true;
+D.forEach(function(x){delete x._spm;delete x._sb;delete x._sol});
 return SZ_MAP;
-}).catch(function(){return {}});
+}).catch(function(){DETAIL_P=null;return {}});
+return DETAIL_P;
+}
+
+function loadHistory(){
+if(HIST_LOAD)return HIST_LOAD;
+HIST_LOAD=fetch("data/history.json?"+Date.now()).then(function(r){
+if(!r.ok)return {};
+return r.json();
+}).then(function(j){
+HIST=(j&&typeof j==="object")?j:{};
+return HIST;
+}).catch(function(){HIST={};return HIST});
+return HIST_LOAD;
 }
 
 function loadPromos(isAuto){
@@ -740,7 +802,7 @@ BRN[bkey(x)]=brandOf(x);
 x._titleClean=cleanSearchStr((x.marque||"")+" "+(x.nom||""));
 x._allClean=cleanSearchStr((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||"")+" "+((x.cat||[]).join(" ")));
 });
-return loadSizePrices().then(function(){
+return loadSizeIndex().then(function(){
 buildDup();
 FAV=ls("fav")||{};
 var snap=ls("snap");
@@ -766,7 +828,9 @@ if(!isAuto)loadPrefs();
 renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(changed||!isAuto)apply(true);
 updBell();
+renderBudget();
 if(!isAuto)restoreView();
+openFromHash();
 });
 });
 }
@@ -790,6 +854,16 @@ function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
 function toggleDrop(){onlyDrop=!onlyDrop;syncChips();apply()}
 function toggleTop(){onlyTop=!onlyTop;syncChips();apply()}
 function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
+
+function renderBudget(){
+var el=$("budget");
+if(!el)return;
+var cur=parseFloat($("pmax").value);
+var act=!isNaN(cur);
+el.innerHTML=BUDGETS.map(function(v){
+return '<button type="button" class="chip bb'+(cur===v?" on":"")+'" data-p="'+v+'">≤ '+v+' €</button>';
+}).join("")+(act?'<button type="button" class="chip bb" data-p="">Tous les prix</button>':"");
+}
 
 function resetAll(){
 $("q").value="";$("pmax").value="";
@@ -868,6 +942,21 @@ renderBrandList();
 }
 });
 
+var bd=$("budget");
+if(bd)bd.addEventListener("click",function(e){
+var b=e.target.closest(".bb");
+if(!b)return;
+var p=b.getAttribute("data-p");
+var cur=parseFloat($("pmax").value);
+$("pmax").value=(p&&cur!==+p)?p:"";
+apply();
+});
+
+window.addEventListener("hashchange",function(){
+if(location.hash.indexOf("#p=")===0){if(!sheetOpen())openFromHash()}
+else if(sheetOpen())hideSheet();
+});
+
 function searchScore(x,rawQ){
 var cq=cleanSearchStr(rawQ);
 if(!cq)return 1;
@@ -900,8 +989,7 @@ if(!genOkG(x,F.gen))return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
 if(F.pm!=null){
-var minP=(catOf(x)==="chau")?shoePriceBounds(x).min:x.prix;
-if(minP>F.pm)return false;
+if(shoePriceBounds(x).min>F.pm)return false;
 }
 if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
 if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
@@ -949,17 +1037,23 @@ return (c.remise*1.5-(c.prix/10))-(a.remise*1.5-(a.prix/10));
 }
 if(onlyTop)return c.remise-a.remise;
 if(tri==="prix"){
-var pa=(catOf(a)==="chau")?shoePriceBounds(a).min:a.prix;
-var pc=(catOf(c)==="chau")?shoePriceBounds(c).min:c.prix;
-return pa-pc;
+return shoePriceBounds(a).min-shoePriceBounds(c).min;
 }
 if(tri==="prixd"){
-var pa2=(catOf(a)==="chau")?shoePriceBounds(a).max:a.prix;
-var pc2=(catOf(c)==="chau")?shoePriceBounds(c).max:c.prix;
-return pc2-pa2;
+return shoePriceBounds(c).max-shoePriceBounds(a).max;
 }
 return c.remise-a.remise;
 });
+if(DEDUP){
+var seenG={};
+L=L.filter(function(x){
+var g=x._gid;
+if(!g)return true;
+if(seenG[g])return false;
+seenG[g]=1;
+return true;
+});
+}
 if(onlyTop)L=L.slice(0,30);
 }
 function updRes(){
@@ -988,6 +1082,7 @@ else{
 if(isDrop(x))tags+='<span class="tag td">↓ −'+f(x.prec-x.prix)+'</span>';
 if(fv&&fv.prix-x.prix>0.01)tags+='<span class="tag td">↓ −'+f(fv.prix-x.prix)+'</span>';
 if(x._alt)tags+=x._best?'<span class="tag tb">MEILLEUR PRIX</span>':'<span class="tag tg">MOINS CHER AILLEURS</span>';
+if(x._grpN>1)tags+='<span class="tag tb">'+x._grpN+' BOUTIQUES</span>';
 if(x.inf)tags+='<span class="tag tg">PRIX BARRÉ ?</span>';
 else if(catOf(x)!=="chau"&&x.pmin&&x.pmin<x.prix-0.5&&!isDrop(x))tags+='<span class="tag tg">DÉJÀ À '+f(x.pmin)+'</span>';
 }
@@ -1125,6 +1220,70 @@ document.body.style.overflow="hidden";
 if(hs===0)pushO();
 }
 
+function szBlockHtml(x){
+var uSizes=allSizes(x);
+var spm=sizePriceMap(x);
+if(!uSizes.length)return '<div id="szWrap"></div>';
+return '<div id="szWrap"><div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+uSizes.map(function(t){var pv=spm[t];return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(pv?'<em>'+esc(f(pv))+'</em>':'')+'</button>'}).join("")+'</div></div>';
+}
+function renderSheetSizes(){
+var x=M[cur]||FAV[cur];
+var wrap=$("szWrap");
+if(!x||!wrap)return;
+var uSizes=allSizes(x),spm=sizePriceMap(x);
+wrap.innerHTML=uSizes.length?'<div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+uSizes.map(function(t){var pv=spm[t];return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(pv?'<em>'+esc(f(pv))+'</em>':'')+'</button>'}).join("")+'</div>':"";
+renderPickedSizePrice();
+}
+function setHash(l,t){
+try{
+var url=location.pathname+location.search+(l?("#p="+encodeURIComponent(l)+(t?"&t="+encodeURIComponent(t):"")):"");
+history.replaceState(history.state||{o:1},"",url);
+}catch(e){}
+}
+function deepLink(l,t){
+return location.origin+location.pathname+"#p="+encodeURIComponent(l)+(t?"&t="+encodeURIComponent(t):"");
+}
+function openFromHash(){
+var h=location.hash||"";
+if(h.indexOf("#p=")!==0)return false;
+var rest=h.slice(3),t="";
+var i=rest.indexOf("&t=");
+if(i>=0){t=decodeURIComponent(rest.slice(i+3));rest=rest.slice(0,i)}
+var lien=decodeURIComponent(rest);
+if(!M[lien])return false;
+openSheet(lien);
+if(t){pickedSize=t;renderPickedSizePrice();setHash(lien,t)}
+return true;
+}
+function histStats(x){
+var h=HIST[x.lien];
+if(!h||!h.h||!h.h.length)return null;
+var pts=[];
+h.h.slice(-12).forEach(function(p){if(p&&typeof p[1]==="number"&&p[1]>0)pts.push(p)});
+if(!pts.length)return null;
+var min=pts[0][1],minD=pts[0][0],max=pts[0][1];
+pts.forEach(function(p){if(p[1]<min){min=p[1];minD=p[0]}if(p[1]>max)max=p[1]});
+return {min:min,minD:minD,max:max,pts:pts,n:pts.length};
+}
+function sparkline(pts){
+if(pts.length<2)return "";
+var vals=pts.map(function(p){return p[1]});
+var mn=Math.min.apply(null,vals),mx=Math.max.apply(null,vals);
+var W=280,H=44,step=W/(pts.length-1);
+var d=pts.map(function(p,i){var y=mx===mn?H/2:H-((p[1]-mn)/(mx-mn))*(H-8)-4;return (i?"L":"M")+Math.round(i*step)+" "+Math.round(y)}).join(" ");
+return '<svg class="spark" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none" aria-hidden="true"><path d="'+d+'" fill="none" stroke="#4fe0d6" stroke-width="2"/></svg>';
+}
+function renderHistBlock(x){
+var el=$("histWrap");
+if(!el||!x)return;
+var s=histStats(x);
+if(!s){el.innerHTML="";return}
+var h='<div class="lbl">Historique</div><div class="hist-line">Plus bas vu : <b>'+f(s.min)+'</b> le '+fdate(s.minD)+'</div>'+sparkline(s.pts);
+var real=s.max>0?Math.round((1-x.prix/s.max)*100):0;
+if(s.n>=2&&real<x.remise-10)h+='<div class="hist-warn">Remise réelle sur les prix observés : <b>−'+real+' %</b> (affichée : −'+x.remise+' %)</div>';
+if(x.ancien_prix&&s.max&&x.ancien_prix<=s.max*1.02)h+='<div class="hist-warn">Prix barré peu crédible : déjà vu à '+f(s.max)+'</div>';
+el.innerHTML=h;
+}
 function renderPickedSizePrice(){
 var x=M[cur]||FAV[cur];
 var box=$("szPickBox");
@@ -1152,20 +1311,21 @@ var x=M[l]||FAV[l];
 if(!x)return;
 cur=l;
 pickedSize="";
-var uSizes=allSizes(x);
-var spm=sizePriceMap(x);
-var szHtml=uSizes.length?'<div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+uSizes.map(function(t){var pv=spm[t];return '<button type="button" class="sz-item" data-sz="'+esc(t)+'">'+esc(t)+(pv?'<em>'+esc(f(pv))+'</em>':'')+'</button>'}).join("")+'</div><div id="szPickBox" class="sz-pick-price" style="display:none"></div>':'';
+var szHtml=szBlockHtml(x)+'<div id="szPickBox" class="sz-pick-price" style="display:none"></div>';
 var alt="";
 if(M[l]&&x._alt){
 alt='<div class="lbl">Aussi chez</div>'+x._alt.map(function(y){return '<a class="altl" href="'+esc(y.lien)+'" target="_blank" rel="noopener"><span>'+esc(y.boutique)+'</span><b>'+f(y.prix)+'</b></a>'}).join("");
 }
 var small=thumb(x.image),big=thumb(x.image,700);
 var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+szHtml+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
+$("shBody").innerHTML='<button class="sh-x" onclick="closeSheet()">✕</button>'+img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div>'+szHtml+'<div id="histWrap" class="hist"></div>'+alt+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir sur le site</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>';
 $("shBody").scrollTop=0;
 $("sheet").className="open";
 document.body.style.overflow="hidden";
 if(hs===0)pushO();
+setHash(l,"");
+loadHistory().then(function(){if(cur===l)renderHistBlock(M[l]||FAV[l])});
+if(!DETAIL_LOADED)loadSizeDetail().then(function(){if(cur===l)renderSheetSizes()});
 if(x.image&&big&&big!==small){
 var im=new Image();
 im.referrerPolicy="no-referrer";
@@ -1178,6 +1338,7 @@ function hideSheet(){
 $("sheet").className="";
 document.body.style.overflow="";
 cur=null;pickedSize="";
+setHash(null);
 if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else syncFavs();
 }
@@ -1189,10 +1350,11 @@ function shareCur(){
 var x=M[cur]||FAV[cur];
 if(!x)return;
 var txt=x.nom+" — "+priceRangeLabel(x)+" (−"+x.remise+" %) chez "+x.boutique;
+var url=deepLink(cur,pickedSize);
 if(navigator.share){
-navigator.share({title:x.nom,text:txt,url:x.lien}).catch(function(){});
+navigator.share({title:x.nom,text:txt,url:url}).catch(function(){});
 }else if(navigator.clipboard){
-navigator.clipboard.writeText(txt+" "+x.lien).then(function(){var b=$("shShare");if(b)b.textContent="Copié ✓"}).catch(function(){});
+navigator.clipboard.writeText(txt+"\n"+url).then(function(){var b=$("shShare");if(b)b.textContent="Copié ✓"}).catch(function(){});
 }
 }
 

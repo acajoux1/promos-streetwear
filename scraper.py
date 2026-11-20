@@ -164,69 +164,97 @@ def charger(chemin, defaut):
     except Exception:
         return defaut
 
-now = datetime.datetime.now(datetime.timezone.utc)
-maj = now.strftime("%Y-%m-%dT%H:%M:%SZ")
-jour = now.strftime("%Y-%m-%d")
+def rapport_sante(statut, anciens_items, seuil=0.5):
+    """Repère une boutique dont la collecte s'effondre par rapport au relevé précédent."""
+    avant = {}
+    for item in anciens_items:
+        boutique = item.get("boutique")
+        if boutique:
+            avant[boutique] = avant.get(boutique, 0) + 1
+    sante = {}
+    for nom, etat in statut.items():
+        n = etat.get("n", 0)
+        precedent = avant.get(nom, 0)
+        alerte = precedent >= 20 and n < precedent * seuil
+        sante[nom] = {"n": n, "avant": precedent, "alerte": alerte}
+        if alerte:
+            print("ALERTE", nom, ":", n, "articles contre", precedent, "au relevé précédent")
+    return sante
 
-ancien = charger("data/promos.json", {})
-anciens_items = ancien.get("items", [])
-ancien_statut = ancien.get("statut", {})
-history = charger("data/history.json", {})
 
-items = []
-statut = {}
-for nom, fn in SOURCES:
-    try:
-        r = fn()
-    except Exception as e:
-        print(nom, ": ECHEC", type(e).__name__, e)
-        r = []
-    if r:
-        print(nom, ":", len(r), "articles")
-        items += r
-        statut[nom] = {"ok": True, "n": len(r), "depuis": maj}
-    else:
-        reprise = [x for x in anciens_items if x.get("boutique") == nom]
-        print(nom, ": aucun article, reprise de", len(reprise), "anciens")
-        items += reprise
-        depuis = ancien_statut.get(nom, {}).get("depuis", ancien.get("maj", maj))
-        statut[nom] = {"ok": False, "n": len(reprise), "depuis": depuis}
+def main():
+    now = datetime.datetime.now(datetime.timezone.utc)
+    maj = now.strftime("%Y-%m-%dT%H:%M:%SZ")
+    jour = now.strftime("%Y-%m-%d")
 
-for x in items:
-    h = history.setdefault(x["lien"], {"h": []})
-    serie = h["h"]
-    prix = round(x["prix"], 2)
-    anc = round(x["ancien_prix"], 2)
-    der = serie[-1] if serie else None
-    if der is None or der[1] != prix or (len(der) > 2 and der[2] != anc):
-        serie.append([jour, prix, anc])
-        del serie[:-12]
-    h["v"] = jour
-    prev = None
-    debut = jour
-    for e in reversed(serie):
-        if e[1] != prix:
-            prev = e[1]
-            break
-        debut = e[0]
-    if prev is not None:
-        x["prec"] = prev
-        x["chg"] = debut
-    pmin = min(e[1] for e in serie)
-    if pmin < prix - 0.01:
-        x["pmin"] = pmin
-    ancs = [e[2] for e in serie if len(e) > 2]
-    if len(ancs) >= 2:
-        bas = min(ancs)
-        if anc > bas * 1.05:
-            x["inf"] = bas
+    ancien = charger("data/promos.json", {})
+    anciens_items = ancien.get("items", [])
+    ancien_statut = ancien.get("statut", {})
+    history = charger("data/history.json", {})
 
-limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
-history = {k: v for k, v in history.items() if v.get("v", jour) >= limite}
+    items = []
+    statut = {}
+    for nom, fn in SOURCES:
+        try:
+            r = fn()
+        except Exception as e:
+            print(nom, ": ECHEC", type(e).__name__, e)
+            r = []
+        if r:
+            print(nom, ":", len(r), "articles")
+            items += r
+            statut[nom] = {"ok": True, "n": len(r), "depuis": maj}
+        else:
+            reprise = [x for x in anciens_items if x.get("boutique") == nom]
+            print(nom, ": aucun article, reprise de", len(reprise), "anciens")
+            items += reprise
+            depuis = ancien_statut.get(nom, {}).get("depuis", ancien.get("maj", maj))
+            statut[nom] = {"ok": False, "n": len(reprise), "depuis": depuis}
 
-os.makedirs("data", exist_ok=True)
-with open("data/promos.json", "w", encoding="utf-8") as f:
-    json.dump({"maj": maj, "statut": statut, "items": items}, f, ensure_ascii=False, separators=(",", ":"))
-with open("data/history.json", "w", encoding="utf-8") as f:
-    json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
-print("TOTAL", len(items))
+    for x in items:
+        h = history.setdefault(x["lien"], {"h": []})
+        serie = h["h"]
+        prix = round(x["prix"], 2)
+        anc = round(x["ancien_prix"], 2)
+        der = serie[-1] if serie else None
+        if der is None or der[1] != prix or (len(der) > 2 and der[2] != anc):
+            serie.append([jour, prix, anc])
+            del serie[:-12]
+        h["v"] = jour
+        prev = None
+        debut = jour
+        for e in reversed(serie):
+            if e[1] != prix:
+                prev = e[1]
+                break
+            debut = e[0]
+        if prev is not None:
+            x["prec"] = prev
+            x["chg"] = debut
+        pmin = min(e[1] for e in serie)
+        if pmin < prix - 0.01:
+            x["pmin"] = pmin
+        ancs = [e[2] for e in serie if len(e) > 2]
+        if len(ancs) >= 2:
+            bas = min(ancs)
+            if anc > bas * 1.05:
+                x["inf"] = bas
+
+    limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
+    history = {k: v for k, v in history.items() if v.get("v", jour) >= limite}
+
+    sante = rapport_sante(statut, anciens_items)
+
+    os.makedirs("data", exist_ok=True)
+    with open("data/promos.json", "w", encoding="utf-8") as f:
+        json.dump({"maj": maj, "statut": statut, "items": items}, f, ensure_ascii=False, separators=(",", ":"))
+    with open("data/history.json", "w", encoding="utf-8") as f:
+        json.dump(history, f, ensure_ascii=False, separators=(",", ":"))
+    with open("data/sante.json", "w", encoding="utf-8") as f:
+        json.dump({"maj": maj, "boutiques": sante}, f, ensure_ascii=False, separators=(",", ":"))
+    print("TOTAL", len(items))
+    return items
+
+
+if __name__ == "__main__":
+    main()

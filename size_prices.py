@@ -1,5 +1,6 @@
 import json
 import re
+import sys
 import time
 from urllib.error import HTTPError, URLError
 from urllib.parse import parse_qs, urlparse
@@ -82,6 +83,93 @@ def norm_size_key(label: str) -> str:
     if u:
         return f"{u.group(1).upper()} {u.group(2)}"
     return raw.upper()
+
+
+COND_RE = re.compile(r"(recond|refurb|neuf|new|occasion|used|seconde)", re.I)
+PRIX_ABERRANT = 1500.0
+
+
+def split_size_label(label):
+    """Sépare un libellé composite ("42,5 / RECONDITIONNÉ / 105978") en taille + état."""
+    raw = str(label or "").strip()
+    if "/" not in raw:
+        return raw, ""
+    parts = [part.strip() for part in raw.split("/") if part.strip()]
+    for index in range(1, len(parts)):
+        if COND_RE.search(parts[index]):
+            return "/".join(parts[:index]), parts[index]
+    return raw, ""
+
+
+def offer_size_key(label):
+    base, _ = split_size_label(label)
+    return norm_size_key(base)
+
+
+def _size_sort_key(key: str):
+    number = re.match(r"^(\d+(?:\.\d+)?)", key or "")
+    if number:
+        return (0, float(number.group(1)), key)
+    letters = ["XXS", "XS", "S", "M", "L", "XL", "XXL", "XXXL"]
+    if key in letters:
+        return (1, letters.index(key), key)
+    return (2, 0, key)
+
+
+def build_size_index(payload: dict) -> dict:
+    """Index léger consommé par l'interface : bornes et prix mini par taille."""
+    by_link = {}
+    for record in payload.get("articles") or []:
+        if not isinstance(record, dict) or not record.get("lien"):
+            continue
+        prices = {}
+        toutes = []
+        for variant in record.get("variantes") or []:
+            if not isinstance(variant, dict) or variant.get("disponible") is False:
+                continue
+            price = variant.get("prix")
+            if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+                continue
+            value = round(float(price), 2)
+            toutes.append(value)
+            key = offer_size_key(variant.get("taille"))
+            if not key:
+                continue
+            if key not in prices or value < prices[key]:
+                prices[key] = value
+        if not prices:
+            for size, price in (record.get("prix_par_taille") or {}).items():
+                if not isinstance(price, (int, float)) or isinstance(price, bool) or price <= 0:
+                    continue
+                key = offer_size_key(size)
+                if key and (key not in prices or price < prices[key]):
+                    prices[key] = round(float(price), 2)
+        sizes = sorted(prices, key=_size_sort_key)
+        minimum = min(toutes) if toutes else record.get("prix_min")
+        maximum = max(toutes) if toutes else record.get("prix_max")
+        by_link[record["lien"]] = {"min": minimum, "max": maximum,
+                                   "t": sizes, "p": prices}
+    return {"maj": payload.get("maj"), "total": len(by_link), "by_link": by_link}
+
+
+def rapport_variantes_aberrantes(items, records, seuil=PRIX_ABERRANT):
+    """Compte les variantes à prix invraisemblable pour repérer un parsing douteux."""
+    boutique_de = {item.get("lien"): item.get("boutique", "?") for item in items
+                   if isinstance(item, dict)}
+    par_boutique = {}
+    fiches = 0
+    for record in records:
+        count = 0
+        for variant in record.get("variantes") or []:
+            price = variant.get("prix")
+            if isinstance(price, (int, float)) and not isinstance(price, bool) and price >= seuil:
+                count += 1
+        if count:
+            fiches += 1
+            boutique = boutique_de.get(record.get("lien"), "?")
+            par_boutique[boutique] = par_boutique.get(boutique, 0) + count
+    return {"seuil": seuil, "total": sum(par_boutique.values()),
+            "fiches": fiches, "par_boutique": par_boutique}
 
 
 def extract_variant_id(product_url: str):
@@ -243,7 +331,8 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
 
 
 def run_size_prices(input_path: str = "data/promos.json", output_path: str = "data/prix_tailles.json",
-                    fetch_remote_shopify: bool = True, delay: float = 0.12) -> dict:
+                    fetch_remote_shopify: bool = True, delay: float = 0.12,
+                    index_path: str = None) -> dict:
     with open(input_path, "r", encoding="utf-8") as source_file:
         source = json.load(source_file)
     items = source.get("items") if isinstance(source, dict) and "items" in source else source
@@ -256,8 +345,29 @@ def run_size_prices(input_path: str = "data/promos.json", output_path: str = "da
                "total": len(records), "by_link": by_link, "articles": records}
     with open(output_path, "w", encoding="utf-8") as output_file:
         json.dump(payload, output_file, ensure_ascii=False, indent=2)
+    if index_path:
+        index = build_size_index(payload)
+        with open(index_path, "w", encoding="utf-8") as index_file:
+            json.dump(index, index_file, ensure_ascii=False, separators=(",", ":"))
+    rapport = rapport_variantes_aberrantes(items, records)
+    print("Variantes à prix aberrant (>= {:.0f} €) : {} sur {} fiche(s)".format(
+        rapport["seuil"], rapport["total"], rapport["fiches"]))
+    for boutique, count in sorted(rapport["par_boutique"].items(), key=lambda kv: -kv[1]):
+        print("  - {} : {}".format(boutique, count))
     return payload
 
 
+def main():
+    if "--index-seulement" in sys.argv:
+        with open("data/prix_tailles.json", encoding="utf-8") as source:
+            payload = json.load(source)
+        index = build_size_index(payload)
+        with open("data/tailles_index.json", "w", encoding="utf-8") as target:
+            json.dump(index, target, ensure_ascii=False, separators=(",", ":"))
+        print("Index régénéré :", index["total"], "fiches")
+        return
+    run_size_prices(index_path="data/tailles_index.json")
+
+
 if __name__ == "__main__":
-    run_size_prices()
+    main()

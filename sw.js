@@ -1,4 +1,4 @@
-var V="promos-v21";
+var V="promos-v23";
 // Ne pas précacher les gros JSON : l’installation du service worker ne doit pas
 // échouer lorsque les données produits dépassent le quota de cache disponible.
 var SHELL=["./","index.html","app.js","style.css","manifest.json"];
@@ -21,7 +21,7 @@ self.addEventListener("fetch",function(e){
 
   // Les JSON sont toujours demandés au réseau en premier. En cas d'échec,
   // utiliser la dernière copie effectivement mise en cache.
-  if(/(?:promos|prix_tailles)\.json$/.test(u.pathname)){
+  if(/(?:promos|prix_tailles|tailles_index|history|sante)\.json$/.test(u.pathname)){
     e.respondWith(
       Promise.race([
         fetch(r,{cache:"no-store"}),
