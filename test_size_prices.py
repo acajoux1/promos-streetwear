@@ -95,6 +95,26 @@ class TestGeneralSizePrices(unittest.TestCase):
         self.assertEqual(rec["prix_par_taille"]["41"], 230.0)
         self.assertEqual(rec["prix_par_taille"]["42"], 259.0)
 
+    def test_bornes_ignorent_variantes_indisponibles(self):
+        item = {
+            "lien": "https://shop-ex.test/products/item-3",
+            "prix": 199.0,
+            "tailles": ["43"],
+        }
+        fake_js = {
+            "variants": [
+                {"id": 201, "title": "41", "price": "19.00", "available": False},
+                {"id": 202, "title": "42", "price": "3900.00", "available": False},
+                {"id": 203, "title": "43", "price": "199.00", "available": True},
+            ]
+        }
+
+        with patch("size_prices.fetch_json", return_value=fake_js):
+            rec = collect_article_prices(item, fetch_remote_shopify=True, delay=0)
+
+        self.assertEqual(rec["prix_min"], 199.0)
+        self.assertEqual(rec["prix_max"], 199.0)
+
     def test_run_size_prices_end_to_end(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             in_path = os.path.join(tmpdir, "promos.json")

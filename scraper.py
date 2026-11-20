@@ -9,6 +9,30 @@ def fetch(url):
     req = urllib.request.Request(url, headers=H)
     return urllib.request.urlopen(req, timeout=30).read().decode("utf-8", "ignore")
 
+def choisir_offre(variantes):
+    """Retourne (prix, ancien_prix) pris sur une même variante soldée.
+
+    Le prix barré ne doit jamais venir d'une autre variante : appliquer le
+    compare_at le plus élevé (grande taille, coloris rare) au prix le plus bas
+    fabrique une remise qui n'existe sur aucune variante. On retient la
+    variante réellement soldée la moins chère, et son propre ancien prix.
+    """
+    meilleure = None
+    for v in variantes:
+        if not v.get("available"):
+            continue
+        try:
+            prix = round(float(v["price"]), 2)
+            brut = v.get("compare_at_price")
+            ancien = round(float(brut), 2) if brut else None
+        except (KeyError, TypeError, ValueError):
+            continue
+        if ancien is None or ancien <= prix:
+            continue
+        if meilleure is None or prix < meilleure[0]:
+            meilleure = (prix, ancien)
+    return meilleure if meilleure else (None, None)
+
 def shopify(boutique, base, collection, prod_base, maxpages=20):
     items = []
     for page in range(1, maxpages + 1):
@@ -24,10 +48,8 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
             dispo = [v for v in p["variants"] if v["available"]]
             if not dispo:
                 continue
-            prix = min(float(v["price"]) for v in dispo)
-            anciens = [float(v["compare_at_price"]) for v in dispo if v.get("compare_at_price")]
-            ancien = max(anciens) if anciens else None
-            if not ancien or ancien <= prix:
+            prix, ancien = choisir_offre(dispo)
+            if prix is None:
                 continue
             tags = [t for t in p.get("tags", []) if t.startswith(("cat_", "gender:"))]
             tags.append(p.get("product_type", ""))

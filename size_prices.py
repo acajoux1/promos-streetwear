@@ -225,7 +225,10 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
         except (URLError, HTTPError, TimeoutError, ValueError, json.JSONDecodeError):
             pass
     entries = deduplicate_entries(entries)
-    prices = [e["prix"] for e in entries if isinstance(e.get("prix"), (int, float))]
+    prices = [e["prix"] for e in entries
+              if isinstance(e.get("prix"), (int, float)) and e.get("disponible", True)]
+    if not prices:
+        prices = [e["prix"] for e in entries if isinstance(e.get("prix"), (int, float))]
     fallback = parse_price(item.get("prix"))
     prices = prices or ([fallback] if fallback is not None else [])
     return {

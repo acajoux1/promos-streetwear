@@ -117,9 +117,6 @@
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
 <div class="hero-actions">
-<a class="lightbeam-button" href="#g" aria-label="Explorer les promotions streetwear">
-<span class="lightbeam-label">Explorer les promos</span><span class="lightbeam-arrow" aria-hidden="true">↘</span>
-</a>
 <span class="hero-note">Les meilleures réductions, réunies au même endroit.</span>
 </div>
 </div>
@@ -133,8 +130,10 @@
 <button class="fbtn" id="cBell" onclick="openAlerts()" aria-label="Alertes">🔔</button>
 <button class="fbtn" id="cFav" onclick="toggleFav2()">♥ 0</button>
 </div>
-<div class="quick-nav" id="quickNav"></div>
+<div class="bar-foot">
 <div class="pills2" id="pills"></div>
+<button type="button" class="shop-tab" id="bBtn" onclick="openShops()" aria-label="Choisir une boutique"><span aria-hidden="true">🏬</span><b id="bName">Toutes</b><i aria-hidden="true">▾</i></button>
+</div>
 </div>
 
 <div id="newsBubble" class="news-bubble" style="display:none"></div>
@@ -150,7 +149,7 @@
 <div class="dr-body">
 <div class="dr-head"><span>Filtres &amp; Menu</span><button class="sh-x" onclick="closePanel()">✕</button></div>
 <div id="panel">
-<details class="sec" open><summary><span>Catégories<i class="bdg" id="bd1" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Genre</div><div class="tabs" id="gens"></div><div class="lbl">Catégorie</div><div class="cat-grid" id="cats"></div></div></details>
+<details class="sec" open><summary><span>Catégories<i class="bdg" id="bd1" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Catégorie</div><div class="tabs" id="cats"></div><div class="lbl">Genre</div><div class="tabs" id="gens"></div></div></details>
 <details class="sec"><summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary><div class="sec-body"><div class="prow"><button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button><button class="chip" id="cDrop" onclick="toggleDrop()">↓ Baisses récentes</button><button class="chip" id="cTop" onclick="toggleTop()">🏆 Top 30</button><button class="chip" id="cRE" onclick="toggleRE()">🇷🇪 Livre à La Réunion</button></div><div class="s" style="margin-top:8px">Seul Laced Run (Saint-Denis) est vérifié pour La Réunion.</div></div></details>
 <details class="sec"><summary><span>Boutique &amp; prix<i class="bdg" id="bd3" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Boutique</div><select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select><div class="lbl">Remise minimale</div><select id="remise" onchange="apply()"><option value="0">Toutes remises</option><option value="20">−20 % et +</option><option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option></select><div class="lbl">Prix maximum (€)</div><input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()"><div class="lbl">Tri</div><select id="tri" onchange="apply()"><option value="remise">Plus grosse remise</option><option value="pepite">🔥 Tri Pépite (Score Affaire)</option><option value="prix">Prix croissant</option><option value="prixd">Prix décroissant</option></select></div></details>
 <details class="sec"><summary><span>Marques &amp; tailles<i class="bdg" id="bd4" style="display:none"></i></span></summary><div class="sec-body"><div id="szLet"></div><div id="szSys"></div><div id="szNum"></div></div></details>
