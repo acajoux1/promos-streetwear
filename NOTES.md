@@ -21,9 +21,10 @@
   supérieur au prix payé. Le réseau n'est sollicité que pour les fiches sans instantané (Footshop,
   dont la page liste ne donne qu'un prix unique par produit).
 - Feuilles de style : tout est dans `style.css` (papier chaud, sérif Newsreader, mono Courier Prime,
-  filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi ni dégradé).
+  filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi, et un seul
+  dégradé : le reflet de texte de `shiny.js`, jamais utilisé comme aplat).
 - Polices : chargées depuis Google Fonts ; repli Georgia / Courier New hors ligne.
-- Version du cache du service worker : `promos-v25` (`sw.js`)
+- Version du cache du service worker : `promos-v26` (`sw.js`, `shiny.js` précaché)
 
 ## Tests
 
@@ -49,6 +50,11 @@
   Recherche et tri sur une ligne fine, pastilles de filtres actifs en soulignement bleu.
 - Héro : accroche mono, titre sérif avec une phrase italique bleue, deux boutons, bandeau de
   spécifications et wordmark étalé lettre par lettre, rogné par le bas du cadre.
+- Reflet de texte : portage vanilla du composant ShinyText (aucune dépendance React), dans `shiny.js`.
+  Le dégradé est découpé sur les glyphes (`background-clip:text`) et sa position avancée en
+  `requestAnimationFrame` ; les lettres du grand wordmark démarrent en décalé (`data-delay`) pour une
+  vague. Les couleurs viennent du CSS (`--sh-color`, `--sh-shine`), la boucle s'arrête hors écran et
+  sous `prefers-reduced-motion` le texte reste uni.
 - Produit voyageur : un seul article (le premier résultat avec image) fixé en `position:fixed`, déplacé
   et estompé au défilement, en `mix-blend-mode:multiply` pour détacher la photo blanche du papier.
   Masqué sous 900 px et sous `prefers-reduced-motion`.

@@ -7,6 +7,7 @@
 --ink2:#4A5364;
 --mut:#767E8C;
 --blue:#2C4A8F;
+--blue2:#8FA5CE;
 --rule:rgba(20,28,43,.16);
 --rule2:rgba(20,28,43,.36);
 --serif:'Newsreader',Georgia,'Times New Roman',serif;
@@ -64,6 +65,18 @@ h1 em{font-style:italic;color:var(--blue)}
 .hero-strip #maj{color:var(--ink)}
 .wordmark-spread{display:flex;justify-content:space-between;align-items:flex-end;font-family:var(--serif);font-weight:500;font-size:clamp(54px,13.6vw,182px);line-height:.72;letter-spacing:-.045em;color:var(--ink);transform:translateY(16%);user-select:none;pointer-events:none;will-change:transform}
 .wordmark-spread .dot{color:var(--blue)}
+
+/* ---------- ShinyText -------------------------------------------------- */
+/* Reflet qui balaie le texte ; shiny.js avance la position. Sans JS, ou si
+   le découpage du fond sur le texte n'est pas pris en charge, le texte
+   garde simplement sa couleur. */
+.shiny{display:inline-block;--sh-color:currentColor;--sh-shine:var(--blue);--sh-spread:120deg}
+.hero h1 em.shiny{--sh-color:var(--blue);--sh-shine:var(--blue2);display:inline}
+.wordmark-spread .shiny{--sh-color:var(--ink);--sh-shine:var(--blue)}
+@supports ((-webkit-background-clip:text) or (background-clip:text)){
+.shiny{background-image:linear-gradient(var(--sh-spread),var(--sh-color) 0%,var(--sh-color) 35%,var(--sh-shine) 50%,var(--sh-color) 65%,var(--sh-color) 100%);background-size:200% auto;background-position:150% center;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.hero h1 em.shiny{color:transparent}
+}
 
 /* Produit voyageur : un seul article, déplacé au défilement. */
 .traveller{position:fixed;left:0;top:0;width:clamp(180px,25vw,340px);z-index:5;pointer-events:none;opacity:0;visibility:hidden;display:none;mix-blend-mode:multiply}
@@ -240,6 +253,7 @@ input:focus,select:focus{outline:none;border-color:var(--blue)}
 @media (prefers-reduced-motion:reduce){
 *{animation:none!important;transition:none!important}
 .traveller,.wordmark-spread{display:none!important}
+.shiny{background:none!important;color:var(--sh-color)!important;-webkit-text-fill-color:currentColor!important}
 }
 
 /* Actions de fiche : pleine largeur puis deux boutons courts sur très petits écrans */

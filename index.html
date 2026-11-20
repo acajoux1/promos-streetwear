@@ -41,7 +41,7 @@
 <section class="hero" id="hero">
   <div class="hero-in">
     <p class="kicker">Le radar · édition permanente</p>
-    <h1>Le prix le plus bas,<br><em>vérifié</em> heure par heure.</h1>
+    <h1>Le prix le plus bas,<br><em class="shiny" data-shiny data-speed="3.2" data-spread="118">vérifié</em> heure par heure.</h1>
     <p class="lede">Cinq boutiques comparées, le prix de chaque taille et l’historique du plus bas jamais vu. Une remise affichée ici a été recoupée, pas repeinte.</p>
     <div class="hero-cta">
       <button type="button" class="btn" onclick="goResults()">Voir les promos</button>
@@ -54,7 +54,7 @@
     <span>Historique</span>
     <span>Alertes</span>
   </div>
-  <div class="wordmark-spread" aria-hidden="true"><span>P</span><span>R</span><span>O</span><span>M</span><span>O</span><span>S</span></div>
+  <div class="wordmark-spread" aria-hidden="true"><span data-shiny data-speed="6" data-spread="100" data-delay="0">P</span><span data-shiny data-speed="6" data-spread="100" data-delay=".16">R</span><span data-shiny data-speed="6" data-spread="100" data-delay=".32">O</span><span data-shiny data-speed="6" data-spread="100" data-delay=".48">M</span><span data-shiny data-speed="6" data-spread="100" data-delay=".64">O</span><span data-shiny data-speed="6" data-spread="100" data-delay=".8">S</span></div>
 </section>
 
 <div class="traveller" id="traveller" aria-hidden="true"><img id="travImg" alt="" referrerpolicy="no-referrer"></div>
@@ -93,6 +93,7 @@
 </div>
 </div>
 
+<script src="shiny.js"></script>
 <script src="app.js"></script>
 </body>
 </html>
