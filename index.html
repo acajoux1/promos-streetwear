@@ -11,6 +11,7 @@
 <meta name="apple-mobile-web-app-title" content="Promos">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="lightbeam.css">
 <title>Promos Streetwear</title>
 </head>
 <body>
@@ -47,7 +48,6 @@
 </defs>
 <rect width="400" height="800" fill="url(#sky2)"/>
 <rect width="400" height="800" fill="url(#bgHorizonGlow)" class="bg-glow"/>
-
 <g class="stars stars-a">
 <rect x="36" y="56" width="2" height="2" fill="#fff"/>
 <rect x="148" y="48" width="3" height="3" fill="#ff5c93"/>
@@ -66,7 +66,6 @@
 <rect x="120" y="230" width="2" height="2" fill="#fff"/>
 <rect x="285" y="250" width="3" height="3" fill="#f2bd85"/>
 </g>
-
 <g class="bg-clouds" fill="#ff7eb0" opacity=".1">
 <rect x="24" y="150" width="76" height="3"/>
 <rect x="36" y="147" width="48" height="3"/>
@@ -75,7 +74,6 @@
 <rect x="52" y="330" width="68" height="3"/>
 <rect x="255" y="390" width="84" height="3"/>
 </g>
-
 <g class="bg-grid" stroke="#ff5c93" stroke-width="1" opacity=".15">
 <line x1="0" y1="640" x2="400" y2="640"/>
 <line x1="0" y1="674" x2="400" y2="674"/>
@@ -88,14 +86,9 @@
 <line x1="200" y1="620" x2="310" y2="800"/>
 <line x1="200" y1="620" x2="400" y2="800"/>
 </g>
-
 <g fill="#06040e" opacity=".72">
-<g class="palm-sway-a">
-<use href="#palmPx" x="-36" y="540" width="180" height="225"/>
-</g>
-<g class="palm-sway-b">
-<use href="#palmPx" x="260" y="580" width="160" height="200"/>
-</g>
+<g class="palm-sway-a"><use href="#palmPx" x="-36" y="540" width="180" height="225"/></g>
+<g class="palm-sway-b"><use href="#palmPx" x="260" y="580" width="160" height="200"/></g>
 </g>
 </svg>
 
@@ -104,65 +97,31 @@
 <svg class="hero-bg" viewBox="0 0 400 220" preserveAspectRatio="xMidYMax slice" shape-rendering="crispEdges" aria-hidden="true">
 <defs>
 <linearGradient id="hSky" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#1d113d"/>
-<stop offset=".35" stop-color="#481e63"/>
-<stop offset=".65" stop-color="#9c386c"/>
-<stop offset=".85" stop-color="#d96459"/>
-<stop offset="1" stop-color="#f2a663"/>
+<stop offset="0" stop-color="#1d113d"/><stop offset=".35" stop-color="#481e63"/><stop offset=".65" stop-color="#9c386c"/><stop offset=".85" stop-color="#d96459"/><stop offset="1" stop-color="#f2a663"/>
 </linearGradient>
-<linearGradient id="hSun" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#ffe18c"/>
-<stop offset="1" stop-color="#ff4f8b"/>
-</linearGradient>
-<linearGradient id="hSea" x1="0" y1="0" x2="0" y2="1">
-<stop offset="0" stop-color="#3a1959"/>
-<stop offset="1" stop-color="#110a26"/>
-</linearGradient>
-<mask id="hSunM">
-<rect width="400" height="220" fill="#fff"/>
-<rect x="140" y="142" width="120" height="3" fill="#000"/>
-<rect x="140" y="150" width="120" height="4" fill="#000"/>
-<rect x="140" y="159" width="120" height="5" fill="#000"/>
-<rect x="140" y="169" width="120" height="6" fill="#000"/>
-</mask>
+<linearGradient id="hSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe18c"/><stop offset="1" stop-color="#ff4f8b"/></linearGradient>
+<linearGradient id="hSea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a1959"/><stop offset="1" stop-color="#110a26"/></linearGradient>
+<mask id="hSunM"><rect width="400" height="220" fill="#fff"/><rect x="140" y="142" width="120" height="3" fill="#000"/><rect x="140" y="150" width="120" height="4" fill="#000"/><rect x="140" y="159" width="120" height="5" fill="#000"/><rect x="140" y="169" width="120" height="6" fill="#000"/></mask>
 </defs>
 <rect width="400" height="220" fill="url(#hSky)"/>
-<g fill="#ff9eb5" opacity=".22">
-<rect x="16" y="64" width="96" height="4"/>
-<rect x="268" y="74" width="112" height="4"/>
-</g>
-<g class="anim-sun" fill="url(#hSun)" mask="url(#hSunM)">
-<rect x="176" y="92" width="48" height="4"/>
-<rect x="168" y="96" width="64" height="4"/>
-<rect x="160" y="100" width="80" height="8"/>
-<rect x="156" y="108" width="88" height="12"/>
-<rect x="152" y="120" width="96" height="32"/>
-<rect x="156" y="152" width="88" height="12"/>
-<rect x="160" y="164" width="80" height="8"/>
-</g>
-<g fill="#231345">
-<path d="M0 176V158H12V144H24V160H34V136H48V156H60V148H72V176Z"/>
-<path d="M304 176V158H316V142H326V160H338V148H352V134H364V162H376V152H388V166H400V176Z"/>
-</g>
+<g fill="#ff9eb5" opacity=".22"><rect x="16" y="64" width="96" height="4"/><rect x="268" y="74" width="112" height="4"/></g>
+<g class="anim-sun" fill="url(#hSun)" mask="url(#hSunM)"><rect x="176" y="92" width="48" height="4"/><rect x="168" y="96" width="64" height="4"/><rect x="160" y="100" width="80" height="8"/><rect x="156" y="108" width="88" height="12"/><rect x="152" y="120" width="96" height="32"/><rect x="156" y="152" width="88" height="12"/><rect x="160" y="164" width="80" height="8"/></g>
+<g fill="#231345"><path d="M0 176V158H12V144H24V160H34V136H48V156H60V148H72V176Z"/><path d="M304 176V158H316V142H326V160H338V148H352V134H364V162H376V152H388V166H400V176Z"/></g>
 <rect x="0" y="176" width="400" height="44" fill="url(#hSea)"/>
-<g stroke="#ff5c93" stroke-width="1" opacity=".32">
-<line x1="0" y1="182" x2="400" y2="182"/>
-<line x1="0" y1="190" x2="400" y2="190"/>
-<line x1="0" y1="200" x2="400" y2="200"/>
-<line x1="0" y1="212" x2="400" y2="212"/>
-<line x1="200" y1="176" x2="120" y2="220"/>
-<line x1="200" y1="176" x2="280" y2="220"/>
-</g>
-<path d="M0 186H120V220H0Z" fill="#0b071c"/>
-<path d="M280 186H400V220H280Z" fill="#0b071c"/>
-<g fill="#0c0820">
-<use href="#palmPx" x="-16" y="34" width="128" height="160"/>
-<use href="#palmPx" x="292" y="42" width="124" height="155"/>
-</g>
+<g stroke="#ff5c93" stroke-width="1" opacity=".32"><line x1="0" y1="182" x2="400" y2="182"/><line x1="0" y1="190" x2="400" y2="190"/><line x1="0" y1="200" x2="400" y2="200"/><line x1="0" y1="212" x2="400" y2="212"/><line x1="200" y1="176" x2="120" y2="220"/><line x1="200" y1="176" x2="280" y2="220"/></g>
+<path d="M0 186H120V220H0Z" fill="#0b071c"/><path d="M280 186H400V220H280Z" fill="#0b071c"/>
+<g fill="#0c0820"><use href="#palmPx" x="-16" y="34" width="128" height="160"/><use href="#palmPx" x="292" y="42" width="124" height="155"/></g>
 </svg>
 <div class="hero-in">
+<p class="hero-eyebrow">LE RADAR DES BONNES AFFAIRES</p>
 <h1>Promos Streetwear</h1>
 <p class="sub" id="maj">Chargement…</p>
+<div class="hero-actions">
+<a class="lightbeam-button" href="#g" aria-label="Explorer les promotions streetwear">
+<span class="lightbeam-label">Explorer les promos</span><span class="lightbeam-arrow" aria-hidden="true">↘</span>
+</a>
+<span class="hero-note">Les meilleures réductions, réunies au même endroit.</span>
+</div>
 </div>
 </div>
 
@@ -191,65 +150,11 @@
 <div class="dr-body">
 <div class="dr-head"><span>Filtres &amp; Menu</span><button class="sh-x" onclick="closePanel()">✕</button></div>
 <div id="panel">
-<details class="sec" open>
-<summary><span>Catégories<i class="bdg" id="bd1" style="display:none"></i></span></summary>
-<div class="sec-body">
-<div class="lbl">Genre</div>
-<div class="tabs" id="gens"></div>
-<div class="lbl">Catégorie</div>
-<div class="cat-grid" id="cats"></div>
-</div>
-</details>
-<details class="sec">
-<summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary>
-<div class="sec-body">
-<div class="prow">
-<button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button>
-<button class="chip" id="cDrop" onclick="toggleDrop()">↓ Baisses récentes</button>
-<button class="chip" id="cTop" onclick="toggleTop()">🏆 Top 30</button>
-<button class="chip" id="cRE" onclick="toggleRE()">🇷🇪 Livre à La Réunion</button>
-</div>
-<div class="s" style="margin-top:8px">Seul Laced Run (Saint-Denis) est vérifié pour La Réunion.</div>
-</div>
-</details>
-<details class="sec">
-<summary><span>Boutique &amp; prix<i class="bdg" id="bd3" style="display:none"></i></span></summary>
-<div class="sec-body">
-<div class="lbl">Boutique</div>
-<select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select>
-<div class="lbl">Remise minimale</div>
-<select id="remise" onchange="apply()">
-<option value="0">Toutes remises</option><option value="20">−20 % et +</option>
-<option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option>
-</select>
-<div class="lbl">Prix maximum (€)</div>
-<input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()">
-<div class="lbl">Tri</div>
-<select id="tri" onchange="apply()">
-<option value="remise">Plus grosse remise</option>
-<option value="pepite">🔥 Tri Pépite (Score Affaire)</option>
-<option value="prix">Prix croissant</option>
-<option value="prixd">Prix décroissant</option>
-</select>
-</div>
-</details>
-<details class="sec">
-<summary><span>Marques &amp; tailles<i class="bdg" id="bd4" style="display:none"></i></span></summary>
-<div class="sec-body">
-<div id="szLet"></div>
-<div id="szSys"></div>
-<div id="szNum"></div>
-</div>
-</details>
-<details class="sec">
-<summary><span>Alertes</span></summary>
-<div class="sec-body">
-<div class="prow">
-<button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer cette recherche</button>
-<button class="chip" onclick="openAlertsFromPanel()">Mes alertes</button>
-</div>
-</div>
-</details>
+<details class="sec" open><summary><span>Catégories<i class="bdg" id="bd1" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Genre</div><div class="tabs" id="gens"></div><div class="lbl">Catégorie</div><div class="cat-grid" id="cats"></div></div></details>
+<details class="sec"><summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary><div class="sec-body"><div class="prow"><button class="chip" id="cNew" onclick="toggleNew()">✨ Nouveautés</button><button class="chip" id="cDrop" onclick="toggleDrop()">↓ Baisses récentes</button><button class="chip" id="cTop" onclick="toggleTop()">🏆 Top 30</button><button class="chip" id="cRE" onclick="toggleRE()">🇷🇪 Livre à La Réunion</button></div><div class="s" style="margin-top:8px">Seul Laced Run (Saint-Denis) est vérifié pour La Réunion.</div></div></details>
+<details class="sec"><summary><span>Boutique &amp; prix<i class="bdg" id="bd3" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Boutique</div><select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select><div class="lbl">Remise minimale</div><select id="remise" onchange="apply()"><option value="0">Toutes remises</option><option value="20">−20 % et +</option><option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option></select><div class="lbl">Prix maximum (€)</div><input id="pmax" type="number" inputmode="decimal" placeholder="Prix max (€)" oninput="onSearch()"><div class="lbl">Tri</div><select id="tri" onchange="apply()"><option value="remise">Plus grosse remise</option><option value="pepite">🔥 Tri Pépite (Score Affaire)</option><option value="prix">Prix croissant</option><option value="prixd">Prix décroissant</option></select></div></details>
+<details class="sec"><summary><span>Marques &amp; tailles<i class="bdg" id="bd4" style="display:none"></i></span></summary><div class="sec-body"><div id="szLet"></div><div id="szSys"></div><div id="szNum"></div></div></details>
+<details class="sec"><summary><span>Alertes</span></summary><div class="sec-body"><div class="prow"><button class="chip" id="cSave" onclick="saveAlert()">🔔 Enregistrer cette recherche</button><button class="chip" onclick="openAlertsFromPanel()">Mes alertes</button></div></div></details>
 </div>
 <div class="dr-foot"><button class="fbtn" onclick="resetAll()">Réinitialiser</button><button class="more" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
 </div>
