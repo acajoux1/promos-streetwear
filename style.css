@@ -358,3 +358,20 @@ input,select{font-size:16px}
 .page th,.page td{padding:7px 4px;font-size:10.5px}
 }
 .altl b em{font-style:normal;font-size:11px;color:var(--mut);letter-spacing:0}
+
+/* ---------- Tailles épuisées, retours, requêtes vides, fiches ---------- */
+.sz-item.off{color:var(--mut);border-style:dashed}
+.sz-item.off em{font-size:9px;color:var(--mut)}
+.sz-off-note{font-size:9.5px;line-height:1.7;letter-spacing:.03em;color:var(--mut);margin-top:6px}
+.retour-row{margin-top:8px}
+.retour-row .fbtn{border:1px solid var(--rule2);padding:8px 10px;font-size:10px;letter-spacing:.06em;text-transform:none}
+.retour-row .fbtn:hover{border-color:var(--ink)}
+.retour-row .fbtn.on{color:var(--blue);border-color:rgba(44,74,143,.5)}
+.cmp-med{font-size:10px;line-height:1.7;letter-spacing:.02em;color:var(--ink2);border-top:1px solid var(--rule);padding-top:8px;margin-top:8px}
+.vides-list{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 6px}
+.vides-list span{font-size:10px;letter-spacing:.02em;color:var(--ink2);border:1px solid var(--rule);padding:1px 6px}
+.fiche .fiche-prix{margin:8px 0 0}
+.fiche img{margin:16px 0}
+.fiche .tabs{margin-bottom:12px}
+.fiche .go{display:inline-block;flex:0 0 auto;text-decoration:none}
+.fiche .hist-warn a{color:var(--blue)}

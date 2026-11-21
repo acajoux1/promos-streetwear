@@ -28,10 +28,21 @@
   en trois (romain, gras, italique). Plus de requête vers Google Fonts : ni bascule de police ni saut
   de mise en page à l'arrivée, ce qui compte d'abord sur mobile. Preload des deux fichiers courants,
   les autres sont mis en cache à la première utilisation. Total ≈ 315 Ko. Repli Georgia / Courier New.
-- Version du cache du service worker : `promos-v29` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+- Version du cache du service worker : `promos-v30` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
   `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
+  Il écrit aussi les fiches `p/<modèle>-<hash>.html` des 40 meilleures remises : page statique
+  avec balises OG, prix par taille et lien profond vers la fiche complète, ajoutée au plan du site.
+  Elles servent au partage et au référencement, pas au parcours quotidien.
+- Historique : un point par jour et par changement de prix, plafonné à 30 points par article
+  (`HIST_MAX_POINTS`), et articles absents depuis 45 jours oubliés. La date de première observation
+  est gardée à part (`d`) pour que les badges annoncent l'ancienneté réelle du suivi même après
+  élagage. Le fichier reste borné au lieu de croître sans fin avec le nombre de relevés.
+- `verifie_sante.py` : lancé par le workflow **après** la publication. Il échoue — donc GitHub
+  prévient le propriétaire — si le relevé a plus de 3 h, si le catalogue tombe sous 500 articles,
+  si une boutique n'a pas répondu ou si `sante.json` signale un effondrement. Un échec ne bloque
+  pas la publication : les données valides sont déjà en ligne.
 
 ## Mobile
 
@@ -81,6 +92,7 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - le choix d'offre et les marques du scraper (`test_scraper.py`)
 - l'intégrité des JSON livrés : bornes = variantes disponibles, `articles`/`by_link` cohérents,
   index identique aux bornes (`test_data_integrity.py`)
+- le diagnostic de santé des collectes (`test_verifie_sante.py`, sans réseau)
 - l'interface dans un vrai navigateur (`test_interface.py`, ignoré si Playwright est absent) : grille
   remplie, aucun débordement horizontal, tiroir et fiche qui s'ouvrent et se ferment, recherche
   tolérante, lien profond `#p=`, et aucune erreur console. En local :
@@ -134,6 +146,26 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   90 jours théorique : le badge ne promet pas plus d'historique qu'il n'en existe. Rien n'est affiché
   sous trois relevés, un « plus bas » sur un point unique ne veut rien dire. Les badges sont posés
   après coup (`annotateBasSuivi`) sans redessiner la grille.
+- Baisses depuis la dernière visite : une photo des prix (`prix_visite`) est gardée d'une visite
+  à l'autre ; le bandeau annonce les articles réellement moins chers depuis, avec une date de
+  référence, et un filtre dédié. « Ignorer » remet le compteur à zéro. Cela ne dépend pas de la
+  granularité quotidienne de l'historique.
+- Tailles épuisées : l'index publie les pointures dont toutes les variantes sont parties (`e`).
+  Elles restent visibles, sans prix inventé, et « Me prévenir si elle revient » enregistre une
+  surveillance ; la veille prévient au relevé où la taille réapparaît.
+- Prix par taille : avec une seule taille sélectionnée, « Prix maximum » et les tris de prix portent
+  sur cette taille, pas sur le plus bas de l'article.
+- Recherche sans résultat exact : les articles partageant au moins un terme sont proposés, avec une
+  mention explicite, et la requête reste notée dans `ls("vides")` — désormais listée dans le tiroir
+  (section Alertes) pour compléter les synonymes et les marques manquantes.
+- Comparateur : ligne « prix médian ailleurs » qui juge le prix barré sur les prix réellement
+  pratiqués par les autres boutiques, au lieu d'une règle arbitraire.
+- Veille : en plus des alertes et des seuils, deux contrôles — retour en stock d'une taille
+  surveillée, et « moins cher ailleurs » (15 % ou plus) pour un article dont un seuil est suivi.
+  Les deux passent par la même déduplication et la même limite de quatre notifications.
+- Accessibilité : le focus revient à l'élément qui a ouvert une couche, la tabulation reste piégée
+  dans la fiche et le tiroir, `aria-expanded` suit le bouton filtres, et le compteur de résultats
+  est en `aria-live`.
 - Sélection de la semaine : cinq articles au plus bas depuis le début du suivi, classés par remise
   affichée, calculés après l'inactivité et masqués dès qu'un filtre ou un tri est actif.
 - Recherche tolérante : accents et pluriels normalisés, synonymes du vestiaire (`chaussures` ↔ `sneaker`,

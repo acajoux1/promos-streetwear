@@ -117,7 +117,11 @@ def _size_sort_key(key: str):
 
 
 def build_size_index(payload: dict) -> dict:
-    """Index léger consommé par l'interface : bornes et prix mini par taille."""
+    """Index léger consommé par l'interface : bornes, prix mini et tailles épuisées.
+
+    « e » liste les pointures connues mais indisponibles : l'interface peut
+    afficher une taille épuisée et proposer d'être prévenu de son retour.
+    """
     by_link = {}
     records = payload.get("by_link")
     if isinstance(records, dict):
@@ -151,8 +155,11 @@ def build_size_index(payload: dict) -> dict:
         # La fourchette de la fiche doit être exactement celle du bloc de prix par taille.
         minimum = min(prices.values()) if prices else record.get("prix_min")
         maximum = max(prices.values()) if prices else record.get("prix_max")
-        by_link[record["lien"]] = {"min": minimum, "max": maximum,
-                                   "t": sizes, "p": prices}
+        entry = {"min": minimum, "max": maximum, "t": sizes, "p": prices}
+        epuisees = [s for s in (record.get("epuisees") or []) if s and s not in prices]
+        if epuisees:
+            entry["e"] = sorted(set(epuisees), key=_size_sort_key)
+        by_link[record["lien"]] = entry
     return {"maj": payload.get("maj"), "total": len(by_link), "by_link": by_link}
 
 
@@ -352,6 +359,11 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
             except (URLError, HTTPError, TimeoutError, ValueError, json.JSONDecodeError):
                 pass
     entries = deduplicate_entries(entries)
+    # Tailles dont toutes les variantes sont parties : publiées à part pour que
+    # la fiche puisse les montrer comme épuisées sans inventer de prix.
+    epuisees = sorted({offer_size_key(e.get("taille")) for e in entries
+                       if e.get("disponible") is False and offer_size_key(e.get("taille"))},
+                      key=_size_sort_key)
     target_price = None
     if fetch_remote_shopify and target_id and "/products/" in link:
         try:
@@ -384,6 +396,7 @@ def collect_article_prices(item: dict, fetch_remote_shopify: bool = True, delay:
         "prix_min": min(prices) if prices else None,
         "prix_max": max(prices) if prices else None,
         "variantes": entries,
+        "epuisees": epuisees,
     }
 
 

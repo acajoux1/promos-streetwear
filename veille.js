@@ -69,10 +69,46 @@ if(vus[k])return;
 out.push({t:"Seuil atteint",b:x.nom+" à "+f(x.prix)+" (objectif "+f(s.prix)+")",l:l,k:k});
 });
 
+/* Retour en stock : une taille surveillée depuis la fiche redevient disponible. */
+var retours=ls("retours")||{};
+Object.keys(retours).forEach(function(l){
+var x=M()[l];
+if(!x)return;
+Object.keys(retours[l]||{}).forEach(function(sz){
+if(!(W.sizePrice&&W.sizePrice(l,sz)>0))return;
+var k="r:"+l+":"+sz;
+if(vus[k])return;
+out.push({t:"Retour en stock",b:x.nom+" — taille "+sz+" de nouveau disponible",l:l,k:k});
+});
+});
+
+/* Moins cher ailleurs : un article dont le prix est surveillé se trouve à 15 %
+   de moins ou plus dans une autre boutique du même modèle. */
+Object.keys(SEUILS).forEach(function(l){
+var x=M()[l];
+if(!x||!x._alt||!x._alt.length||!W.shoePriceBounds)return;
+var best=null;
+x._alt.forEach(function(y){var v=W.shoePriceBounds(y).min;if(v>0&&(best===null||v<best))best=v});
+if(best===null||best>=x.prix*0.85)return;
+var k="x:"+l+":"+Math.round(best*100);
+if(vus[k])return;
+out.push({t:"Moins cher ailleurs",b:x.nom+" à "+f(best)+" (vous suivez "+f(x.prix)+")",l:l,k:k});
+});
+
 out.slice(0,4).forEach(function(n){
 notifier(n.t,n.b,n.l);
 vus[n.k]=Date.now();
 });
+
+/* Un retour signalé n'est plus surveillé. */
+var rest=ls("retours")||{};
+Object.keys(rest).forEach(function(l){
+Object.keys(rest[l]||{}).forEach(function(sz){
+if(vus["r:"+l+":"+sz])delete rest[l][sz];
+});
+if(!Object.keys(rest[l]||{}).length)delete rest[l];
+});
+ls("retours",rest);
 
 /* On garde les 400 derniers repères pour ne pas gonfler le stockage. */
 var ks=Object.keys(vus);
@@ -96,6 +132,18 @@ h+='<div class="sh-act"><button type="button" class="fbtn" data-v-act="perm">Act
 h+='<div class="sh-act"><button type="button" class="fbtn" data-v-act="test">Vérifier maintenant</button></div>';
 }
 h+='<div class="veille-note">La veille est locale : elle sonne quand le site est ouvert, ou tant que l’onglet reste en arrière-plan. Un site statique ne peut pas se réveiller seul, nous ne prétendons donc pas le contraire.</div>';
+var ret=ls("retours")||{};
+var rk=[];
+Object.keys(ret).forEach(function(l){
+var nm=(M()[l]||{}).nom||(ret[l]&&Object.values(ret[l])[0]&&Object.values(ret[l])[0].nom)||"Article";
+Object.keys(ret[l]||{}).forEach(function(sz){rk.push({l:l,sz:sz,nom:nm})});
+});
+if(rk.length){
+h+='<div class="lbl" style="margin-top:14px">Retours en stock suivis</div>';
+rk.forEach(function(r){
+h+='<div class="seuil-on"><span>'+esc(r.nom)+' · taille '+esc(r.sz)+'</span><button type="button" class="fbtn" data-v-act="delret" data-l="'+esc(r.l)+'" data-sz="'+esc(r.sz)+'">Retirer</button></div>';
+});
+}
 var ks=Object.keys(SEUILS);
 if(ks.length){
 h+='<div class="lbl" style="margin-top:14px">Seuils suivis</div>';
@@ -165,6 +213,14 @@ SEUILS[l]={prix:v,nom:(x&&x.nom)||""};
 ls("seuils",SEUILS);
 if(permission()==="default")demander();
 majSeuil(l);
+return;
+}
+if(act==="delret"){
+var rr=ls("retours")||{};
+var lr=b.getAttribute("data-l"),sr=b.getAttribute("data-sz");
+if(rr[lr]){delete rr[lr][sr];if(!Object.keys(rr[lr]).length)delete rr[lr]}
+ls("retours",rr);
+majAlertes();
 return;
 }
 if(act==="del"){

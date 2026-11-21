@@ -1,3 +1,6 @@
 __pycache__/
 # Instantané transitoire entre scraper.py et size_prices.py, jamais publié.
 data/variantes.json
+
+# Captures de vérification, jamais publiées.
+artifacts/

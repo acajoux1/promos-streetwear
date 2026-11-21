@@ -250,6 +250,51 @@ def rapport_sante(statut, anciens_items, seuil=0.5):
     return sante
 
 
+HIST_MAX_POINTS = 30
+HIST_FENETRE_JOURS = 45
+
+
+def maj_historique(history, items, jour):
+    """Ajoute le relevé du jour et borne l'historique de chaque article.
+
+    Un point par jour et par changement de prix suffit à tracer la courbe ; on
+    garde au plus HIST_MAX_POINTS points par article pour que le fichier livré
+    reste léger, et la date de première observation à part (« d ») pour que les
+    badges annoncent l'ancienneté réelle du suivi même après élagage.
+    """
+    for x in items:
+        h = history.setdefault(x["lien"], {"h": []})
+        h.setdefault("d", jour)
+        serie = h["h"]
+        prix = round(x["prix"], 2)
+        anc = round(x["ancien_prix"], 2)
+        der = serie[-1] if serie else None
+        if der is None or der[1] != prix or (len(der) > 2 and der[2] != anc):
+            serie.append([jour, prix, anc])
+            if len(serie) > HIST_MAX_POINTS:
+                del serie[:-HIST_MAX_POINTS]
+        h["v"] = jour
+        prev = None
+        debut = jour
+        for e in reversed(serie):
+            if e[1] != prix:
+                prev = e[1]
+                break
+            debut = e[0]
+        if prev is not None:
+            x["prec"] = prev
+            x["chg"] = debut
+        pmin = min(e[1] for e in serie)
+        if pmin < prix - 0.01:
+            x["pmin"] = pmin
+        ancs = [e[2] for e in serie if len(e) > 2]
+        if len(ancs) >= 2:
+            bas = min(ancs)
+            if anc > bas * 1.05:
+                x["inf"] = bas
+    return history
+
+
 def main():
     now = datetime.datetime.now(datetime.timezone.utc)
     maj = now.strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -288,36 +333,9 @@ def main():
             variantes[x["lien"]] = v
     variantes = {k: v for k, v in variantes.items() if k in liens}
 
-    for x in items:
-        h = history.setdefault(x["lien"], {"h": []})
-        serie = h["h"]
-        prix = round(x["prix"], 2)
-        anc = round(x["ancien_prix"], 2)
-        der = serie[-1] if serie else None
-        if der is None or der[1] != prix or (len(der) > 2 and der[2] != anc):
-            serie.append([jour, prix, anc])
-            del serie[:-12]
-        h["v"] = jour
-        prev = None
-        debut = jour
-        for e in reversed(serie):
-            if e[1] != prix:
-                prev = e[1]
-                break
-            debut = e[0]
-        if prev is not None:
-            x["prec"] = prev
-            x["chg"] = debut
-        pmin = min(e[1] for e in serie)
-        if pmin < prix - 0.01:
-            x["pmin"] = pmin
-        ancs = [e[2] for e in serie if len(e) > 2]
-        if len(ancs) >= 2:
-            bas = min(ancs)
-            if anc > bas * 1.05:
-                x["inf"] = bas
+    maj_historique(history, items, jour)
 
-    limite = (now - datetime.timedelta(days=45)).strftime("%Y-%m-%d")
+    limite = (now - datetime.timedelta(days=HIST_FENETRE_JOURS)).strftime("%Y-%m-%d")
     history = {k: v for k, v in history.items() if v.get("v", jour) >= limite}
 
     sante = rapport_sante(statut, anciens_items)

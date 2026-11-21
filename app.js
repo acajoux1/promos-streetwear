@@ -1,4 +1,5 @@
-var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2,PROFIL_FILTER=false;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2,PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
+var PRIX_VISITE=null,VISITE_T=0,BAISSES={};
 var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true,BUDGETS=[100,150,200];
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var PROF_KIND="haut",PROF_SYS="EU";
@@ -224,6 +225,7 @@ function allSizes(x){
 var seen={},out=[];
 uniqueRawSizes(x).forEach(function(t){if(!seen[t]){seen[t]=1;out.push(t)}});
 Object.keys(sizeOfferList(x)).forEach(function(t){if(!seen[t]){seen[t]=1;out.push(t)}});
+epuisees(x).forEach(function(t){if(!seen[t]){seen[t]=1;out.push(t)}});
 return out.sort(function(a,b){
 var na=val(a),nb=val(b);
 var fa=isNaN(na),fb=isNaN(nb);
@@ -396,6 +398,8 @@ return '<button class="chip gen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[
 }).join("");
 }
 function syncChips(){
+var cv=$("cVisite");
+if(cv)cv.className="chip"+(onlyVisite?" on":"");
 $("cNew").className="chip"+(onlyNew?" on":"");
 $("cDrop").className="chip"+(onlyDrop?" on":"");
 $("cTop").className="chip"+(onlyTop?" on":"");
@@ -419,6 +423,7 @@ if(onlyRE)a.push(["re","","🇷🇪 Réunion"]);
 if(onlyNew)a.push(["new","","Nouveautés"]);
 if(onlyDrop)a.push(["drop","","Baisses"]);
 if(onlyTop)a.push(["top","","Top 30"]);
+if(onlyVisite)a.push(["vis","","Baissé depuis votre visite"]);
 if(onlyFav)a.push(["fav","","Favoris"]);
 if(PROFIL_FILTER)a.push(["prof","","Profil tailles"]);
 return a;
@@ -455,14 +460,17 @@ if(onlyNew)n++;
 if(onlyDrop)n++;
 if(onlyTop)n++;
 if(onlyRE)n++;
+if(onlyVisite)n++;
 if($("tri").value!=="remise")n++;
 var fb=$("fBtn");
 if(fb)fb.innerHTML="≡"+(n?'<b class="n">'+n+"</b>":"");
 if(fb)fb.className="sqbtn"+(n?" on":"");
 setBd("bd1",(GEN!=="all"?1:0)+(CAT!=="all"?1:0));
-setBd("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0));
+setBd("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
 setBd("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
 setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
+var pn=$("pmNote");
+if(pn){var sk=Object.keys(SZ);pn.textContent=sk.length===1?"Prix de la taille "+sk[0]+" uniquement":""}
 updShopTab();
 renderPills();
 updHomeBtn();
@@ -494,6 +502,7 @@ function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
 // Ouvre la fiche : le focus part sur le bouton de fermeture, toujours visible.
 function showSheet(label){
+rememberFocus();
 var s=$("sheet");
 s.setAttribute("role","dialog");
 s.setAttribute("aria-modal","true");
@@ -519,15 +528,19 @@ if(sheetOpen())hideSheet();
 else if(drawerOpen())hidePanel();
 });
 function togglePanel(){
+rememberFocus();
 $("drawer").className="open";
+$("fBtn").setAttribute("aria-expanded","true");
 document.body.style.overflow="hidden";
 $("panel").scrollTop=0;
 renderProfileSection();
+renderVides();
 updBtn();
 if(hs===0)pushO();
 }
 function hidePanel(forceTop){
 $("drawer").className="";
+$("fBtn").setAttribute("aria-expanded","false");
 document.body.style.overflow="";
 updBtn();
 if(dirty){
@@ -539,6 +552,7 @@ else keepView(fz);
 }else if(forceTop){
 scrollToTopResults();
 }
+restoreFocus();
 }
 function closePanel(){
 hidePanel();
@@ -569,15 +583,19 @@ var nb=$("newsBubble");
 if(!nb)return;
 var newCnt=Object.keys(NEWS).length;
 var goneCnt=goneFavCount();
-if(!newCnt&&!goneCnt){
+var visCnt=onlyVisite?0:Object.keys(BAISSES).length;
+if(!newCnt&&!goneCnt&&!visCnt){
 nb.style.display="none";
 nb.innerHTML="";
 return;
 }
 var txt=[];
+if(visCnt)txt.push("<b>"+visCnt+"</b> baisse"+(visCnt>1?"s":"")+" depuis votre dernière visite");
 if(newCnt)txt.push("<b>"+newCnt+"</b> nouveauté"+(newCnt>1?"s":""));
 if(goneCnt)txt.push("<b>"+goneCnt+"</b> favori"+(goneCnt>1?"s retirés":" retiré"));
 var btns=[];
+if(visCnt)btns.push('<button type="button" class="nb-btn" id="nbVis">Voir les baisses</button>');
+if(visCnt)btns.push('<button type="button" class="nb-btn" id="nbVisSkip">Ignorer</button>');
 if(newCnt)btns.push('<button type="button" class="nb-btn" id="nbNew">Voir nouveautés</button>');
 if(goneCnt)btns.push('<button type="button" class="nb-btn" id="nbGone">Voir favoris retirés</button>');
 nb.style.display="flex";
@@ -697,6 +715,8 @@ if(savedProf.haut){var nh=norm(savedProf.haut)||savedProf.haut;SZ[nh]=1}
 if(savedProf.bas){var nb=norm(savedProf.bas)||savedProf.bas;SZ[nb]=1}
 
 $("newsBubble").addEventListener("click",function(e){
+if(e.target.closest("#nbVis")){onlyVisite=true;onlyNew=false;onlyFav=false;syncChips();favCount();apply(true,true)}
+if(e.target.closest("#nbVisSkip")){BAISSES={};PRIX_VISITE=null;VISITE_T=0;ls("prix_visite",null);ls("visite",0);updNewsAndFavBubble()}
 if(e.target.closest("#nbNew")){onlyNew=true;onlyFav=false;syncChips();favCount();apply(true,true)}
 if(e.target.closest("#nbGone")){onlyFav=true;onlyNew=false;syncChips();favCount();apply(true,true)}
 });
@@ -713,6 +733,13 @@ pickedSize=(pickedSize===t)?"":t;
   renderPickedSizePrice();
   if(cur)setHash(cur,pickedSize);
   return;
+}
+var rb=e.target.closest("[data-ret]");
+if(rb){
+var xx=M[cur]||FAV[cur];
+if(xx)toggleRetour(xx,rb.getAttribute("data-ret"));
+renderPickedSizePrice();
+return;
 }
 var shopRow=e.target.closest(".shop-row");
 if(shopRow){
@@ -745,7 +772,9 @@ openAlerts();
 }
 });
 document.addEventListener("keydown",function(e){
-if(e.key==="Escape"){if(sheetOpen())closeSheet();else if(drawerOpen())closePanel()}
+if(e.key==="Escape"){if(sheetOpen())closeSheet();else if(drawerOpen())closePanel();return}
+if(sheetOpen())trapFocus(e,$("sheet"));
+else if(drawerOpen())trapFocus(e,$("drawer"));
 });
 })();
 
@@ -772,7 +801,7 @@ setDens(ls("dens")===3?3:2);
 
 $("g").innerHTML=Array(9).join('<div class="card sk"><div class="ph"></div><div class="in"><div class="skl"></div><div class="skl s2"></div></div></div>');
 
-function sig(){return JSON.stringify([curF(),onlyFav,onlyNew,onlyDrop,onlyTop,$("tri").value])}
+function sig(){return JSON.stringify([curF(),onlyFav,onlyNew,onlyDrop,onlyTop,onlyVisite,$("tri").value])}
 function saveView(){
 if(!MAJ)return;
 ls("view",{t:Date.now(),y:window.scrollY,n:shownN,s:sig(),m:MAJ});
@@ -856,6 +885,7 @@ var snap=ls("snap");
 var links=D.map(function(x){return x.lien});
 if(!snap){snap={maj:j.maj,links:links,prev:null};ls("snap",snap)}
 else if(snap.maj!==j.maj){snap={maj:j.maj,links:links,prev:snap.links};ls("snap",snap)}
+calcBaisses();
 NEWS={};
 if(snap.prev){
 hasNew=true;
@@ -880,6 +910,7 @@ renderBudget();
 if(!isAuto)restoreView();
 openFromHash();
 if(!isAuto)importSharedFavs();
+if(!isAuto)noterVisite();
 document.dispatchEvent(new CustomEvent("promos:maj",{detail:{maj:j.maj}}));
 annotateBasSuivi();
 renderSelection();
@@ -894,6 +925,7 @@ if("requestIdleCallback" in window)requestIdleCallback(run,{timeout:3500});
 else setTimeout(run,1500);
 })();
 
+chargerVisite();
 loadPromos(false).catch(function(){
 $("g").innerHTML="";
 $("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions.";
@@ -913,6 +945,7 @@ function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
 function toggleDrop(){onlyDrop=!onlyDrop;syncChips();apply()}
 function toggleTop(){onlyTop=!onlyTop;syncChips();apply()}
 function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
+function toggleVisite(){onlyVisite=!onlyVisite;syncChips();apply()}
 
 function renderBudget(){
 var el=$("budget");
@@ -927,7 +960,7 @@ return '<button type="button" class="chip bb'+(cur===v?" on":"")+'" data-p="'+v+
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
 syncChips();
 renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
@@ -958,6 +991,7 @@ else if(k==="re")onlyRE=false;
 else if(k==="new")onlyNew=false;
 else if(k==="drop")onlyDrop=false;
 else if(k==="top")onlyTop=false;
+else if(k==="vis")onlyVisite=false;
 else if(k==="fav"){onlyFav=false;favCount()}
 else if(k==="prof"){PROFIL_FILTER=false;ls("profFiltre",false);renderProfileSection()}
 syncChips();
@@ -1041,13 +1075,13 @@ var syn=SYN[t]||SYN[st];
 if(syn)syn.split(" ").forEach(function(a){if(a&&out.indexOf(a)<0)out.push(a)});
 return out;
 }
-function searchScore(x,rawQ){
+function searchScore(x,rawQ,relax){
 var cq=cleanSearchStr(rawQ);
 if(!cq)return 1;
 var terms=cq.split(/\s+/).filter(Boolean);
 var allStr=x._allClean||cleanSearchStr((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||""));
 var titleStr=x._titleClean||cleanSearchStr((x.marque||"")+" "+(x.nom||""));
-var sizes=null;
+var sizes=null,hits=0;
 
 for(var i=0;i<terms.length;i++){
 var vars=searchVariants(terms[i]);
@@ -1060,10 +1094,15 @@ if(!sizes)sizes=getT(x).map(function(s){return String(s).toLowerCase()});
 var n=terms[i].replace(",",".");
 if(sizes.indexOf(n)>=0||sizes.indexOf(n+" 1/3")>=0)hit=true;
 }
-if(!hit)return 0;
+if(!hit){
+if(relax)continue;
+return 0;
 }
+hits++;
+}
+if(relax&&!hits)return 0;
 
-var score=1;
+var score=relax?0:1;
 if(titleStr.indexOf(cq)>=0)score+=50;
 terms.forEach(function(t){
 var best=0;
@@ -1080,13 +1119,13 @@ function curF(){
 var pm=parseFloat($("pmax").value);
 return {q:$("q").value.trim(),gen:GEN,cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
-function pass(x,F){
+function pass(x,F,relax){
 if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
 if(!genOkG(x,F.gen))return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
 if(F.pm!=null){
-if(shoePriceBounds(x).min>F.pm)return false;
+if(pxOf(x)>F.pm)return false;
 }
 if(F.re&&RE_OK.indexOf(x.boutique)<0)return false;
 if(F.br.length&&F.br.indexOf(bkey(x))<0)return false;
@@ -1095,7 +1134,7 @@ var t=getT(x);
 if(!F.sz.some(function(s){return t.indexOf(s)>=0}))return false;
 }
 if(F.q){
-var sc=searchScore(x,F.q);
+var sc=searchScore(x,F.q,relax);
 if(!sc)return false;
 x._qScore=sc;
 }else{
@@ -1115,7 +1154,7 @@ onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
 syncChips();
 renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
 }
-function compute(){
+function compute(relax){
 var F=curF();
 var tri=$("tri").value;
 var base=onlyFav?Object.keys(FAV).map(function(l){return M[l]||Object.assign({},FAV[l],{gone:true})}):D;
@@ -1123,7 +1162,8 @@ L=base.filter(function(x){
 if(onlyNew&&!NEWS[x.lien])return false;
 if(onlyDrop&&!isDrop(x))return false;
 if(onlyTop&&x.inf)return false;
-return pass(x,F);
+if(onlyVisite&&!BAISSES[x.lien])return false;
+return pass(x,F,relax);
 });
 L.sort(function(a,c){
 if(F.q&&(c._qScore||0)!==(a._qScore||0)){
@@ -1134,10 +1174,10 @@ return (c.remise*1.5-(c.prix/10))-(a.remise*1.5-(a.prix/10));
 }
 if(onlyTop)return c.remise-a.remise;
 if(tri==="prix"){
-return shoePriceBounds(a).min-shoePriceBounds(c).min;
+return pxOf(a)-pxOf(c);
 }
 if(tri==="prixd"){
-return shoePriceBounds(c).max-shoePriceBounds(a).max;
+return Object.keys(SZ).length===1?pxOf(c)-pxOf(a):shoePriceBounds(c).max-shoePriceBounds(a).max;
 }
 return c.remise-a.remise;
 });
@@ -1159,7 +1199,15 @@ if(sr)sr.textContent="Voir "+L.length+" résultat"+(L.length>1?"s":"");
 }
 function draw(soft,forceTop){
 compute();
-if(!L.length&&$("q").value.trim())logVide($("q").value);
+var exact=L.length;
+RELAX=false;
+/* Aucun résultat exact : on propose les articles qui partagent au moins un
+   terme plutôt qu'un écran vide. La requête reste notée comme infructueuse. */
+if(!exact&&$("q").value.trim()){
+compute(true);
+RELAX=L.length>0;
+logVide($("q").value);
+}
 updRes();
 if(drawerOpen()){
 dirty=true;
@@ -1204,9 +1252,12 @@ if(onlyNew)parts.push("Nouveautés");
 if(onlyDrop)parts.push("Baisses");
 if(onlyTop)parts.push("Top 30");
 if(onlyRE)parts.push("La Réunion");
+if(onlyVisite)parts.push("Baissé depuis votre visite");
 var note="";
 if(Object.keys(SZ).length)note=" · articles sans taille indiquée masqués";
 if(onlyFav&&!L.length)note=" · touchez ♡ sur un article pour l’ajouter";
+if(onlyVisite&&VISITE_T)note=" · depuis le "+new Date(VISITE_T).toLocaleDateString("fr-FR");
+if(RELAX)note=" · aucun résultat exact, voici les plus proches";
 $("n").textContent=L.length+" article"+(L.length>1?"s":"")+(parts.length?" · "+parts.join(" · "):"")+note;
 updRes();
 $("g").innerHTML=shown.map(function(x){return cardHtml(x)}).join("");
@@ -1321,18 +1372,29 @@ $("shBody").scrollTop=0;
 showSheet("Boutiques");
 }
 
-function szBlockHtml(x){
+/* Bloc de tailles : les pointures épuisées restent visibles, sans prix inventé,
+   et peuvent être surveillées pour un retour en stock. */
+function szListHtml(x){
 var uSizes=allSizes(x);
-var spm=sizePriceMap(x);
-if(!uSizes.length)return '<div id="szWrap"></div>';
-return '<div id="szWrap"><div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+uSizes.map(function(t){var pv=spm[t];return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(pv?'<em>'+esc(f(pv))+'</em>':'')+'</button>'}).join("")+'</div></div>';
+if(!uSizes.length)return "";
+var spm=sizePriceMap(x),off={};
+epuisees(x).forEach(function(t){off[t]=1});
+var items=uSizes.map(function(t){
+var pv=spm[t],isOff=!pv&&off[t];
+return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+(isOff?" off":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(isOff?'<em>épuisée</em>':(pv?'<em>'+esc(f(pv))+'</em>':''))+'</button>';
+}).join("");
+var note=Object.keys(off).length?'<div class="sz-off-note">Touchez une taille épuisée pour être prévenu de son retour.</div>':"";
+return '<div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+items+'</div>'+note;
+}
+function szBlockHtml(x){
+if(!allSizes(x).length)return '<div id="szWrap"></div>';
+return '<div id="szWrap">'+szListHtml(x)+'</div>';
 }
 function renderSheetSizes(){
 var x=M[cur]||FAV[cur];
 var wrap=$("szWrap");
 if(!x||!wrap)return;
-var uSizes=allSizes(x),spm=sizePriceMap(x);
-wrap.innerHTML=uSizes.length?'<div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+uSizes.map(function(t){var pv=spm[t];return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(pv?'<em>'+esc(f(pv))+'</em>':'')+'</button>'}).join("")+'</div>':"";
+wrap.innerHTML=szListHtml(x);
 renderPickedSizePrice();
 }
 function setHash(l,t){
@@ -1397,7 +1459,14 @@ if(!x||!pickedSize){box.style.display="none";box.innerHTML="";return}
 var list=sizeOfferList(x)[pickedSize]||[];
 box.style.display="";
 if(!list.length){
+if(epuisees(x).indexOf(pickedSize)<0){
 box.innerHTML="Taille <b>"+esc(pickedSize)+"</b> · Prix site : <b>"+esc(priceRangeLabel(x))+"</b>";
+}else{
+var r=retours(),w=!!(r[cur]&&r[cur][pickedSize]);
+box.innerHTML='<div class="sz-offer-h">Taille '+esc(pickedSize)+'</div>'+
+'<div class="sz-offer"><span>Épuisée sur ce site</span><b>—</b></div>'+
+'<div class="retour-row"><button type="button" class="fbtn'+(w?" on":"")+'" data-ret="'+esc(pickedSize)+'">'+(w?"Alerte de retour en place ✓":"Me prévenir si elle revient")+'</button></div>';
+}
 renderCmp();
 return;
 }
@@ -1410,14 +1479,113 @@ return '<div class="sz-offer">'+(multi?'<span>'+esc(o.etat||"Prix site")+'</span
 renderCmp();
 }
 
+/* --- Prix de la taille, visites, retours en stock, focus -------------- */
+/* Prix retenu par les filtres et le tri : celui de la seule taille choisie,
+   sinon le plus bas de l'article. */
+function pxOf(x){
+var ks=Object.keys(SZ);
+if(ks.length===1){
+var v=sizePriceMap(x)[ks[0]];
+if(v>0)return v;
+}
+return shoePriceBounds(x).min;
+}
+function median(vals){
+var a=vals.filter(function(v){return v>0}).sort(function(p,q){return p-q});
+if(!a.length)return null;
+var m=Math.floor(a.length/2);
+return a.length%2?a[m]:(a[m-1]+a[m])/2;
+}
+/* Pointures connues mais indisponibles, publiées par l'index des tailles. */
+function epuisees(x){
+var e=IDX[x.lien];
+return (e&&Array.isArray(e.e))?e.e:[];
+}
+function sizePrice(l,s){
+var e=IDX[l];
+return (e&&e.p&&e.p[s]>0)?e.p[s]:0;
+}
+window.sizePrice=sizePrice;
+function retours(){
+var r=ls("retours");
+return (r&&typeof r==="object")?r:{};
+}
+function toggleRetour(x,size){
+var r=retours();
+r[x.lien]=r[x.lien]||{};
+if(r[x.lien][size])delete r[x.lien][size];
+else r[x.lien][size]={nom:x.nom,taille:size};
+if(!Object.keys(r[x.lien]).length)delete r[x.lien];
+ls("retours",r);
+try{
+if(window.Veille&&Veille.demander&&"Notification" in window&&Notification.permission==="default")Veille.demander();
+}catch(e){}
+}
+/* Baisses depuis la dernière visite : une photo des prix est gardée d'une
+   visite à l'autre, ce qui montre ce qui a réellement baissé depuis, sans
+   dépendre de la granularité quotidienne de l'historique. */
+function chargerVisite(){
+PRIX_VISITE=ls("prix_visite");
+VISITE_T=+ls("visite")||0;
+}
+function noterVisite(){
+var snap={};
+D.forEach(function(x){snap[x.lien]=Math.round(x.prix*100)});
+ls("prix_visite",snap);
+ls("visite",Date.now());
+}
+function calcBaisses(){
+BAISSES={};
+if(!PRIX_VISITE||typeof PRIX_VISITE!=="object")return;
+D.forEach(function(x){
+var old=PRIX_VISITE[x.lien];
+if(!(old>0))return;
+var avant=old/100;
+if(x.prix<avant-0.5)BAISSES[x.lien]={avant:avant,ecart:avant-x.prix};
+});
+VISITE_T=+ls("visite")||VISITE_T;
+}
+/* Focus rendu à l'élément qui a ouvert une couche, et piégé dedans tant
+   qu'elle est ouverte : au clavier, on ne sort plus de la fiche par erreur. */
+var FOCUS_BACK=null;
+function rememberFocus(){FOCUS_BACK=document.activeElement}
+function restoreFocus(){
+var el=FOCUS_BACK;FOCUS_BACK=null;
+if(el&&el.focus&&document.contains(el)){try{el.focus({preventScroll:true})}catch(e){}}
+}
+function trapFocus(e,root){
+if(e.key!=="Tab"||!root)return;
+var all=root.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+var list=[];
+Array.prototype.forEach.call(all,function(el){if(el.offsetParent!==null||el===document.activeElement)list.push(el)});
+if(!list.length)return;
+var first=list[0],last=list[list.length-1];
+if(e.shiftKey&&(document.activeElement===first||!root.contains(document.activeElement))){e.preventDefault();last.focus()}
+else if(!e.shiftKey&&(document.activeElement===last||!root.contains(document.activeElement))){e.preventDefault();first.focus()}
+}
+/* Recherches restées sans résultat : la seule source gratuite pour repérer les
+   synonymes et marques qui manquent. */
+function renderVides(){
+var box=$("videsBox");
+if(!box)return;
+var v=ls("vides")||[];
+if(!v.length){box.innerHTML="";return}
+box.innerHTML='<div class="lbl">Recherches sans résultat</div><div class="vides-list">'+v.map(function(q){return '<span>'+esc(q)+'</span>'}).join("")+'</div><div class="s" style="white-space:normal">Ces requêtes ne donnaient rien : elles servent à compléter les synonymes.</div>';
+}
+
 /* --- Comparateur : la même paire, vue chez les autres boutiques -------- */
 function cmpBlockHtml(x){
 if(!M[x.lien]||!x._alt||!x._alt.length)return "";
 var list=x._alt.slice().sort(function(a,b){return shoePriceBounds(a).min-shoePriceBounds(b).min});
 var best=shoePriceBounds(list[0]).min;
 var own=x.prix;
+var med=median(list.map(function(y){return shoePriceBounds(y).min}));
 var line='<div class="cmp-line">'+list.length+(list.length>1?" autres boutiques":" autre boutique")+
 (best<own-0.01?" · dès "+f(best)+", soit "+f(own-best)+" de moins":" · aucun meilleur prix ce jour")+'</div>';
+/* Le prix barré se juge sur les prix réellement pratiqués ailleurs. */
+if(med&&x.ancien_prix>med*1.05){
+line+='<div class="cmp-med">Prix médian ailleurs : '+f(med)+' · le prix barré ('+f(x.ancien_prix)+') est '+Math.round((x.ancien_prix/med-1)*100)+' % au-dessus</div>';
+}
 var rows=list.map(function(y){
 var b=shoePriceBounds(y);
 var szP=null;
@@ -1448,6 +1616,9 @@ if(!h||!h.h||!h.h.length)return null;
 /* Moins de trois relevés : le « plus bas » ne veut rien dire, on se tait. */
 if(h.h.length<3)return null;
 var min=null,first=null;
+/* « d » est la date de première observation, conservée même quand les points
+   les plus anciens ont été élagués : l'ancienneté affichée reste vraie. */
+if(h.d){var t0=new Date(h.d+"T00:00:00Z").getTime();if(!isNaN(t0))first=t0}
 h.h.forEach(function(p){
 if(!p||typeof p[1]!=="number"||!(p[1]>0))return;
 var t=new Date(p[0]+"T00:00:00Z").getTime();
@@ -1598,6 +1769,7 @@ cur=null;pickedSize="";
 setHash(null);
 if(onlyFav){var y=window.scrollY;draw(true);window.scrollTo(0,y)}
 else syncFavs();
+restoreFocus();
 }
 function closeSheet(){
 hideSheet();

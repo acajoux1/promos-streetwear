@@ -1,19 +1,30 @@
-"""Génère le flux RSS des nouveautés et le plan du site.
+"""Génère le flux RSS, les fiches partageables et le plan du site.
 
 Appelé par le workflow horaire juste après size_prices.py : aucun accès réseau,
 seulement les fichiers déjà livrés.
 """
+import hashlib
+import html
 import json
 import os
+import re
+import shutil
+import unicodedata
 from email.utils import format_datetime
 from datetime import datetime, timezone
+from urllib.parse import quote
 from xml.sax.saxutils import escape
 
 PROMOS = "data/promos.json"
+INDEX = "data/tailles_index.json"
 FEED = "feed.xml"
 SITEMAP = "sitemap.xml"
+FICHES = "p"
 SITE = "https://acajoux1.github.io/promos-streetwear/"
 LIMITE = 60
+# Les fiches statiques servent au partage et au référencement : inutile d'en
+# générer des milliers, les meilleures remises suffisent.
+FICHES_MAX = 40
 
 
 def charger(chemin):
@@ -45,6 +56,12 @@ def retenus(items):
     return sorted(items, key=cle, reverse=True)[:LIMITE]
 
 
+def euros(valeur):
+    if not isinstance(valeur, (int, float)) or isinstance(valeur, bool):
+        return "prix ?"
+    return f"{valeur:.2f} €".replace(".", ",")
+
+
 def description(x):
     bouts = []
     if x.get("ancien_prix"):
@@ -58,10 +75,17 @@ def description(x):
     return " — ".join(bouts)
 
 
+def nom_affiche(x):
+    """Évite « Adidas Adidas Samba » quand le titre contient déjà la marque."""
+    marque = str(x.get("marque") or "").strip()
+    nom = str(x.get("nom") or "").strip()
+    if marque and nom.lower().startswith(marque.lower()):
+        return nom
+    return f"{marque} {nom}".strip()
+
+
 def titre(x):
-    prix = x.get("prix")
-    p = f"{prix:.2f} €".replace(".", ",") if isinstance(prix, (int, float)) else "prix ?"
-    return f"{x.get('marque', '')} {x.get('nom', '')}".strip() + f" — {p}"
+    return nom_affiche(x) + f" — {euros(x.get('prix'))}"
 
 
 def ecrire_feed(promo):
@@ -97,14 +121,116 @@ def ecrire_feed(promo):
         f.write("\n".join(lignes))
 
 
-def ecrire_sitemap(promo):
-    maj = promo.get("maj", "")[:10]
-    pages = [("", "1.0"), ("methode.html", "0.6"), ("etat.html", "0.4")]
+def slug(x):
+    """Nom de fichier lisible et stable pour une fiche."""
+    nom = str(x.get("nom") or "")
+    marque = str(x.get("marque") or "")
+    base = nom if (not marque or nom.lower().startswith(marque.lower())) else f"{marque} {nom}"
+    base = unicodedata.normalize("NFKD", base).encode("ascii", "ignore").decode()
+    base = re.sub(r"[^a-z0-9]+", "-", base.lower()).strip("-")[:60] or "article"
+    court = hashlib.sha1((x.get("lien") or "").encode("utf-8")).hexdigest()[:6]
+    return f"{base}-{court}"
+
+
+def image_absolue(url):
+    if not url:
+        return SITE + "og.png"
+    if url.startswith("//"):
+        return "https:" + url
+    if url.startswith("/"):
+        return SITE.rstrip("/") + url
+    return url
+
+
+def fiche_html(x, entree, maj):
+    nom = html.escape(nom_affiche(x))
+    boutique = html.escape(str(x.get("boutique") or ""))
+    lien = html.escape(str(x.get("lien") or ""))
+    image = html.escape(image_absolue(x.get("image") or ""))
+    prix = euros(x.get("prix"))
+    ancien = euros(x.get("ancien_prix")) if x.get("ancien_prix") else ""
+    remise = x.get("remise") or 0
+    fichier = slug(x) + ".html"
+    canonique = f"{SITE}p/{fichier}"
+    profond = f"{SITE}#p={quote(str(x.get('lien') or ''), safe='')}"
+    resume = f"{nom} à {prix} chez {boutique} (−{remise} %). Prix vérifié taille par taille, relevé du {maj}."
+    ancien_html = f' <span class="old">{ancien}</span>' if ancien else ""
+
+    blocs = []
+    if entree:
+        for taille in entree.get("t") or []:
+            p = (entree.get("p") or {}).get(taille)
+            blocs.append(
+                '<span class="chip">' + html.escape(str(taille))
+                + (f" · {euros(p)}" if p else "") + "</span>"
+            )
+    tailles = ('<div class="lbl">Tailles &amp; prix</div><div class="tabs">'
+               + "".join(blocs) + "</div>") if blocs else ""
+
+    return f"""<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<meta name="description" content="{html.escape(resume)}">
+<link rel="canonical" href="{canonique}">
+<meta property="og:type" content="product">
+<meta property="og:site_name" content="PROMOS.">
+<meta property="og:locale" content="fr_FR">
+<meta property="og:title" content="{nom} — {prix}">
+<meta property="og:description" content="{html.escape(resume)}">
+<meta property="og:url" content="{canonique}">
+<meta property="og:image" content="{image}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="192x192" href="../icone-192.png">
+<link rel="stylesheet" href="../style.css">
+<title>{nom} — {prix} · PROMOS.</title>
+</head>
+<body>
+<main class="page fiche">
+<p class="kicker">Fiche · {boutique}</p>
+<h1>{nom}</h1>
+<p class="fiche-prix"><span class="big">{prix}</span>{ancien_html} <span class="pct2">−{remise} %</span></p>
+<img class="sh-img" src="{image}" alt="" referrerpolicy="no-referrer">
+{tailles}
+<p><a class="go" href="{lien}" target="_blank" rel="noopener">Voir l’offre chez {boutique}</a></p>
+<p><a href="{profond}">Ouvrir la fiche complète : historique du prix et autres boutiques</a></p>
+<div class="hist-warn">Prix relevé le {maj} lors du suivi horaire de cinq boutiques. La remise affichée est recoupée avec les prix observés : voir la <a href="../methode.html">méthode</a>.</div>
+<a class="back" href="../">← Toutes les promos</a>
+</main>
+</body>
+</html>
+"""
+
+
+def ecrire_fiches(promo, index):
+    """Les meilleures remises en pages statiques, partageables et indexables."""
+    items = [x for x in (promo.get("items") or []) if x.get("lien") and x.get("image")]
+    items.sort(key=lambda x: ((x.get("remise") or 0), -(x.get("prix") or 0)), reverse=True)
+    shutil.rmtree(FICHES, ignore_errors=True)
+    os.makedirs(FICHES, exist_ok=True)
+    maj = str(promo.get("maj") or "")[:10]
+    by_link = index.get("by_link") if isinstance(index, dict) else {}
+    pages = []
+    for x in items[:FICHES_MAX]:
+        fichier = slug(x) + ".html"
+        with open(os.path.join(FICHES, fichier), "w", encoding="utf-8") as f:
+            f.write(fiche_html(x, (by_link or {}).get(x["lien"]), maj))
+        pages.append(f"p/{fichier}")
+    return pages
+
+
+def ecrire_sitemap(promo, pages):
+    maj = str(promo.get("maj") or "")[:10]
+    entrees = [("", "1.0"), ("methode.html", "0.6"), ("etat.html", "0.4")]
+    entrees += [(chemin, "0.5") for chemin in pages]
     lignes = [
         '<?xml version="1.0" encoding="UTF-8"?>',
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ]
-    for chemin, prio in pages:
+    for chemin, prio in entrees:
         bloc = [f"<loc>{SITE}{chemin}</loc>"]
         if maj:
             bloc.append(f"<lastmod>{maj}</lastmod>")
@@ -120,10 +246,12 @@ def main():
     if not promo:
         print("promos.json illisible : flux et plan du site inchangés")
         return 1
+    index = charger(INDEX)
     ecrire_feed(promo)
-    ecrire_sitemap(promo)
+    pages = ecrire_fiches(promo, index)
+    ecrire_sitemap(promo, pages)
     n = min(LIMITE, len(promo.get("items") or []))
-    print(f"{FEED} : {n} entrées · {SITEMAP} : 3 pages")
+    print(f"{FEED} : {n} entrées · {len(pages)} fiches · {SITEMAP} : {3 + len(pages)} pages")
     return 0
 
 

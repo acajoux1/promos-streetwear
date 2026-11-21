@@ -45,7 +45,7 @@
       <button type="button" class="fbtn" id="cFav" onclick="toggleFav2()">♥ 0</button>
       <button type="button" class="fbtn" id="cBell" onclick="openAlerts()">Alertes</button>
       <button type="button" class="fbtn nav-wide" id="bShops" onclick="openShops()">Boutiques</button>
-      <button type="button" class="sqbtn" id="fBtn" onclick="togglePanel()" aria-label="Filtres">≡</button>
+      <button type="button" class="sqbtn" id="fBtn" onclick="togglePanel()" aria-label="Filtres" aria-expanded="false" aria-controls="drawer">≡</button>
     </nav>
   </div>
   <div class="searchrow">
@@ -76,12 +76,12 @@
 
 <div class="traveller" id="traveller" aria-hidden="true"><img id="travImg" alt="" referrerpolicy="no-referrer"></div>
 
-<div id="newsBubble" class="news-bubble" style="display:none"></div>
+<div id="newsBubble" class="news-bubble" style="display:none" role="status"></div>
 
 <div id="selBlock" class="sel" hidden></div>
 
 <div class="metaline">
-  <div class="sub" id="n"></div>
+  <div class="sub" id="n" aria-live="polite"></div>
   <select id="tri" aria-label="Trier les résultats" onchange="apply()">
     <option value="remise">Remise</option>
     <option value="pepite">Score affaire</option>
@@ -102,16 +102,16 @@
 
 <button type="button" id="top" onclick="backTop()">↑</button>
 
-<div id="drawer">
+<div id="drawer" role="dialog" aria-modal="true" aria-label="Filtres">
 <div class="dr-bg" onclick="closePanel()"></div>
 <div class="dr-body">
 <div class="dr-head"><span>Filtres</span><button type="button" class="sh-x" onclick="closePanel()" aria-label="Fermer">✕</button></div>
 <div id="panel">
 <details class="sec" open><summary><span>Catégories<i class="bdg" id="bd1" style="display:none"></i></span></summary><div class="sec-body"><div class="tabs" id="cats"></div></div></details>
-<details class="sec"><summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary><div class="sec-body"><div class="prow"><button type="button" class="chip" id="cNew" onclick="toggleNew()">Nouveautés</button><button type="button" class="chip" id="cDrop" onclick="toggleDrop()">Baisses récentes</button><button type="button" class="chip" id="cTop" onclick="toggleTop()">Top 30</button><button type="button" class="chip" id="cRE" onclick="toggleRE()">Livre à La Réunion</button><button type="button" class="chip" id="cDup" onclick="toggleDup()">Regrouper les doublons</button></div></div></details>
-<details class="sec"><summary><span>Prix &amp; boutique<i class="bdg" id="bd3" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Boutique</div><select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select><div class="lbl">Remise minimale</div><select id="remise" onchange="apply()"><option value="0">Toutes remises</option><option value="20">−20 % et +</option><option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option></select><div class="lbl">Prix maximum</div><input id="pmax" type="number" inputmode="decimal" placeholder="ex. 150" oninput="onSearch()"></div></details>
+<details class="sec"><summary><span>Collections<i class="bdg" id="bd2" style="display:none"></i></span></summary><div class="sec-body"><div class="prow"><button type="button" class="chip" id="cNew" onclick="toggleNew()">Nouveautés</button><button type="button" class="chip" id="cDrop" onclick="toggleDrop()">Baisses récentes</button><button type="button" class="chip" id="cVisite" onclick="toggleVisite()">Baissé depuis votre visite</button><button type="button" class="chip" id="cTop" onclick="toggleTop()">Top 30</button><button type="button" class="chip" id="cRE" onclick="toggleRE()">Livre à La Réunion</button><button type="button" class="chip" id="cDup" onclick="toggleDup()">Regrouper les doublons</button></div></div></details>
+<details class="sec"><summary><span>Prix &amp; boutique<i class="bdg" id="bd3" style="display:none"></i></span></summary><div class="sec-body"><div class="lbl">Boutique</div><select id="boutique" onchange="apply()"><option value="">Toutes les boutiques</option></select><div class="lbl">Remise minimale</div><select id="remise" onchange="apply()"><option value="0">Toutes remises</option><option value="20">−20 % et +</option><option value="30">−30 % et +</option><option value="40">−40 % et +</option><option value="50">−50 % et +</option></select><div class="lbl">Prix maximum</div><input id="pmax" type="number" inputmode="decimal" placeholder="ex. 150" oninput="onSearch()"><div class="s" id="pmNote"></div><div class="s" style="white-space:normal">Avec une seule taille sélectionnée, le prix maximum porte sur cette taille.</div></div></details>
 <details class="sec"><summary><span>Tailles &amp; marques<i class="bdg" id="bd4" style="display:none"></i></span></summary><div class="sec-body"><div id="szLet"></div><div id="szSys"></div><div id="szNum"></div></div></details>
-<details class="sec"><summary><span>Alertes</span></summary><div class="sec-body"><div class="prow"><button type="button" class="chip" id="cSave" onclick="saveAlert()">Enregistrer cette recherche</button><button type="button" class="chip" onclick="openAlertsFromPanel()">Mes alertes</button><button type="button" class="chip" onclick="shareFavs()">Partager mes favoris</button></div></div></details>
+<details class="sec"><summary><span>Alertes</span></summary><div class="sec-body"><div class="prow"><button type="button" class="chip" id="cSave" onclick="saveAlert()">Enregistrer cette recherche</button><button type="button" class="chip" onclick="openAlertsFromPanel()">Mes alertes</button><button type="button" class="chip" onclick="shareFavs()">Partager mes favoris</button></div><div id="videsBox"></div></div></details>
 </div>
 <div class="dr-foot"><button type="button" class="btn ghost" onclick="resetAll()">Réinitialiser</button><button type="button" class="btn" id="showRes" onclick="closePanel()">Voir les résultats</button></div>
 </div>
