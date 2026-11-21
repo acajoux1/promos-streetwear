@@ -76,7 +76,9 @@ class InterfaceTest(unittest.TestCase):
     def test_03_tiroir_et_fiche(self):
         self.page.click("#fBtn")
         self.page.wait_for_selector("#drawer.open")
-        self.page.click("#profSec > summary")
+        # Le profil tailles vit désormais dans la section « Tailles & marques ».
+        self.page.click("#panel details:nth-of-type(3) > summary")
+        self.assertTrue(self.page.is_visible("#profBox .prof-presets"))
         self.page.click("#drawer .dr-head .sh-x")
         self.page.wait_for_function("() => !document.querySelector('#drawer.open')")
 

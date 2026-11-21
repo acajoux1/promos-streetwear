@@ -465,10 +465,9 @@ if($("tri").value!=="remise")n++;
 var fb=$("fBtn");
 if(fb)fb.innerHTML="≡"+(n?'<b class="n">'+n+"</b>":"");
 if(fb)fb.className="sqbtn"+(n?" on":"");
-setBd("bd1",(GEN!=="all"?1:0)+(CAT!=="all"?1:0));
-setBd("bd2",(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
-setBd("bd3",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
-setBd("bd4",Object.keys(SZ).length+Object.keys(BR).length);
+setBd("bd1",(CAT!=="all"?1:0)+(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
+setBd("bd2",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
+setBd("bd3",Object.keys(SZ).length+Object.keys(BR).length+(PROFIL_FILTER?1:0));
 var pn=$("pmNote");
 if(pn){var sk=Object.keys(SZ);pn.textContent=sk.length===1?"Prix de la taille "+sk[0]+" uniquement":""}
 updShopTab();
@@ -534,7 +533,6 @@ $("fBtn").setAttribute("aria-expanded","true");
 document.body.style.overflow="hidden";
 $("panel").scrollTop=0;
 renderProfileSection();
-renderVides();
 updBtn();
 if(hs===0)pushO();
 }
@@ -609,9 +607,8 @@ return {haut:"",bas:"",chau:""};
 }
 
 function renderProfileSection(){
-var sec=$("profSec");
+var sec=$("profBox");
 if(!sec)return;
-var wasOpen=sec.open;
 var saved=getProfData();
 var list=PROF_KIND==="haut"?TOP_SIZES:(PROF_KIND==="bas"?PANT_SIZES[PROF_SYS]:SHOE_SIZES);
 var activeVal=saved[PROF_KIND]||"";
@@ -630,8 +627,9 @@ return '<button type="button" class="chip'+(PROF_SYS===sys?" on":"")+'" data-psy
 '</div>';
 }
 
-sec.innerHTML='<summary><span>Mon profil tailles'+(badges.length?' <i class="bdg">'+esc(badges.join(" · "))+'</i>':'')+'</span></summary>'+
-'<div class="sec-body">'+
+sec.innerHTML='<div class="prof-block">'+
+'<div class="lbl">Mon profil tailles</div>'+
+'<div class="s prof-line">'+(badges.length?esc(badges.join(" · ")):"Aucune taille enregistrée")+'</div>'+
 '<div class="prof-sub-tabs">'+
 '<button type="button" class="chip'+(PROF_KIND==="haut"?" on":"")+'" data-pkind="haut">👕 Hauts</button>'+
 '<button type="button" class="chip'+(PROF_KIND==="bas"?" on":"")+'" data-pkind="bas">👖 Bas</button>'+
@@ -647,9 +645,7 @@ return '<button type="button" class="chip'+(isOn?" on":"")+'" data-pval="'+esc(f
 '</div>'+
 (activeVal?'<div class="prow"><button type="button" class="chip" id="clearProf">Effacer ('+esc(activeVal)+')</button></div>':'')+
 '<div class="prow"><button type="button" class="chip'+(PROFIL_FILTER?" on":"")+'" id="profFilter">Filtrer tout le catalogue</button></div>'+
-'<div class="s" style="margin-top:8px;white-space:normal">'+(PROFIL_FILTER?"Les résultats sont limités aux articles existant dans vos tailles.":"Applique vos trois tailles à tous les résultats à la fois.")+'</div>'+
 '</div>';
-if(wasOpen)sec.open=true;
 }
 
 (function(){
@@ -658,11 +654,7 @@ var sz=$("szLet");sz.parentNode.insertBefore(b,sz);
 var w=document.createElement("div");w.id="warn";w.style.display="none";
 var n=$("n");n.parentNode.insertBefore(w,n);
 
-var profSec=document.createElement("details");
-profSec.className="sec";
-profSec.id="profSec";
 var drawerPanel=$("panel");
-drawerPanel.insertBefore(profSec,drawerPanel.firstChild);
 renderProfileSection();
 
 drawerPanel.addEventListener("click",function(e){
@@ -787,11 +779,9 @@ b.className="chip dn"+(+b.getAttribute("data-d")===d?" on":"");
 });
 }
 (function(){
-var dr=document.createElement("div");
-dr.className="dens-row";
-dr.innerHTML='<div class="lbl" style="margin-top:4px">Affichage</div><div class="tabs"><button class="chip dn" data-d="2">▦ Normal</button><button class="chip dn" data-d="3">▩ Compact</button></div>';
-var pn=$("panel");
-pn.insertBefore(dr,pn.firstChild);
+var dr=$("dens");
+if(!dr)return;
+dr.innerHTML='<button type="button" class="chip dn" data-d="2">▦ Normal</button><button type="button" class="chip dn" data-d="3">▩ Compact</button>';
 dr.addEventListener("click",function(e){
 var b=e.target.closest(".dn");
 if(b)setDens(+b.getAttribute("data-d"));
@@ -1563,16 +1553,6 @@ var first=list[0],last=list[list.length-1];
 if(e.shiftKey&&(document.activeElement===first||!root.contains(document.activeElement))){e.preventDefault();last.focus()}
 else if(!e.shiftKey&&(document.activeElement===last||!root.contains(document.activeElement))){e.preventDefault();first.focus()}
 }
-/* Recherches restées sans résultat : la seule source gratuite pour repérer les
-   synonymes et marques qui manquent. */
-function renderVides(){
-var box=$("videsBox");
-if(!box)return;
-var v=ls("vides")||[];
-if(!v.length){box.innerHTML="";return}
-box.innerHTML='<div class="lbl">Recherches sans résultat</div><div class="vides-list">'+v.map(function(q){return '<span>'+esc(q)+'</span>'}).join("")+'</div><div class="s" style="white-space:normal">Ces requêtes ne donnaient rien : elles servent à compléter les synonymes.</div>';
-}
-
 /* --- Comparateur : la même paire, vue chez les autres boutiques -------- */
 function cmpBlockHtml(x){
 if(!M[x.lien]||!x._alt||!x._alt.length)return "";

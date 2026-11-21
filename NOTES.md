@@ -28,7 +28,7 @@
   en trois (romain, gras, italique). Plus de requête vers Google Fonts : ni bascule de police ni saut
   de mise en page à l'arrivée, ce qui compte d'abord sur mobile. Preload des deux fichiers courants,
   les autres sont mis en cache à la première utilisation. Total ≈ 315 Ko. Repli Georgia / Courier New.
-- Version du cache du service worker : `promos-v30` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+- Version du cache du service worker : `promos-v31` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
   `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
@@ -124,8 +124,11 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   et estompé au défilement, en `mix-blend-mode:multiply` pour détacher la photo blanche du papier.
   Masqué sous 900 px et sous `prefers-reduced-motion`.
 - Historique : la courbe est tracée à l'ouverture (`strokeDashoffset` animé ~2 s).
-- Filtres : catégories, collections, prix/boutique, tailles & marques, alertes. Le filtre de genre
-  a été retiré (peu utile, les articles sont majoritairement unisexes).
+- Filtres : quatre sections — catégories (avec les collections sous les puces de catégorie), prix &
+  boutique, tailles & marques, alertes — plus « Affichage » replié en bas. Seules les catégories sont
+  ouvertes à l'ouverture du tiroir ; le profil tailles vit dans la section tailles au lieu d'occuper
+  sa propre section. Le filtre de genre a été retiré (peu utile, les articles sont majoritairement
+  unisexes).
 - Dédoublonnage : un même modèle vendu par plusieurs boutiques n'apparaît qu'une fois
   (désactivable via « Regrouper les doublons »).
 - Mes alertes : recherches enregistrées localement, avec le nombre d'articles et de nouveautés.
@@ -156,8 +159,9 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - Prix par taille : avec une seule taille sélectionnée, « Prix maximum » et les tris de prix portent
   sur cette taille, pas sur le plus bas de l'article.
 - Recherche sans résultat exact : les articles partageant au moins un terme sont proposés, avec une
-  mention explicite, et la requête reste notée dans `ls("vides")` — désormais listée dans le tiroir
-  (section Alertes) pour compléter les synonymes et les marques manquantes.
+  mention explicite, et la requête reste notée dans `ls("vides")` pour compléter les synonymes et
+  les marques manquantes. Cette liste ne s'affiche plus dans le tiroir : elle n'aide pas à choisir
+  un article.
 - Comparateur : ligne « prix médian ailleurs » qui juge le prix barré sur les prix réellement
   pratiqués par les autres boutiques, au lieu d'une règle arbitraire.
 - Veille : en plus des alertes et des seuils, deux contrôles — retour en stock d'une taille
@@ -170,7 +174,8 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   affichée, calculés après l'inactivité et masqués dès qu'un filtre ou un tri est actif.
 - Recherche tolérante : accents et pluriels normalisés, synonymes du vestiaire (`chaussures` ↔ `sneaker`,
   `sweat` ↔ `hoodie`…), et un nombre cherché correspond aussi à une taille. Les requêtes sans résultat
-  sont mémorisées dans `ls("vides")` (40 dernières) pour arbitrer la suite.
+  sont mémorisées dans `ls("vides")` (40 dernières), sans affichage dans l'interface, pour arbitrer
+  la suite.
 - Profil tailles : « Filtrer tout le catalogue » applique les trois tailles du profil à tous les
   résultats, sans les perdre au changement de catégorie (`syncProfFilter` après `pruneSZBR`).
 - Favoris partageables : `#f=` porte la liste encodée en base64url ; à l'ouverture, un bandeau propose
