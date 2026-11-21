@@ -23,11 +23,26 @@
 - Feuilles de style : tout est dans `style.css` (papier chaud, sérif Newsreader, mono Courier Prime,
   filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi, et un seul
   dégradé : le reflet de texte de `shiny.js`, jamais utilisé comme aplat).
-- Polices : chargées depuis Google Fonts ; repli Georgia / Courier New hors ligne.
-- Version du cache du service worker : `promos-v28` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
-  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192)
+- Polices : intégrées au site dans `fonts/` (sous-ensemble latin, `@font-face` en tête de `style.css`).
+  Newsreader est servie en deux fichiers variables (romain, italique, poids 400–600) et Courier Prime
+  en trois (romain, gras, italique). Plus de requête vers Google Fonts : ni bascule de police ni saut
+  de mise en page à l'arrivée, ce qui compte d'abord sur mobile. Preload des deux fichiers courants,
+  les autres sont mis en cache à la première utilisation. Total ≈ 315 Ko. Repli Georgia / Courier New.
+- Version du cache du service worker : `promos-v29` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
+
+## Mobile
+
+- Bandeau opaque (plus de flou ni de transparence) et resserré : 52 px de barre, recherche à 16 px
+  pour qu'iOS ne zoome pas au focus, pastilles de filtre sur une seule ligne défilante.
+- Héro sans hauteur minimale imposée : le vide sous les boutons disparaît, la carte fait la taille de
+  son contenu (≈ 430 px au lieu de 520). Titre à `clamp(27px,8.6vw,36px)`, chapô à 13 px, deux boutons
+  de largeur égale.
+- Le mot-symbole `PROMOS` revient dans la carte (`line-height:.95`, sans `translateY`) au lieu d'être
+  coupé par son bord. Les marges basses gardent `env(safe-area-inset-*)`.
+- Vérifié à 360, 390, 414, 768 et 1280 px : aucun débordement horizontal, polices locales chargées.
 
 ## Mesure du démarrage
 

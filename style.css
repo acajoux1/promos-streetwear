@@ -1,5 +1,14 @@
 /* PROMOS. — feuille unique. Papier chaud, encre, un seul bleu, filets. */
 
+/* Polices servies depuis le site (sous-ensemble latin, variable pour Newsreader) :
+   plus d'aller-retour vers Google Fonts, donc pas de bascule de police ni de
+   saut de mise en page à l'arrivée sur mobile. */
+@font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin.woff2) format('woff2')}
+@font-face{font-family:'Newsreader';font-style:italic;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-italic-latin.woff2) format('woff2')}
+@font-face{font-family:'Courier Prime';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/courier-prime-latin.woff2) format('woff2')}
+@font-face{font-family:'Courier Prime';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/courier-prime-bold-latin.woff2) format('woff2')}
+@font-face{font-family:'Courier Prime';font-style:italic;font-weight:400;font-display:swap;src:url(fonts/courier-prime-italic-latin.woff2) format('woff2')}
+
 :root{
 --paper:#EFE9DD;
 --paper2:#E5DED0;
@@ -17,7 +26,7 @@
 
 *{box-sizing:border-box;border-radius:0}
 html{-webkit-text-size-adjust:100%}
-body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:12px;line-height:1.9;letter-spacing:.07em;-webkit-font-smoothing:antialiased}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--mono);font-size:12px;line-height:1.9;letter-spacing:.07em;-webkit-font-smoothing:antialiased;font-kerning:normal;text-rendering:optimizeLegibility}
 button,input,select,a{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 button{font:inherit;color:inherit}
 a{color:inherit}
@@ -241,14 +250,37 @@ input:focus,select:focus{outline:none;border-color:var(--blue)}
 .grid{grid-template-columns:repeat(5,minmax(0,1fr))}
 }
 @media(max-width:760px){
-.hero{min-height:min(74vh,520px)}
+/* Bandeau : opaque plutôt que translucide, pour que le titre ne transparaisse
+   pas dessous pendant le défilement. */
+#bar{background:var(--paper);-webkit-backdrop-filter:none;backdrop-filter:none;padding-top:env(safe-area-inset-top)}
+.nav{height:52px}
+.searchrow{gap:6px;padding-bottom:8px}
+#q{font-size:16px;padding:5px 2px;letter-spacing:.03em}
+.pills2{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-bottom:8px}
+.pills2::-webkit-scrollbar{display:none}
+.pl2{white-space:nowrap}
+/* Héro : plus de hauteur imposée (elle creusait un vide sous les boutons) et
+   une échelle typographique réglée pour la largeur du téléphone. */
+.hero{min-height:0;padding:20px 16px 0}
 .hero-in{max-width:100%}
-.hero-strip{gap:4px 14px}
+.kicker{margin-bottom:10px}
+h1{font-size:clamp(27px,8.6vw,36px);line-height:1.06;letter-spacing:-.015em;margin-bottom:12px}
+.lede{font-size:13px;line-height:1.75;letter-spacing:.01em;max-width:none;margin-bottom:18px}
+.hero-cta{gap:8px}
+.hero-cta .btn{flex:1 1 0;padding:12px 8px;font-size:10px;letter-spacing:.07em}
+.hero-strip{gap:6px 14px;margin-top:22px;padding:10px 0}
+/* Le mot-symbole tient dans la carte au lieu d'être coupé par son bord. */
+.wordmark-spread{font-size:clamp(36px,11vw,52px);line-height:.95;letter-spacing:-.025em;transform:none;padding:4px 0 8px}
+input,select{font-size:16px}
 }
 @media(max-width:560px){
 .nav-wide{display:none}
 .nav-links{gap:12px}
 .wordmark{font-size:18px}
+.hero{padding:18px 14px 0}
+.hero-strip{font-size:9.5px;letter-spacing:.08em}
+.hero-cta .btn{letter-spacing:.04em}
+.metaline{margin:14px 0 8px}
 }
 @media (prefers-reduced-motion:reduce){
 *{animation:none!important;transition:none!important}
