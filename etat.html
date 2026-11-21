@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<title>État des collectes — PROMOS.</title>
+<meta name="description" content="Dernier relevé heure par heure, nombre d’articles par boutique et collectes en échec.">
+<link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+<header id="bar">
+  <div class="nav">
+    <a class="wordmark" href="./" style="text-decoration:none">PROMOS<span>.</span></a>
+    <nav class="nav-links" aria-label="Navigation"><a class="fbtn" href="./" style="text-decoration:none">Le radar</a></nav>
+  </div>
+</header>
+
+<main class="page">
+  <p class="kicker">Transparence</p>
+  <h1>État des collectes</h1>
+  <p class="lede">Le relevé tourne chaque heure. Quand une boutique bloque ou renvoie moins d’articles que d’habitude, mieux vaut le savoir que croiser une liste incomplète sans prévenir.</p>
+
+  <div id="etat"><p class="s">Chargement du dernier relevé…</p></div>
+
+  <h2>Comment lire ce tableau</h2>
+  <p>« Articles » compte les pièces en promotion retenues pour la boutique. La colonne « Écart » compare au relevé précédent : une chute brutale (plus de la moitié) est signalée en bleu et la boutique est considérée comme en échec pour ce passage — ses prix restent affichés, mais datés.</p>
+  <p>Une boutique peut aussi refuser temporairement les requêtes (limitation de débit). Dans ce cas rien n’est inventé : le site conserve les dernières données valides et l’indique dans le bandeau.</p>
+
+  <a class="back" href="./">← Retour au radar</a>
+</main>
+
+<footer class="foot">
+  <span>PROMOS. · relevé horaire de cinq boutiques</span>
+  <nav aria-label="Informations"><a href="./">Le radar</a><a href="methode.html">Méthode</a><a href="feed.xml">Flux RSS</a></nav>
+</footer>
+</div>
+
+<script>
+(function(){
+function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+function $(id){return document.getElementById(id)}
+function fdate(s){var d=new Date(s);return isNaN(d)?"?":d.toLocaleString("fr-FR",{dateStyle:"long",timeStyle:"short"})}
+function age(iso){
+var d=new Date(iso).getTime();
+if(isNaN(d))return "";
+var h=Math.round((Date.now()-d)/3600000);
+if(h<1)return "il y a moins d’une heure";
+if(h<24)return "il y a "+h+" heure"+(h>1?"s":"");
+var j=Math.round(h/24);
+return "il y a "+j+" jour"+(j>1?"s":"");
+}
+function render(sante,promos){
+var box=$("etat");
+if(!box)return;
+var b=(sante&&sante.boutiques)||{};
+var noms=Object.keys(b);
+if(!noms.length){
+box.innerHTML='<p class="s">Aucun relevé lisible pour le moment.</p>';
+return;
+}
+noms.sort(function(a,c){return (b[c].n||0)-(b[a].n||0)});
+var total=0,ko=0;
+noms.forEach(function(n){total+=(b[n].n||0);if(b[n].alerte)ko++});
+var h='<p class="s" style="margin:16px 0 4px">Dernier relevé : <b>'+esc(fdate(sante.maj||(promos&&promos.maj)||""))+'</b> · '+esc(age(sante.maj||(promos&&promos.maj)))+' · '+total+' articles · '+(ko?ko+" boutique"+(ko>1?"s":"")+" en échec":"toutes les boutiques ont répondu")+'</p>';
+h+='<table><thead><tr><th>Boutique</th><th class="n">Articles</th><th class="n">Écart</th><th>État</th></tr></thead><tbody>';
+noms.forEach(function(n){
+var o=b[n]||{},d=(o.n||0)-(o.avant||0);
+h+='<tr><td>'+esc(n)+'</td><td class="n">'+(o.n||0)+'</td><td class="n">'+(d>0?"+":"")+(d||0)+'</td><td class="'+(o.alerte?"ko":"ok")+'">'+(o.alerte?"relevé incomplet":"à jour")+'</td></tr>';
+});
+h+='</tbody></table>';
+box.innerHTML=h;
+}
+Promise.all([
+fetch("data/sante.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null}),
+fetch("data/promos.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null})
+]).then(function(res){
+render(res[0],res[1]);
+}).catch(function(){
+var box=$("etat");
+if(box)box.innerHTML='<p class="s">Données momentanément indisponibles.</p>';
+});
+})();
+</script>
+</body>
+</html>

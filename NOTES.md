@@ -24,7 +24,40 @@
   filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi, et un seul
   dégradé : le reflet de texte de `shiny.js`, jamais utilisé comme aplat).
 - Polices : chargées depuis Google Fonts ; repli Georgia / Courier New hors ligne.
-- Version du cache du service worker : `promos-v26` (`sw.js`, `shiny.js` précaché)
+- Version du cache du service worker : `promos-v27` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192)
+- `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
+  à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
+
+## Mesure du démarrage
+
+Mesuré avant d'alléger quoi que ce soit (`node`, V8, 5 passes) :
+
+| Fichier | Taille | gzip | `JSON.parse` |
+| --- | --- | --- | --- |
+| `data/promos.json` | 2,02 Mo | 0,36 Mo | 6,5 ms |
+| `data/tailles_index.json` | 0,74 Mo | 0,13 Mo | 5,4 ms |
+| `data/history.json` | 0,71 Mo | — | 3,6 ms |
+
+Conclusion : GitHub Pages compresse déjà, le parsing pèse une dizaine de millisecondes. Un découpage
+en plusieurs payloads ne se justifiait pas. Seule optimisation retenue : l'index des tailles part
+**en même temps** que `promos.json` (`fetchSizeIndex` avant la requête, `applySizeIndex` après le
+parsing) au lieu d'attendre ; et `history.json` n'est chargé qu'après la grille, à l'inactivité.
+
+## Monétisation — décision à prendre, pas encore codée
+
+Aucun lien affilié n'est posé aujourd'hui et aucun classement n'est vendu. Si la question se pose,
+elle doit être tranchée **avant** d'ajouter des boutiques : le choix des sources et l'ordre des résultats
+en dépendent. Trois options, par ordre de discrétion : rien (statu quo), liens affiliés signalés dans
+la fiche, ou emplacements sponsorisés séparés de la grille. Le point non négociable est la transparence :
+la page méthode affirme qu'aucun classement n'est vendu, il faudrait la corriger en même temps.
+
+## Boutiques — état
+
+Cinq sources. En ajouter suppose un adaptateur et un relevé réel pour le valider ; l'IP de la VM de
+développement est limitée par Shopify (`local_rate_limited`), donc aucun ajout n'a été tenté ici :
+`data/sante.json` absorbe déjà la surveillance (alerte si une boutique perd plus de la moitié de ses
+articles), ce qui rend l'extension possible sans devenir aveugle.
 
 ## Tests
 
@@ -33,6 +66,11 @@
 - le choix d'offre et les marques du scraper (`test_scraper.py`)
 - l'intégrité des JSON livrés : bornes = variantes disponibles, `articles`/`by_link` cohérents,
   index identique aux bornes (`test_data_integrity.py`)
+- l'interface dans un vrai navigateur (`test_interface.py`, ignoré si Playwright est absent) : grille
+  remplie, aucun débordement horizontal, tiroir et fiche qui s'ouvrent et se ferment, recherche
+  tolérante, lien profond `#p=`, et aucune erreur console. En local :
+  `pip install playwright && python -m playwright install chromium`, puis
+  `python -m unittest test_interface`. Le workflow horaire ne l'installe pas : il est ignoré.
 
 ## Interface
 
@@ -64,4 +102,29 @@
 - Dédoublonnage : un même modèle vendu par plusieurs boutiques n'apparaît qu'une fois
   (désactivable via « Regrouper les doublons »).
 - Mes alertes : recherches enregistrées localement, avec le nombre d'articles et de nouveautés.
-  Aucune notification système : rien ne s'affiche lorsque l'application est fermée.
+- Veille (`veille.js`) : notifications locales. À chaque relevé (événement `promos:maj` émis par
+  `loadPromos`), chaque alerte enregistrée et chaque seuil personnel sont revérifiés ; jusqu'à quatre
+  notifications sont envoyées par le service worker, une seule fois par article et par prix
+  (`ls("vus")`, borné à 400 repères). **Limite assumée : un site statique ne se réveille pas seul** —
+  la veille sonne quand le site est ouvert ou tant que l'onglet vit en arrière-plan. Le dire est
+  préférable à le laisser croire ; c'est écrit dans l'interface et sur la page méthode.
+- Seuil par article : « M'alerter sous X € » dans la fiche, stocké avec le nom de l'article, prévient
+  dès que le prix passe sous le seuil (et non seulement en cas de baisse déclarée par la boutique).
+- Comparateur : la fiche liste les autres boutiques du même modèle, triées par prix, avec le prix de
+  la taille sélectionnée quand il est connu, l'écart avec l'offre courante et un repère « meilleur prix ».
+- Badges d'historique : « PLUS BAS 90 J » quand le prix courant égale le minimum des 90 derniers jours,
+  « MIN 90 J x € » sinon. Rien n'est affiché sous trois relevés : un « plus bas » sur un point unique
+  ne veut rien dire. Les badges sont posés après coup (`annotateLow90`) sans redessiner la grille.
+- Sélection de la semaine : cinq articles au plus bas depuis le début du suivi, classés par remise
+  affichée, calculés après l'inactivité et masqués dès qu'un filtre ou un tri est actif.
+- Recherche tolérante : accents et pluriels normalisés, synonymes du vestiaire (`chaussures` ↔ `sneaker`,
+  `sweat` ↔ `hoodie`…), et un nombre cherché correspond aussi à une taille. Les requêtes sans résultat
+  sont mémorisées dans `ls("vides")` (40 dernières) pour arbitrer la suite.
+- Profil tailles : « Filtrer tout le catalogue » applique les trois tailles du profil à tous les
+  résultats, sans les perdre au changement de catégorie (`syncProfFilter` après `pruneSZBR`).
+- Favoris partageables : `#f=` porte la liste encodée en base64url ; à l'ouverture, un bandeau propose
+  d'importer les liens encore en promo. « Partager mes favoris » est dans le tiroir, section Alertes.
+- Bandeau « nouvelle version » : `controllerchange` du service worker déclenche un rechargement proposé,
+  sans écraser la position de lecture.
+- Pied de page : méthode, état des collectes, flux RSS. Pages `methode.html` (règles de calcul, limites)
+  et `etat.html` (santé par boutique, lue dans `data/sante.json`).

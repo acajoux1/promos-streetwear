@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#EFE9DD">
+<title>Comment on calcule les prix — PROMOS.</title>
+<meta name="description" content="D’où viennent les prix, comment le prix par taille est calculé, pourquoi un prix barré peut être refusé et ce que le site ne fait pas.">
+<link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&amp;display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+<header id="bar">
+  <div class="nav">
+    <a class="wordmark" href="./" style="text-decoration:none">PROMOS<span>.</span></a>
+    <nav class="nav-links" aria-label="Navigation"><a class="fbtn" href="./" style="text-decoration:none">Le radar</a></nav>
+  </div>
+</header>
+
+<main class="page">
+  <p class="kicker">Méthode</p>
+  <h1>Comment ces prix sont obtenus, et ce qu’ils ne disent pas.</h1>
+  <p class="lede">Un agrégateur vaut ce que vaut sa vérification. Voici les règles appliquées à chaque relevé, y compris celles qui font disparaître une promo de la liste.</p>
+
+  <h2>D’où viennent les prix</h2>
+  <p>Les articles sont lus directement sur les catalogues publics de <b>Starcow Paris</b>, <b>END.</b>, <b>Footshop</b>, <b>Laced Run</b> et <b>Dimension Stores</b>, une fois par heure. Rien n’est saisi à la main et aucune remise n’est déclarée par une boutique sans être recoupée avec le prix de référence qu’elle affiche elle-même.</p>
+  <p>Chaque relevé conserve le prix courant, l’ancien prix, la date du changement et la disponibilité réelle des tailles. Ces relevés forment l’historique : c’est lui qui permet d’écrire « plus bas vu » sans le demander à personne.</p>
+
+  <h2>Le prix par taille, pas le prix d’appel</h2>
+  <p>Une fiche affiche souvent « à partir de 59 € » alors que la seule taille disponible est à 189 €. Ici, le prix affiché est calculé sur les variantes réellement disponibles :</p>
+  <ul>
+    <li>chaque taille garde <b>son</b> prix, y compris quand une boutique vend chaque pointure comme une pièce unique ;</li>
+    <li>les variantes indisponibles sont écartées du calcul, sauf si aucune ne l’est ;</li>
+    <li>la fourchette en haut d’une fiche est le minimum et le maximum du bloc de tailles, pas une estimation.</li>
+  </ul>
+
+  <h2>Pourquoi un prix barré peut être refusé</h2>
+  <p>Un prix barré n’est retenu que s’il provient de la même variante soldée et s’il est supérieur au prix payé. Deux garde-fous s’ajoutent :</p>
+  <ul>
+    <li>si l’historique montre que l’article était déjà à ce prix « barré » avant la promo, la remise est signalée comme peu crédible ;</li>
+    <li>si la remise réelle calculée sur nos propres relevés est très inférieure à la remise annoncée, l’écart est affiché sur la fiche.</li>
+  </ul>
+
+  <h2>Doublons, et comparaison entre boutiques</h2>
+  <p>Un même modèle vendu par plusieurs boutiques n’apparaît qu’une fois. La fiche indique alors les autres boutiques qui le proposent, leur prix et, si vous avez choisi une taille, le prix de cette taille chez chacune. Le regroupement peut être désactivé dans les filtres pour voir chaque offre séparément.</p>
+
+  <h2>Alertes et veille</h2>
+  <p>Une recherche enregistrée ou un seuil de prix personnel sont stockés dans votre navigateur, jamais sur un serveur. Le site les revérifie à chaque relevé et affiche une notification si vous l’avez autorisée.</p>
+  <p><b>Limite assumée :</b> un site statique ne peut pas se réveiller seul. La veille sonne quand le site est ouvert, ou tant que l’onglet reste en arrière-plan. Nous préférons l’écrire que le laisser croire.</p>
+
+  <h2>Ce que le site ne fait pas</h2>
+  <ul>
+    <li>il ne vérifie pas le stock au moment où vous cliquez : la boutique peut avoir vendu la dernière pièce entre deux relevés ;</li>
+    <li>il ne classe pas les résultats par ce qu’ils pourraient lui rapporter : aucun classement n’est vendu ;</li>
+    <li>il ne demande ni compte, ni e-mail, ni mot de passe, et n’embarque aucun traceur publicitaire.</li>
+  </ul>
+  <p>Le détail de la dernière collecte, boutique par boutique, est sur la page <a href="etat.html">État des collectes</a>.</p>
+
+  <a class="back" href="./">← Retour au radar</a>
+</main>
+
+<footer class="foot">
+  <span>PROMOS. · relevé horaire de cinq boutiques</span>
+  <nav aria-label="Informations"><a href="./">Le radar</a><a href="etat.html">État des collectes</a><a href="feed.xml">Flux RSS</a></nav>
+</footer>
+</div>
+
+</body>
+</html>
