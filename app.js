@@ -881,7 +881,7 @@ if(!isAuto)restoreView();
 openFromHash();
 if(!isAuto)importSharedFavs();
 document.dispatchEvent(new CustomEvent("promos:maj",{detail:{maj:j.maj}}));
-annotateLow90();
+annotateBasSuivi();
 renderSelection();
 });
 });
@@ -889,7 +889,7 @@ renderSelection();
 
 /* L'historique (708 Ko) n'arrive qu'après la grille : badges 90 jours et sélection. */
 (function(){
-function run(){loadHistory().then(function(){annotateLow90();renderSelection()})}
+function run(){loadHistory().then(function(){annotateBasSuivi();renderSelection()})}
 if("requestIdleCallback" in window)requestIdleCallback(run,{timeout:3500});
 else setTimeout(run,1500);
 })();
@@ -1212,7 +1212,7 @@ updRes();
 $("g").innerHTML=shown.map(function(x){return cardHtml(x)}).join("");
 setMore();
 initTraveller();
-annotateLow90();
+annotateBasSuivi();
 }
 function setMore(){
 var rest=L.length-shownN;
@@ -1225,7 +1225,7 @@ var next=L.slice(shownN,shownN+PER);
 $("g").insertAdjacentHTML("beforeend",next.map(function(x){return cardHtml(x)}).join(""));
 shownN+=next.length;
 setMore();
-annotateLow90();
+annotateBasSuivi();
 }
 function watch(){
 var s=$("sentinel");
@@ -1295,10 +1295,13 @@ var tot=0,nw=0;
 D.forEach(function(x){if(pass(x,a.f)){tot++;if(NEWS[x.lien]||isDrop(x))nw++}});
 h+='<div class="alrt"><div class="al-t">'+esc(a.name)+'</div><div class="s">'+tot+' article'+(tot>1?"s":"")+(nw?' · <b>'+nw+' nouveau'+(nw>1?"x":"")+' ou en baisse</b>':'')+'</div><div class="sh-act"><button class="go al-go" data-i="'+i+'">Voir</button><button class="fbtn al-del" data-i="'+i+'">Supprimer</button></div></div>';
 });
+/* Emplacement prévu pour la veille : veille.js le remplit s'il est chargé. */
+h+='<div id="veilleSlot"></div>';
 cur=null;pickedSize="";
 $("shBody").innerHTML=h;
 $("shBody").scrollTop=0;
 showSheet("Mes alertes");
+if(window.Veille&&window.Veille.majAlertes)window.Veille.majAlertes();
 }
 
 function openShops(){
@@ -1436,22 +1439,26 @@ if(!wrap||!x)return;
 wrap.outerHTML=cmpBlockHtml(x);
 }
 
-/* --- Plus bas sur 90 jours, d'après notre propre historique ------------ */
-function low90(l){
+/* --- Plus bas depuis le début du suivi, d'après notre propre historique -- */
+/* L'ancienneté affichée est celle des relevés réellement collectés : 5 jours
+   aujourd'hui, davantage plus tard. Aucun badge ne parle de 90 jours. */
+function basSuivi(l){
 var h=HIST[l];
 if(!h||!h.h||!h.h.length)return null;
 /* Moins de trois relevés : le « plus bas » ne veut rien dire, on se tait. */
 if(h.h.length<3)return null;
-var cut=Date.now()-90*86400000,min=null,any=null;
+var min=null,first=null;
 h.h.forEach(function(p){
 if(!p||typeof p[1]!=="number"||!(p[1]>0))return;
-if(any===null||p[1]<any)any=p[1];
 var t=new Date(p[0]+"T00:00:00Z").getTime();
-if(t>=cut&&(min===null||p[1]<min))min=p[1];
+if(isNaN(t))return;
+if(first===null||t<first)first=t;
+if(min===null||p[1]<min)min=p[1];
 });
-return min===null?any:min;
+if(first===null||!(min>0))return null;
+return {min:min,days:Math.max(1,Math.ceil((Date.now()-first)/86400000))};
 }
-function annotateLow90(){
+function annotateBasSuivi(){
 if(!Object.keys(HIST).length)return;
 var cards=document.querySelectorAll("#g .card[data-l]");
 Array.prototype.forEach.call(cards,function(c){
@@ -1459,14 +1466,16 @@ var el=c.querySelector(".tag-low");
 if(!el)return;
 var l=c.getAttribute("data-l"),x=M[l];
 if(!x||x.gone){el.hidden=true;return}
-var lo=low90(l);
-if(lo===null||!(lo>0)){el.hidden=true;return}
-if(x.prix<=lo+0.01){
-if(el.textContent!=="PLUS BAS 90 J")el.textContent="PLUS BAS 90 J";
+var lo=basSuivi(l);
+if(lo===null||!(lo.min>0)){el.hidden=true;return}
+if(x.prix<=lo.min+0.01){
+var t="PLUS BAS · "+lo.days+" J";
+if(el.textContent!==t)el.textContent=t;
 el.className="tag tb tag-low";
 el.hidden=false;
 }else{
-if(el.textContent!=="MIN 90 J "+f(lo))el.textContent="MIN 90 J "+f(lo);
+var t2="MIN "+lo.days+" J · "+f(lo.min);
+if(el.textContent!==t2)el.textContent=t2;
 el.className="tag tg tag-low";
 el.hidden=false;
 }

@@ -120,6 +120,12 @@ return '<div class="seuil" id="seuilWrap">'+
 '</div>';
 }
 
+/* Remplit l'emplacement réservé par app.js dans la fiche « Mes alertes ». */
+function majAlertes(){
+var s=$("veilleSlot");
+if(s)s.innerHTML=blocHtml();
+}
+
 function majSeuil(l){
 var x=M()[l];
 var wrap=$("seuilWrap");
@@ -136,11 +142,7 @@ demander().then(function(p){
 if(p==="granted"){
 notifier("PROMOS. · veille active","Vous serez prévenu dès qu’une alerte ou un seuil est atteint.",null);
 }
-var body=$("shBody");
-if(body&&body.querySelector(".veille")){
-var v=body.querySelector(".veille");
-v.outerHTML=blocHtml();
-}
+majAlertes();
 });
 return;
 }
@@ -171,23 +173,10 @@ delete SEUILS[l];
 ls("seuils",SEUILS);
 var w=$("seuilWrap");
 if(w&&document.getElementById("sheet").className==="open")majSeuil(l);
-else{
-var body2=$("shBody");
-if(body2&&body2.querySelector(".veille"))body2.querySelector(".veille").outerHTML=blocHtml();
-}
+else majAlertes();
 return;
 }
 });
-
-/* Ajoute le bloc veille à la fiche « Mes alertes » dessinée par app.js. */
-var origAlerts=W.openAlerts;
-if(typeof origAlerts==="function"){
-W.openAlerts=function(){
-origAlerts.apply(null,arguments);
-var body=$("shBody");
-if(body)body.insertAdjacentHTML("beforeend",blocHtml());
-};
-}
 
 document.addEventListener("promos:maj",function(){
 charger();
@@ -199,5 +188,5 @@ window.addEventListener("load",function(){
 setTimeout(function(){charger();verifier()},2500);
 });
 
-W.Veille={verifier:verifier,demander:demander,ficheHtml:ficheHtml};
+W.Veille={verifier:verifier,demander:demander,ficheHtml:ficheHtml,majAlertes:majAlertes};
 })();

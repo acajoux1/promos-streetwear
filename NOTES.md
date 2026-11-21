@@ -24,7 +24,7 @@
   filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi, et un seul
   dégradé : le reflet de texte de `shiny.js`, jamais utilisé comme aplat).
 - Polices : chargées depuis Google Fonts ; repli Georgia / Courier New hors ligne.
-- Version du cache du service worker : `promos-v27` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+- Version du cache du service worker : `promos-v28` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
   `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
@@ -102,6 +102,8 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - Dédoublonnage : un même modèle vendu par plusieurs boutiques n'apparaît qu'une fois
   (désactivable via « Regrouper les doublons »).
 - Mes alertes : recherches enregistrées localement, avec le nombre d'articles et de nouveautés.
+  La fiche réserve un emplacement `<div id="veilleSlot">` que `veille.js` remplit via
+  `Veille.majAlertes()` : pas de réécriture de `openAlerts`, la fiche reste dessinée par `app.js`.
 - Veille (`veille.js`) : notifications locales. À chaque relevé (événement `promos:maj` émis par
   `loadPromos`), chaque alerte enregistrée et chaque seuil personnel sont revérifiés ; jusqu'à quatre
   notifications sont envoyées par le service worker, une seule fois par article et par prix
@@ -112,9 +114,11 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   dès que le prix passe sous le seuil (et non seulement en cas de baisse déclarée par la boutique).
 - Comparateur : la fiche liste les autres boutiques du même modèle, triées par prix, avec le prix de
   la taille sélectionnée quand il est connu, l'écart avec l'offre courante et un repère « meilleur prix ».
-- Badges d'historique : « PLUS BAS 90 J » quand le prix courant égale le minimum des 90 derniers jours,
-  « MIN 90 J x € » sinon. Rien n'est affiché sous trois relevés : un « plus bas » sur un point unique
-  ne veut rien dire. Les badges sont posés après coup (`annotateLow90`) sans redessiner la grille.
+- Badges d'historique : « PLUS BAS · N J » quand le prix courant égale le minimum relevé, « MIN N J · x € »
+  sinon. `N` est l'ancienneté réelle des relevés de l'article (5 jours aujourd'hui), jamais un
+  90 jours théorique : le badge ne promet pas plus d'historique qu'il n'en existe. Rien n'est affiché
+  sous trois relevés, un « plus bas » sur un point unique ne veut rien dire. Les badges sont posés
+  après coup (`annotateBasSuivi`) sans redessiner la grille.
 - Sélection de la semaine : cinq articles au plus bas depuis le début du suivi, classés par remise
   affichée, calculés après l'inactivité et masqués dès qu'un filtre ou un tri est actif.
 - Recherche tolérante : accents et pluriels normalisés, synonymes du vestiaire (`chaussures` ↔ `sneaker`,
