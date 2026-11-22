@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
 var PRIX_VISITE=null,VISITE_T=0,BAISSES={};
 var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
@@ -29,6 +29,12 @@ var SHOE=/\b(sneakers?|shoes?|boots?|sandals?|sandales?|slides?|clogs?|loafers?|
 var APP=/\b(hoodies?|hoody|sweats?|sweatshirts?|jackets?|vestes?|pants?|pantalons?|shorts?|jeans?|joggers?|cargos?|coats?|manteaux?|parkas?|fleeces?|shirts?|chemises?|polos?|dress|robes?|skirts?|jupes?|leggings?|tights|tops?|jumpers?|knits?|pulls?|cardigans?|vests?|gilets?|bombers?|windbreakers?|anoraks?|tracksuits?|crewnecks?|pullovers?|trousers?|denim|overshirts?|shackets?|swim|maillot|bodysuit|jersey|sweatpants?|chinos?|overalls?|dungarees?)\b/;
 var SHOEB=/\b(birkenstock|crocs|vans|converse|hoka|salomon|asics|saucony|mizuno|dr\.? martens|clarks)\b/;
 var COND=/(recond|refurb|neuf|new|occasion|used|seconde)/i;
+var GEN_NAMES={femme:"Femme",homme:"Homme",mixte:"Unisexe"};
+var GEN_F=/\b(women'?s?|womans?|wmns|femmes?|ladies|for women)\b|\b(bralettes?|panties|thongs?)\b/i;
+var GEN_H=/\b(men'?s?|hommes?|for men)\b|\b(boxer briefs?|jockstraps?)\b/i;
+var GEN_W=/(?:^|[\s(])W['’](?=\s|$)|(?:^|[\s(])W(?=\s)/;
+var GEN_PF=/(?:^|[-/])(femmes?|women|womens|wmns|girls?)(?=[-/]|$)/i;
+var GEN_PH=/(?:^|[-/])(hommes?|men|mens|boys?)(?=[-/]|$)/i;
 
 function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k))}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
@@ -66,11 +72,12 @@ var o=[];
 m.forEach(function(t){if(/[a-z]/.test(t)&&/\d/.test(t)&&o.indexOf(t)<0)o.push(t)});
 return o;
 }
-function savePrefs(){ls("prefs",{cat:CAT,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
+function savePrefs(){ls("prefs",{cat:CAT,gen:GEN,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
 function loadPrefs(){
 var p=ls("prefs");
 if(!p)return;
 if(["all","vet","chau","tee","sub","acc"].indexOf(p.cat)>=0)CAT=p.cat;
+if(["all","femme","homme","mixte"].indexOf(p.gen)>=0)GEN=p.gen;
 if(["remise","prix","prixd","pepite"].indexOf(p.tri)>=0)$("tri").value=p.tri;
 (p.sz||[]).forEach(function(s){SZ[s]=1});
 (p.br||[]).forEach(function(b){BR[b]=1});
@@ -80,6 +87,31 @@ if(p.pm!==undefined&&p.pm!==null)$("pmax").value=p.pm;
 onlyRE=!!p.re;onlyNew=!!p.new;onlyDrop=!!p.drop;onlyTop=!!p.top;
 if(typeof p.dup==="boolean")DEDUP=p.dup;
 syncChips();
+}
+/* Genre : l'étiquette de la boutique fait foi, sinon son rayon (URL), sinon
+   le titre. Aucun signal explicite : l'article reste avec les unisexes, plutôt
+   que d'être rangé d'office dans un genre inventé. */
+function genOf(x){
+if(x._g)return x._g;
+var tags=((x.cat||[]).join(" ")).toLowerCase();
+var f=/gender:(womens?|woman|women|femme)/.test(tags);
+var m=/gender:(mens?|man|men|homme)/.test(tags);
+var g;
+if(f&&m)g="mixte";
+else if(f)g="femme";
+else if(m)g="homme";
+else if(/gender:(unisex|kids|enfant)/.test(tags))g="mixte";
+else{
+var s=x.nom||"";
+var p=pathOf(x);
+var fs=GEN_F.test(s)||GEN_W.test(s)||GEN_PF.test(p);
+var ms=GEN_H.test(s)||GEN_PH.test(p);
+if(fs&&ms)g="mixte";
+else if(fs)g="femme";
+else if(ms)g="homme";
+else g="mixte";
+}
+x._g=g;return g;
 }
 function catOf(x){
 if(x._c)return x._c;
@@ -359,6 +391,19 @@ function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
 return '<button class="chip catb'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
 }).join("");
+renderGens();
+}
+function renderGens(){
+var el=$("gens");
+if(!el)return;
+var cnt={all:0,femme:0,homme:0,mixte:0};
+D.forEach(function(x){
+if(CAT!=="all"&&catOf(x)!==CAT)return;
+cnt.all++;cnt[genOf(x)]++;
+});
+el.innerHTML=[["all","Tout"],["femme","Femme"],["homme","Homme"],["mixte","Unisexe"]].map(function(g){
+return '<button class="chip genb'+(GEN===g[0]?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'<span class="gcnt">'+cnt[g[0]]+'</span></button>';
+}).join("");
 }
 function syncChips(){
 var cv=$("cVisite");
@@ -377,6 +422,7 @@ var a=[];
 var q=$("q").value.trim();
 if(q)a.push(["q","","“"+q+"”"]);
 if(CAT!=="all")a.push(["cat","",CL[CAT]]);
+if(GEN!=="all")a.push(["gen","",GEN_NAMES[GEN]]);
 var b=$("boutique").value;if(b)a.push(["b","",b]);
 var r=+$("remise").value;if(r)a.push(["r","","−"+r+" %+"]);
 var pm=parseFloat($("pmax").value);if(!isNaN(pm))a.push(["pm","","≤ "+pm+" €"]);
@@ -413,6 +459,7 @@ hb.title=hasAct?"Réinitialiser et revenir en haut":"Revenir en haut";
 function updBtn(){
 var n=0;
 if(CAT!=="all")n++;
+if(GEN!=="all")n++;
 if($("boutique").value)n++;
 if(+$("remise").value)n++;
 if($("pmax").value)n++;
@@ -427,7 +474,7 @@ if($("tri").value!=="remise")n++;
 var fb=$("fBtn");
 if(fb)fb.innerHTML="≡"+(n?'<b class="n">'+n+"</b>":"");
 if(fb)fb.className="sqbtn"+(n?" on":"");
-setBd("bd1",(CAT!=="all"?1:0)+(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
+setBd("bd1",(CAT!=="all"?1:0)+(GEN!=="all"?1:0)+(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
 setBd("bd2",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
 setBd("bd3",Object.keys(SZ).length+Object.keys(BR).length+(PROFIL_FILTER?1:0));
 var pn=$("pmNote");
@@ -897,7 +944,7 @@ function toggleVisite(){onlyVisite=!onlyVisite;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
+SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
 syncChips();
 renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
@@ -918,6 +965,7 @@ var k=p.getAttribute("data-k"),v=p.getAttribute("data-v");
 if(k==="all"){resetAll();return}
 if(k==="q")$("q").value="";
 else if(k==="cat"){CAT="all";pruneSZBR();renderCats();buildSizes();buildBrands()}
+else if(k==="gen")GEN="all";
 else if(k==="b")$("boutique").value="";
 else if(k==="r")$("remise").value="0";
 else if(k==="pm")$("pmax").value="";
@@ -940,6 +988,13 @@ if(!b)return;
 CAT=b.getAttribute("data-c");
 pruneSZBR();
 renderCats();buildSizes();buildBrands();apply();
+});
+$("gens").addEventListener("click",function(e){
+var b=e.target.closest(".genb");
+if(!b)return;
+GEN=b.getAttribute("data-g");
+renderGens();
+apply();
 });
 $("panel").addEventListener("click",function(e){
 var s=e.target.closest(".sz");
@@ -1035,10 +1090,11 @@ return score;
 
 function curF(){
 var pm=parseFloat($("pmax").value);
-return {q:$("q").value.trim(),cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
+return {q:$("q").value.trim(),cat:CAT,gen:GEN,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
 function pass(x,F,relax){
 if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
+if(F.gen&&F.gen!=="all"&&genOf(x)!==F.gen)return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
 if(F.pm!=null){
@@ -1065,6 +1121,7 @@ $("pmax").value=F.pm==null?"":F.pm;
 $("boutique").value=F.b||"";
 $("remise").value=String(F.r||0);
 CAT=F.cat||"all";
+GEN=(F.gen&&GEN_NAMES[F.gen])?F.gen:"all";
 SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
 BR={};(F.br||[]).forEach(function(b){BR[b]=1});
 onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
@@ -1161,6 +1218,7 @@ var shown=L.slice(0,PER);
 shownN=shown.length;
 var parts=[];
 if(CAT!=="all")parts.push(CL[CAT]);
+if(GEN!=="all")parts.push(GEN_NAMES[GEN]);
 if($("boutique").value)parts.push($("boutique").value);
 if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
 if(onlyFav)parts.push("Favoris");
@@ -1222,6 +1280,7 @@ function alertName(F){
 var p=[];
 if(F.q)p.push(F.q);
 if(F.cat!=="all")p.push(CL[F.cat]);
+if(F.gen&&F.gen!=="all")p.push(GEN_NAMES[F.gen]||F.gen);
 if(F.br.length)p.push(F.br.map(function(k){return BRN[k]||k}).join("/"));
 if(F.sz.length)p.push("taille "+F.sz.join("/"));
 if(F.b)p.push(F.b);
