@@ -6,7 +6,7 @@
 <description>Les dernières baisses de prix relevées heure par heure dans cinq boutiques streetwear.</description>
 <language>fr</language>
 <atom:link href="https://acajoux1.github.io/promos-streetwear/feed.xml" rel="self" type="application/rss+xml"/>
-<lastBuildDate>Sun, 22 Nov 2026 12:45:17 +0000</lastBuildDate>
+<lastBuildDate>Sun, 22 Nov 2026 13:53:29 +0000</lastBuildDate>
 <item>
 <title>adidas Originals adidas Samba OG Core Black/ Night Grey/ Lucid Red — 102,49 €</title>
 <link>https://www.footshop.fr/fr/baskets-homme/554785-adidas-samba-og-core-black-night-grey-lucid-red.html</link>
@@ -288,13 +288,6 @@
 <description>Ancien prix 100.00 € · remise 60 % — Tailles : XS, S, XL — Boutique : Starcow Paris</description>
 </item>
 <item>
-<title>Timberland Field Boots Mid Lace Waterproof Black — 81,00 €</title>
-<link>https://www.starcowparis.com/products/timberland-mid-lace-waterproof-boot-black</link>
-<guid isPermaLink="false">https://www.starcowparis.com/products/timberland-mid-lace-waterproof-boot-black</guid>
-<pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
-<description>Ancien prix 202.00 € · remise 60 % — Tailles : 40 — Boutique : Starcow Paris</description>
-</item>
-<item>
 <title>Hoka U Stinson EVO OG Solar Flare — 81,00 €</title>
 <link>https://www.starcowparis.com/products/hoka-u-stinson-evo-og-solar-flare</link>
 <guid isPermaLink="false">https://www.starcowparis.com/products/hoka-u-stinson-evo-og-solar-flare</guid>
@@ -426,6 +419,13 @@
 <guid isPermaLink="false">https://www.starcowparis.com/products/dickies-874-work-pant-rec-black</guid>
 <pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
 <description>Ancien prix 84.00 € · remise 60 % — Tailles : L30/W28, L30/W29, L34/W38 — Boutique : Starcow Paris</description>
+</item>
+<item>
+<title>Starcow x Padmore P404 Black — 77,00 €</title>
+<link>https://www.starcowparis.com/products/starcow-x-padmore-p404-black</link>
+<guid isPermaLink="false">https://www.starcowparis.com/products/starcow-x-padmore-p404-black</guid>
+<pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
+<description>Ancien prix 191.00 € · remise 60 % — Tailles : 40 — Boutique : Starcow Paris</description>
 </item>
 </channel>
 </rss>
