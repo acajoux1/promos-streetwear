@@ -1,10 +1,16 @@
-var V="promos-v33";
+var V="promos-v34";
 // Ne pas précacher les gros JSON : l’installation du service worker ne doit pas
 // échouer lorsque les données produits dépassent le quota de cache disponible.
 var SHELL=["./","index.html","app.js","shiny.js","veille.js","style.css","manifest.json","methode.html","etat.html","icone-192.png","fonts/newsreader-latin.woff2","fonts/courier-prime-latin.woff2"];
 
 self.addEventListener("install",function(e){
-  e.waitUntil(caches.open(V).then(function(c){return c.addAll(SHELL)}).then(function(){return self.skipWaiting()}));
+  e.waitUntil(caches.open(V).then(function(c){
+    // Fichier par fichier : un seul échec ne condamne plus toute l’installation,
+    // et le service worker peut prendre la main dès que la coquille est là.
+    return Promise.all(SHELL.map(function(u){
+      return c.add(u).catch(function(){});
+    }));
+  }).then(function(){return self.skipWaiting()}));
 });
 
 self.addEventListener("activate",function(e){
@@ -30,6 +36,22 @@ self.addEventListener("notificationclick",function(e){
   }));
 });
 
+/* Réseau d’abord, avec une vraie annulation au bout de 10 s : sans cela la
+   requête continuait en arrière-plan et la copie en cache pouvait arriver
+   après le repli hors ligne. */
+function reseauDAbord(req,options,delai){
+  var ctrl=new AbortController();
+  var t=setTimeout(function(){ctrl.abort()},delai||10000);
+  var opt=Object.assign({signal:ctrl.signal},options||{});
+  return fetch(req,opt).then(function(res){
+    clearTimeout(t);
+    return res;
+  },function(err){
+    clearTimeout(t);
+    throw err;
+  });
+}
+
 self.addEventListener("fetch",function(e){
   var r=e.request;
   if(r.method!=="GET")return;
@@ -40,10 +62,7 @@ self.addEventListener("fetch",function(e){
   // utiliser la dernière copie effectivement mise en cache.
   if(/(?:promos|prix_tailles|tailles_index|history|sante)\.json$/.test(u.pathname)){
     e.respondWith(
-      Promise.race([
-        fetch(r,{cache:"no-store"}),
-        new Promise(function(_,reject){setTimeout(function(){reject(new Error("timeout"));},10000);})
-      ]).then(function(res){
+      reseauDAbord(r,{cache:"no-store"},10000).then(function(res){
         if(!res.ok)throw new Error("HTTP "+res.status);
         var copy=res.clone();
         caches.open(V).then(function(c){c.put(u.pathname,copy);});
@@ -61,7 +80,7 @@ self.addEventListener("fetch",function(e){
 
   // Réseau d'abord pour les fichiers de l'application afin qu'une mise à jour
   // soit visible dès que GitHub Pages sert la nouvelle version.
-  e.respondWith(fetch(r,{cache:"no-cache"}).then(function(res){
+  e.respondWith(reseauDAbord(r,{cache:"no-cache"},10000).then(function(res){
     if(res.ok){var copy=res.clone();caches.open(V).then(function(c){c.put(r,copy);});}
     return res;
   }).catch(function(){return caches.match(r,{ignoreSearch:true});}));

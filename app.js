@@ -1,8 +1,9 @@
-var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",TYPE="all",SYS="EU",shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
 var PRIX_VISITE=null,VISITE_T=0,BAISSES={};
 var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var PROF_KIND="haut",PROF_SYS="EU";
+PROFIL_FILTER=!!ls("profFiltre");
 var RE_OK=["Laced Run"];
 var CATS=[
   ["all","Tout",""],
@@ -13,6 +14,45 @@ var CATS=[
   ["acc","Accessoires",""]
 ];
 var CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
+/* Types d'article : de la famille la plus large au détail le plus fin. L'ordre
+   compte — « sweatpants » doit être un pantalon avant d'être un sweat, un
+   « t-shirt » ne doit pas tomber dans les chemises. */
+var TYPES=[
+["sous-vetement","Sous-vêtements",/\b(underwear|lingerie|boxers?|briefs?|trunks?|cale[çc]ons?|thongs?|strings?|bralettes?|panties|slips?)\b/],
+["chaussettes","Chaussettes",/\b(socks?|chaussettes?)\b/],
+["maillot","Maillots de bain",/\b(swimwear|swimsuits?|swim|maillots?|bikinis?|boardshorts?|baignade)\b/],
+["robe-jupe","Robes & jupes",/\b(dresses?|robes?|skirts?|jupes?)\b/],
+["tshirt","T-shirts",/\b(t[\s-]?shirts?|tshirts?|tees?|jerseys?|short[\s-]?sleeve)\b/],
+["debardeur","Débardeurs",/\b(tanks?|debardeurs?|débardeurs?|camisoles?|singlets?|vest[\s-]?tops?|sleeveless)\b/],
+["top","Tops & blouses",/\b(tops?|blouses?|camis?|tunics?|bodysuits?|henleys?|midlayers?|base[\s-]?layers?)\b/],
+["polo","Polos",/\bpolos?\b/],
+["chemise","Chemises",/\b(overshirts?|shackets?|chemises?|shirts?|flannels?)\b/],
+["manteau","Manteaux",/\b(coats?|manteaux?|parkas?|trench|doudounes?|puffer|down[\s-]?jackets?|anoraks?|capes?|nuptse|jkt)\b/],
+["veste","Vestes",/\b(jackets?|jacke|vestes?|blousons?|bombers?|windbreakers?|blazers?|gilets?|vests?|softshell|hardshell|fleece[\s-]?jackets?|outerwear|coach)\b/],
+["survetement","Survêtements",/\b(tracksuits?|track[\s-]?suits?|surv[eê]tements?|two[\s-]?piece)\b/],
+["sweat","Sweats",/\b(hoodies?|hoody|sweatshirts?|sweats?|crewnecks?|pullovers?|zip[\s-]?ups?|q(?:uarter)?[\s-]?zip|track[\s-]?tops?|warm[\s-]?ups?|fleeces?)\b/],
+["pull","Pulls",/\b(jumpers?|knitwear|knits?|cardigans?|sweaters?|pulls?|mohair)\b/],
+["short","Shorts",/\b(shorts?|bermudas?)\b/],
+["pantalon","Pantalons",/\b(pants?|pantalons?|trousers?|jeans?|denim|chinos?|cargos?|joggers?|jogging|sweatpants?|workpants?|snopants?|leggings?|tights|overalls?|dungarees?|bottoms?|carpenter|ribcage|straight|wide[\s-]?legs?|baggy|501|550|568|874)\b/],
+["botte","Bottes",/\b(boots?|bottes?|bottines?|booties?)\b/],
+["sandale","Sandales",/\b(sandals?|sandales?|slides?|mules?|claquettes?|tongs?|flip[\s-]?flops?)\b/],
+["ville","Mocassins & derbies",/\b(loafers?|mocassins?|derbies?|derby|richelieu|oxfords?|boat[\s-]?shoes?|espadrilles?|ballerines?|heels?|talons?|wallabee)\b/],
+["chausson","Chaussons & clogs",/\b(clogs?|crocs|slippers?|chaussons?|birkenstocks?)\b/],
+["sneaker","Sneakers",/\b(sneakers?|shoes?|trainers?|baskets?|footwear|runners?|jordan\s?\d|dunk|air[\s-]?max|air[\s-]?force|samba|gazelle|campus|superstar|yeezy|ultraboost|vomero|pegasus|gel[\s-])\b/],
+["couvre-chef","Casquettes & bonnets",/\b(caps?|hats?|beanies?|bonnets?|casquettes?|chapeaux?|bucket[\s-]?hats?|headbands?|bandanas?|balaclavas?|brimmers?|5[\s-]?panel)\b/],
+["maison","Maison & cuisine",/\b(kettles?|cooksets?|cookware|ladles?|bowls?|dispensers?|benches?|tool[\s-]?sets?|barista|flasks?|candles?|incense|ashtrays?|grinders?|vases?|candlesticks?|placemats?|lamps?|mirrors?|clocks?|tumblers?|quencher)\b/],
+["skate","Skate",/\b(decks?|wheels?|trucks?|griptapes?|skateboards?|bearings?)\b/],
+["sac","Sacs",/\b(bags?|backpacks?|totes?|sacs?|pouches?|sacoches?|hip[\s-]?bags?|bum[\s-]?bags?|luggage|valises?)\b/],
+["ceinture","Ceintures",/\b(belts?|ceintures?)\b/],
+["portefeuille","Portefeuilles",/\b(wallets?|cardholders?|portefeuilles?|card[\s-]?holders?)\b/],
+["lunettes","Lunettes",/\b(sunglasses|lunettes|eyewear)\b/],
+["bijou","Montres & bijoux",/\b(watches|montres?|jewell?ery|bracelets?|necklaces?|colliers?|earrings?|rings?|bagues?|cha[iî]nes?)\b/],
+["echarpe-gants","Écharpes & gants",/\b(scarfs?|scarves|écharpes?|echarpes?|gloves?|gants?|mittens?|moufles?)\b/]
+];
+var TY_NAME={};
+TYPES.forEach(function(t){TY_NAME[t[0]]=t[1]});
+TY_NAME["autre-vet"]="Autres vêtements";TY_NAME["autre-chau"]="Autres chaussures";
+TY_NAME["autre-acc"]="Autres accessoires";TY_NAME["autre-sub"]="Autres sous-vêtements";
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
 var TOP_SIZES=["XS","S","M","L","XL","XXL"];
 var PANT_SIZES={
@@ -36,7 +76,29 @@ var GEN_W=/(?:^|[\s(])W['’](?=\s|$)|(?:^|[\s(])W(?=\s)/;
 var GEN_PF=/(?:^|[-/])(femmes?|women|womens|wmns|girls?)(?=[-/]|$)/i;
 var GEN_PH=/(?:^|[-/])(hommes?|men|mens|boys?)(?=[-/]|$)/i;
 
-function ls(k,v){try{if(v===undefined){return JSON.parse(localStorage.getItem(k))}localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}}
+/* Stockage local : une écriture refusée (quota plein, navigation privée) ne
+   doit pas passer sous silence. On libère d'abord ce qui est reconstruit au
+   relevé suivant, on réessaie, puis on prévient visiblement si ça échoue. */
+var STORAGE_WARN=false;
+function storageWarn(){
+if(STORAGE_WARN)return;
+STORAGE_WARN=true;
+var w=document.getElementById("warn");
+if(!w)return;
+w.style.display="";
+w.innerHTML+=(w.innerHTML?"<br>":"")+"⚠ Mémoire du navigateur pleine : favoris, alertes et préférences ne sont plus enregistrés.";
+}
+function ls(k,v){
+if(v===undefined){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}}
+try{localStorage.setItem(k,JSON.stringify(v))}
+catch(e){
+try{
+localStorage.removeItem("snap");
+localStorage.removeItem("view");
+localStorage.setItem(k,JSON.stringify(v));
+}catch(e2){storageWarn();return null}
+}
+}
 function esc(s){return String(s).replace(/[&<>"']/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
 function f(n){return Number(n).toFixed(2).replace(".",",")+" €"}
 function $(id){return document.getElementById(id)}
@@ -72,19 +134,20 @@ var o=[];
 m.forEach(function(t){if(/[a-z]/.test(t)&&/\d/.test(t)&&o.indexOf(t)<0)o.push(t)});
 return o;
 }
-function savePrefs(){ls("prefs",{cat:CAT,gen:GEN,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
+function savePrefs(){ls("prefs",{cat:CAT,gen:GEN,ty:TYPE,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,vis:onlyVisite,dup:DEDUP})}
 function loadPrefs(){
 var p=ls("prefs");
 if(!p)return;
 if(["all","vet","chau","tee","sub","acc"].indexOf(p.cat)>=0)CAT=p.cat;
 if(["all","femme","homme","mixte"].indexOf(p.gen)>=0)GEN=p.gen;
+if(typeof p.ty==="string")TYPE=p.ty;
 if(["remise","prix","prixd","pepite"].indexOf(p.tri)>=0)$("tri").value=p.tri;
 (p.sz||[]).forEach(function(s){SZ[s]=1});
 (p.br||[]).forEach(function(b){BR[b]=1});
 if(typeof p.b==="string")$("boutique").value=p.b;
 if(p.r)$("remise").value=String(p.r);
 if(p.pm!==undefined&&p.pm!==null)$("pmax").value=p.pm;
-onlyRE=!!p.re;onlyNew=!!p.new;onlyDrop=!!p.drop;onlyTop=!!p.top;
+onlyRE=!!p.re;onlyNew=!!p.new;onlyDrop=!!p.drop;onlyTop=!!p.top;onlyVisite=!!p.vis;
 if(typeof p.dup==="boolean")DEDUP=p.dup;
 syncChips();
 }
@@ -130,6 +193,23 @@ else if(APP.test(txt))c="vet";
 else if(SHOEB.test(txt))c="chau";
 else c="vet";
 x._c=c;return c;
+}
+/* Type fin d'un article, déduit du titre, du rayon et des étiquettes de la
+   boutique. Aucun signal : « Autres … » plutôt qu'un type inventé. */
+function typeCat(x){
+var t=((x.cat||[]).join(" ")).toLowerCase();
+if(/footwear|shoes|sneakers?/.test(t))return "chau";
+if(/accessor|headwear|bags?|socks|caps?|hats?/.test(t))return "acc";
+if(/underwear|lingerie/.test(t))return "sub";
+return "vet";
+}
+function typeOf(x){
+if(x._ty)return x._ty;
+var txt=((x.nom||"")+" "+pathOf(x).replace(/[-_\/.]/g," ")+" "+((x.cat||[]).join(" "))).toLowerCase();
+var ty=null;
+for(var i=0;i<TYPES.length&&!ty;i++)if(TYPES[i][2].test(txt))ty=TYPES[i][0];
+if(!ty)ty="autre-"+typeCat(x);
+x._ty=ty;return ty;
 }
 function splitSizeLabel(raw){
 var s=String(raw||"").trim();
@@ -212,14 +292,17 @@ Object.keys(by).forEach(function(k){by[k].sort(function(a,b){return a.prix-b.pri
 x._sol=by;
 return by;
 }
+/* Prix par taille. Un prix de taille n'est repris du prix de l'article que si
+   aucune variante n'en donne : sinon toutes les tailles sembleraient au même
+   prix, alors que la boutique les vend à des prix différents. */
 function sizePriceMap(x){
 if(x._spm)return x._spm;
-var map={};
+var map={},has=false;
 var by=sizeOfferList(x);
-Object.keys(by).forEach(function(k){if(by[k].length)map[k]=by[k][0].prix});
-uniqueRawSizes(x).forEach(function(sz){
-if(map[sz]==null&&typeof x.prix==="number"&&x.prix>0)map[sz]=x.prix;
-});
+Object.keys(by).forEach(function(k){if(by[k].length){map[k]=by[k][0].prix;has=true}});
+if(!has&&typeof x.prix==="number"&&x.prix>0){
+uniqueRawSizes(x).forEach(function(sz){map[sz]=x.prix});
+}
 x._spm=map;
 return map;
 }
@@ -274,7 +357,7 @@ function fill(id,label,arr){
 var el=$(id);
 if(!arr.length){el.style.display="none";el.innerHTML="";return}
 el.style.display="";
-el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs tabs-h">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
+el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs tabs-h">'+arr.map(function(t){return '<button type="button" class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'" aria-pressed="'+(SZ[t]?"true":"false")+'">'+t+'</button>'}).join("")+'</div>';
 }
 function pruneSZBR(){
 var items=D.filter(function(x){return CAT==="all"||catOf(x)===CAT});
@@ -320,7 +403,7 @@ var sys=["EU","UK","US"].filter(function(k){return av[k].length});
 var se=$("szSys");
 if(sys.length>1){
 se.style.display="";
-se.innerHTML='<div class="lbl">Système de pointures</div><div class="tabs tabs-h">'+sys.map(function(k){return '<button class="chip sys'+(k===SYS?" on":"")+'" data-y="'+k+'">'+k+'</button>'}).join("")+'</div>';
+se.innerHTML='<div class="lbl">Système de pointures</div><div class="tabs tabs-h">'+sys.map(function(k){return '<button type="button" class="chip sys'+(k===SYS?" on":"")+'" data-y="'+k+'" aria-pressed="'+(k===SYS)+'">'+k+'</button>'}).join("")+'</div>';
 }else{se.style.display="none";se.innerHTML=""}
 fill("szNum",(CAT==="chau"?"Pointures":"Pointures / pantalons")+" ("+SYS+")",av[SYS]);
 }
@@ -348,7 +431,7 @@ if(sa!==sb)return sb-sa;
 return (BRCNT[b]||0)-(BRCNT[a]||0);
 });
 box.innerHTML=ks.length?ks.map(function(k){
-return '<div class="brand-row'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'"><span>'+esc(BRNAME[k]||k)+'</span><span class="cnt">'+(BRCNT[k]||0)+'</span></div>';
+return '<button type="button" class="brand-row'+(BR[k]?" on":"")+'" data-b="'+esc(k)+'" aria-pressed="'+(BR[k]?"true":"false")+'"><span>'+esc(BRNAME[k]||k)+'</span><span class="cnt">'+(BRCNT[k]||0)+'</span></button>';
 }).join(""):'<div class="s">Aucune marque trouvée</div>';
 }
 function buildDup(){
@@ -389,9 +472,32 @@ grp.forEach(function(y){y._gid=k;y._grpN=Object.keys(shops).length;y._grpMin=min
 }
 function renderCats(){
 $("cats").innerHTML=CATS.map(function(c){
-return '<button class="chip catb'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
+return '<button type="button" class="chip catb'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'" aria-pressed="'+(c[0]===CAT)+'">'+c[1]+'</button>';
 }).join("");
+renderTypes();
 renderGens();
+}
+function typeCounts(){
+var c={};
+D.forEach(function(x){
+if(CAT!=="all"&&catOf(x)!==CAT)return;
+var t=typeOf(x);
+c[t]=(c[t]||0)+1;
+});
+return c;
+}
+function renderTypes(){
+var el=$("types");
+if(!el)return;
+var c=typeCounts();
+if(TYPE!=="all"&&!c[TYPE])TYPE="all";
+var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]});
+var tot=0;ks.forEach(function(k){tot+=c[k]});
+if(!ks.length){el.innerHTML="";return}
+var all='<button type="button" class="chip tyb'+(TYPE==="all"?" on":"")+'" data-t="all" aria-pressed="'+(TYPE==="all")+'">Tout<span class="gcnt">'+tot+'</span></button>';
+el.innerHTML=all+ks.map(function(k){
+return '<button type="button" class="chip tyb'+(TYPE===k?" on":"")+'" data-t="'+k+'" aria-pressed="'+(TYPE===k)+'">'+esc(TY_NAME[k]||k)+'<span class="gcnt">'+c[k]+'</span></button>';
+}).join("");
 }
 function renderGens(){
 var el=$("gens");
@@ -399,21 +505,20 @@ if(!el)return;
 var cnt={all:0,femme:0,homme:0,mixte:0};
 D.forEach(function(x){
 if(CAT!=="all"&&catOf(x)!==CAT)return;
+if(TYPE!=="all"&&typeOf(x)!==TYPE)return;
 cnt.all++;cnt[genOf(x)]++;
 });
 el.innerHTML=[["all","Tout"],["femme","Femme"],["homme","Homme"],["mixte","Unisexe"]].map(function(g){
-return '<button class="chip genb'+(GEN===g[0]?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'<span class="gcnt">'+cnt[g[0]]+'</span></button>';
+return '<button type="button" class="chip genb'+(GEN===g[0]?" on":"")+'" data-g="'+g[0]+'" aria-pressed="'+(GEN===g[0])+'">'+g[1]+'<span class="gcnt">'+cnt[g[0]]+'</span></button>';
 }).join("");
 }
 function syncChips(){
-var cv=$("cVisite");
-if(cv)cv.className="chip"+(onlyVisite?" on":"");
-$("cNew").className="chip"+(onlyNew?" on":"");
-$("cDrop").className="chip"+(onlyDrop?" on":"");
-$("cTop").className="chip"+(onlyTop?" on":"");
-$("cRE").className="chip"+(onlyRE?" on":"");
-var cd=$("cDup");
-if(cd)cd.className="chip"+(DEDUP?" on":"");
+[["cVisite",onlyVisite],["cNew",onlyNew],["cDrop",onlyDrop],["cTop",onlyTop],["cRE",onlyRE],["cDup",DEDUP]].forEach(function(p){
+var el=$(p[0]);
+if(!el)return;
+el.className="chip"+(p[1]?" on":"");
+el.setAttribute("aria-pressed",p[1]?"true":"false");
+});
 }
 function toggleDup(){DEDUP=!DEDUP;syncChips();apply()}
 function setBd(id,n){var e=$(id);if(!e)return;e.textContent=n;e.style.display=n?"":"none"}
@@ -422,6 +527,7 @@ var a=[];
 var q=$("q").value.trim();
 if(q)a.push(["q","","“"+q+"”"]);
 if(CAT!=="all")a.push(["cat","",CL[CAT]]);
+if(TYPE!=="all")a.push(["type","",TY_NAME[TYPE]||TYPE]);
 if(GEN!=="all")a.push(["gen","",GEN_NAMES[GEN]]);
 var b=$("boutique").value;if(b)a.push(["b","",b]);
 var r=+$("remise").value;if(r)a.push(["r","","−"+r+" %+"]);
@@ -436,12 +542,6 @@ if(onlyVisite)a.push(["vis","","Baissé depuis votre visite"]);
 if(onlyFav)a.push(["fav","","Favoris"]);
 if(PROFIL_FILTER)a.push(["prof","","Profil tailles"]);
 return a;
-}
-function updShopTab(){
-var b=$("bName"),sel=$("boutique"),tab=$("bBtn");
-if(!b||!sel||!tab)return;
-b.textContent=sel.value||"Toutes";
-tab.className="shop-tab"+(sel.value?" on":"");
 }
 function renderPills(){
 var a=actives(),el=$("pills");
@@ -459,12 +559,14 @@ hb.title=hasAct?"Réinitialiser et revenir en haut":"Revenir en haut";
 function updBtn(){
 var n=0;
 if(CAT!=="all")n++;
+if(TYPE!=="all")n++;
 if(GEN!=="all")n++;
 if($("boutique").value)n++;
 if(+$("remise").value)n++;
 if($("pmax").value)n++;
 if(Object.keys(SZ).length)n++;
 if(Object.keys(BR).length)n++;
+if(onlyFav)n++;
 if(onlyNew)n++;
 if(onlyDrop)n++;
 if(onlyTop)n++;
@@ -474,12 +576,11 @@ if($("tri").value!=="remise")n++;
 var fb=$("fBtn");
 if(fb)fb.innerHTML="≡"+(n?'<b class="n">'+n+"</b>":"");
 if(fb)fb.className="sqbtn"+(n?" on":"");
-setBd("bd1",(CAT!=="all"?1:0)+(GEN!=="all"?1:0)+(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
+setBd("bd1",(CAT!=="all"?1:0)+(TYPE!=="all"?1:0)+(GEN!=="all"?1:0)+(onlyFav?1:0)+(onlyNew?1:0)+(onlyDrop?1:0)+(onlyTop?1:0)+(onlyRE?1:0)+(onlyVisite?1:0));
 setBd("bd2",($("boutique").value?1:0)+(+$("remise").value?1:0)+($("pmax").value?1:0)+($("tri").value!=="remise"?1:0));
 setBd("bd3",Object.keys(SZ).length+Object.keys(BR).length+(PROFIL_FILTER?1:0));
 var pn=$("pmNote");
 if(pn){var sk=Object.keys(SZ);pn.textContent=sk.length===1?"Prix de la taille "+sk[0]+" uniquement":""}
-updShopTab();
 renderPills();
 updHomeBtn();
 }
@@ -864,11 +965,10 @@ return fetch("data/promos.json?"+Date.now()).then(function(r){return r.json()}).
 var changed=!MAJ||MAJ!==j.maj;
 D=j.items||[];
 MAJ=j.maj;
-CNT={all:D.length,vet:0,chau:0,tee:0,sub:0,acc:0};
 M={};
 D.forEach(function(x){
 M[x.lien]=x;
-CNT[catOf(x)]++;
+catOf(x);
 BRN[bkey(x)]=brandOf(x);
 x._titleClean=cleanSearchStr((x.marque||"")+" "+(x.nom||""));
 x._allClean=cleanSearchStr((x.marque||"")+" "+(x.nom||"")+" "+(x.boutique||"")+" "+((x.cat||[]).join(" ")));
@@ -944,7 +1044,8 @@ function toggleVisite(){onlyVisite=!onlyVisite;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
+SZ={};BR={};CAT="all";GEN="all";TYPE="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
+PROFIL_FILTER=false;ls("profFiltre",false);
 syncChips();
 renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
@@ -966,6 +1067,7 @@ if(k==="all"){resetAll();return}
 if(k==="q")$("q").value="";
 else if(k==="cat"){CAT="all";pruneSZBR();renderCats();buildSizes();buildBrands()}
 else if(k==="gen")GEN="all";
+else if(k==="type"){TYPE="all";renderCats()}
 else if(k==="b")$("boutique").value="";
 else if(k==="r")$("remise").value="0";
 else if(k==="pm")$("pmax").value="";
@@ -997,10 +1099,13 @@ renderGens();
 apply();
 });
 $("panel").addEventListener("click",function(e){
+var ty=e.target.closest(".tyb");
+if(ty){TYPE=ty.getAttribute("data-t")||"all";renderCats();apply();return}
 var s=e.target.closest(".sz");
 if(s){
 var k=s.getAttribute("data-s");
 if(SZ[k]){delete SZ[k];s.classList.remove("on")}else{SZ[k]=1;s.classList.add("on")}
+s.setAttribute("aria-pressed",SZ[k]?"true":"false");
 apply();return;
 }
 var br=e.target.closest(".brand-row");
@@ -1090,10 +1195,11 @@ return score;
 
 function curF(){
 var pm=parseFloat($("pmax").value);
-return {q:$("q").value.trim(),cat:CAT,gen:GEN,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
+return {q:$("q").value.trim(),cat:CAT,type:TYPE,gen:GEN,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
 function pass(x,F,relax){
 if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
+if(F.type&&F.type!=="all"&&typeOf(x)!==F.type)return false;
 if(F.gen&&F.gen!=="all"&&genOf(x)!==F.gen)return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
@@ -1121,10 +1227,11 @@ $("pmax").value=F.pm==null?"":F.pm;
 $("boutique").value=F.b||"";
 $("remise").value=String(F.r||0);
 CAT=F.cat||"all";
+TYPE=(F.type&&TY_NAME[F.type])?F.type:"all";
 GEN=(F.gen&&GEN_NAMES[F.gen])?F.gen:"all";
 SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
 BR={};(F.br||[]).forEach(function(b){BR[b]=1});
-onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
+onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyVisite=false;
 syncChips();
 renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
 }
@@ -1218,6 +1325,7 @@ var shown=L.slice(0,PER);
 shownN=shown.length;
 var parts=[];
 if(CAT!=="all")parts.push(CL[CAT]);
+if(TYPE!=="all")parts.push(TY_NAME[TYPE]||TYPE);
 if(GEN!=="all")parts.push(GEN_NAMES[GEN]);
 if($("boutique").value)parts.push($("boutique").value);
 if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
@@ -1280,6 +1388,7 @@ function alertName(F){
 var p=[];
 if(F.q)p.push(F.q);
 if(F.cat!=="all")p.push(CL[F.cat]);
+if(F.type&&F.type!=="all")p.push(TY_NAME[F.type]||F.type);
 if(F.gen&&F.gen!=="all")p.push(GEN_NAMES[F.gen]||F.gen);
 if(F.br.length)p.push(F.br.map(function(k){return BRN[k]||k}).join("/"));
 if(F.sz.length)p.push("taille "+F.sz.join("/"));
@@ -1355,7 +1464,7 @@ var spm=sizePriceMap(x),off={};
 epuisees(x).forEach(function(t){off[t]=1});
 var items=uSizes.map(function(t){
 var pv=spm[t],isOff=!pv&&off[t];
-return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+(isOff?" off":"")+'" data-sz="'+esc(t)+'">'+esc(t)+(isOff?'<em>épuisée</em>':(pv?'<em>'+esc(f(pv))+'</em>':''))+'</button>';
+return '<button type="button" class="sz-item'+(pickedSize===t?" on":"")+(isOff?" off":"")+'" data-sz="'+esc(t)+'" aria-pressed="'+(pickedSize===t)+'">'+esc(t)+(isOff?'<em>épuisée</em>':(pv?'<em>'+esc(f(pv))+'</em>':''))+'</button>';
 }).join("");
 var note=Object.keys(off).length?'<div class="sz-off-note">Touchez une taille épuisée pour être prévenu de son retour.</div>':"";
 return '<div class="lbl">Tailles &amp; prix</div><div class="sz-list">'+items+'</div>'+note;

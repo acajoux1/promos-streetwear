@@ -48,7 +48,7 @@
 
 ## Mobile
 
-- Bandeau opaque (plus de flou ni de transparence) et resserré : 52 px de barre, recherche à 16 px
+- Bandeau resserré : 52 px de barre sous 760 px (58 px au-delà, avec un léger flou d’arrière-plan), recherche à 16 px
   pour qu'iOS ne zoome pas au focus, pastilles de filtre sur une seule ligne défilante.
 - Héro sans hauteur minimale imposée : le vide sous les boutons disparaît, la carte fait la taille de
   son contenu (≈ 430 px au lieu de 520). Titre à `clamp(27px,8.6vw,36px)`, chapô à 13 px, deux boutons
@@ -126,8 +126,11 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   et estompé au défilement, en `mix-blend-mode:multiply` pour détacher la photo blanche du papier.
   Masqué sous 900 px et sous `prefers-reduced-motion`.
 - Historique : la courbe est tracée à l'ouverture (`strokeDashoffset` animé ~2 s).
-- Filtres : quatre sections — catégories (avec les collections sous les puces de catégorie), prix &
-  boutique, tailles & marques, alertes — plus « Affichage » replié en bas. Seules les catégories sont
+- Filtres : cinq sections — catégories (avec le type d’article et les collections sous les puces
+  de catégorie), prix & boutique, tailles & marques, alertes, affichage. Le type d’article
+  (manteau, veste, sweat, chemise, short, pantalon, sneakers…) est déduit du titre, du rayon et des
+  étiquettes, avec son compteur par catégorie : aucun article n’est masqué sans que la puce
+  correspondante soit visible et désactivable. Seules les catégories sont
   ouvertes à l'ouverture du tiroir ; le profil tailles vit dans la section tailles au lieu d'occuper
   sa propre section. Le filtre de genre (Femme, Homme, Unisexe) est calculé, pas deviné :
   l'étiquette `gender:` de la boutique fait foi (Mens + Womens = unisexe), sinon son rayon dans
