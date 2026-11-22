@@ -3,40 +3,44 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="color-scheme" content="light">
-<meta name="theme-color" content="#EFE9DD">
-<meta name="description" content="Le radar des promos streetwear : prix vérifiés taille par taille, historique du plus bas vu, cinq boutiques comparées et alertes. Mis à jour chaque heure.">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#121212">
+<meta name="description" content="Le radar des promos streetwear : prix vérifiés taille par taille, l’histoire derrière chaque pièce, cinq boutiques comparées. Mis à jour chaque heure.">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="Promos.">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PROMOS.">
 <link rel="canonical" href="https://acajoux1.github.io/promos-streetwear/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="PROMOS.">
 <meta property="og:locale" content="fr_FR">
 <meta property="og:title" content="PROMOS. — le radar des bonnes affaires streetwear">
-<meta property="og:description" content="Prix vérifiés taille par taille, historique du plus bas vu, cinq boutiques comparées. Relevé chaque heure.">
+<meta property="og:description" content="Prix vérifiés taille par taille, l’histoire derrière chaque pièce, cinq boutiques comparées. Relevé chaque heure.">
 <meta property="og:url" content="https://acajoux1.github.io/promos-streetwear/">
 <meta property="og:image" content="https://acajoux1.github.io/promos-streetwear/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="PROMOS. — radar des promos streetwear, papier et encre">
+<meta property="og:image:alt" content="PROMOS. — radar des promos streetwear">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="PROMOS. — le radar des bonnes affaires streetwear">
-<meta name="twitter:description" content="Prix vérifiés taille par taille, historique du plus bas vu, cinq boutiques comparées.">
+<meta name="twitter:description" content="Prix vérifiés taille par taille, l’histoire derrière chaque pièce, cinq boutiques comparées.">
 <meta name="twitter:image" content="https://acajoux1.github.io/promos-streetwear/og.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icone-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="alternate" type="application/rss+xml" title="PROMOS. — nouveautés" href="feed.xml">
 <link rel="manifest" href="manifest.json">
-<link rel="preload" href="fonts/newsreader-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/courier-prime-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
 <title>PROMOS. — le radar des bonnes affaires streetwear</title>
 </head>
 <body>
 
-<div class="app">
+<div class="promo-band" id="promoBand" role="region" aria-label="Offre du moment">
+  <span>Jusqu’à −70 % : le Black Friday est arrivé</span>
+  <button type="button" id="promoX" aria-label="Fermer le bandeau">×</button>
+</div>
 
 <header id="bar">
   <div class="nav">
@@ -49,58 +53,103 @@
     </nav>
   </div>
   <div class="searchrow">
-    <input id="q" type="search" autocomplete="off" placeholder="modèle, marque, coloris…" aria-label="Rechercher un article" oninput="onSearch()">
+    <input id="q" type="search" autocomplete="off" placeholder="Cherche un modèle, une marque, un coloris…" aria-label="Rechercher un article" oninput="onSearch()">
     <button type="button" class="sqbtn" id="hBtn" onclick="smartHome()" aria-label="Réinitialiser la recherche">↺</button>
   </div>
   <div class="pills2" id="pills"></div>
 </header>
 
-<section class="hero" id="hero">
-  <div class="hero-in">
-    <p class="kicker">Le radar · édition permanente</p>
-    <h1>Le prix le plus bas,<br><em class="shiny" data-shiny data-speed="3.2" data-spread="118">vérifié</em> heure par heure.</h1>
-    <p class="lede">Cinq boutiques comparées, le prix de chaque taille et l’historique du plus bas jamais vu. Une remise affichée ici a été recoupée, pas repeinte.</p>
+<main class="app">
+
+  <section class="hero">
+    <p class="kicker">Le radar · relevé toutes les heures</p>
+    <h1>LA PROMO<br><span class="accent">QUI VAUT</span><br>LE COUP.</h1>
+    <p class="lede">Cinq boutiques comparées, le prix de chaque taille et l’histoire derrière la pièce. Ici, une remise a été recoupée — pas repeinte pour la galerie.</p>
     <div class="hero-cta">
       <button type="button" class="btn" onclick="goResults()">Voir les promos</button>
       <button type="button" class="btn ghost" onclick="togglePanel()">Filtrer</button>
     </div>
-  </div>
-  <div class="hero-strip">
-    <span id="maj">Chargement…</span>
-    <span>Prix par taille</span>
-    <span>Historique</span>
-    <span>Alertes</span>
-  </div>
-  <div class="wordmark-spread" aria-hidden="true"><span data-shiny data-speed="6" data-spread="100" data-delay="0">P</span><span data-shiny data-speed="6" data-spread="100" data-delay=".16">R</span><span data-shiny data-speed="6" data-spread="100" data-delay=".32">O</span><span data-shiny data-speed="6" data-spread="100" data-delay=".48">M</span><span data-shiny data-speed="6" data-spread="100" data-delay=".64">O</span><span data-shiny data-speed="6" data-spread="100" data-delay=".8">S</span></div>
-</section>
+    <div class="hero-strip">
+      <span id="maj">Chargement…</span>
+      <span>Prix par taille</span>
+      <span>Historique</span>
+      <span>L’histoire</span>
+    </div>
+  </section>
 
-<div class="traveller" id="traveller" aria-hidden="true"><img id="travImg" alt="" referrerpolicy="no-referrer"></div>
+  <div class="traveller" id="traveller" aria-hidden="true"><img id="travImg" alt="" referrerpolicy="no-referrer"></div>
 
-<div id="newsBubble" class="news-bubble" style="display:none" role="status"></div>
+  <div id="newsBubble" class="news-bubble" style="display:none" role="status"></div>
 
-<div id="selBlock" class="sel" hidden></div>
+  <section class="home-sec" aria-labelledby="storiesH">
+    <div class="sec-head">
+      <h2 id="storiesH">Les histoires de la semaine</h2>
+      <span class="sec-note">glisse →</span>
+    </div>
+    <div class="rail stories" id="stories"></div>
+  </section>
 
-<div class="metaline">
-  <div class="sub" id="n" aria-live="polite"></div>
-  <select id="tri" aria-label="Trier les résultats" onchange="apply()">
-    <option value="remise">Remise</option>
-    <option value="pepite">Score affaire</option>
-    <option value="prix">Prix croissant</option>
-    <option value="prixd">Prix décroissant</option>
-  </select>
-</div>
+  <section class="home-sec" aria-labelledby="catsH">
+    <div class="sec-head">
+      <h2 id="catsH">Trier par catégorie</h2>
+      <button type="button" class="sec-link" onclick="resetAll()">Tout voir</button>
+    </div>
+    <div class="rail tiles" id="catTiles"></div>
+  </section>
 
-<div class="grid" id="g"></div>
-<div id="moreWrap"></div>
+  <section class="home-sec" aria-labelledby="trendH">
+    <div class="sec-head">
+      <h2 id="trendH">Trending</h2>
+      <span class="sec-note">top 10 de la semaine</span>
+    </div>
+    <div class="trend" id="trending"></div>
+  </section>
 
-<footer class="foot">
-  <span>PROMOS. · relevé horaire de cinq boutiques</span>
-  <nav aria-label="Informations"><a href="methode.html">Méthode</a><a href="etat.html">État des collectes</a><a href="feed.xml">Flux RSS</a></nav>
-</footer>
+  <div id="selBlock" class="sel" hidden></div>
 
-</div>
+  <section class="results" id="results" aria-labelledby="resH">
+    <div class="res-head">
+      <h2 id="resH">Toutes les promos</h2>
+      <div class="sub" id="n" aria-live="polite"></div>
+    </div>
+    <div class="res-tools">
+      <div class="quick" id="quickF" role="group" aria-label="Remise minimale">
+        <button type="button" class="qf" data-r="0">Tout</button>
+        <button type="button" class="qf" data-r="20">−20 %</button>
+        <button type="button" class="qf" data-r="30">−30 %</button>
+        <button type="button" class="qf" data-r="50">−50 %</button>
+      </div>
+      <button type="button" class="qf qf-more" onclick="togglePanel()">Filtres</button>
+      <label class="tri-wrap"><span class="sr">Trier</span>
+        <select id="tri" aria-label="Trier les résultats" onchange="apply()">
+          <option value="remise">Remise</option>
+          <option value="pepite">Score affaire</option>
+          <option value="prix">Prix croissant</option>
+          <option value="prixd">Prix décroissant</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid" id="g"></div>
+    <div id="moreWrap"></div>
+  </section>
+
+  <footer class="foot">
+    <span>PROMOS. · relevé horaire de cinq boutiques</span>
+    <nav aria-label="Informations"><a href="methode.html">Méthode</a><a href="etat.html">État des collectes</a><a href="feed.xml">Flux RSS</a></nav>
+  </footer>
+
+</main>
 
 <button type="button" id="top" onclick="backTop()">↑</button>
+
+<nav class="tabbar" aria-label="Navigation principale">
+  <button type="button" class="tab on" id="bnHome" data-nav="home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11 12 4l8 7v8a1 1 0 0 1-1 1h-4v-6H9v6H5a1 1 0 0 1-1-1z"/></svg><span>Accueil</span></button>
+  <button type="button" class="tab" id="bnSearch" data-nav="search"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4 4"/></svg><span>Rechercher</span></button>
+  <button type="button" class="tab" id="bnFav" data-nav="fav"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20s-7-4.3-7-9.3A4 4 0 0 1 12 8a4 4 0 0 1 7 2.7C19 15.7 12 20 12 20z"/></svg><span>Wishlist</span></button>
+  <button type="button" class="tab" id="bnCats" data-nav="cats"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg><span>Catégories</span></button>
+  <button type="button" class="tab" id="bnProfile" data-nav="profile"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M5 20a7 7 0 0 1 14 0"/></svg><span>Profil</span></button>
+</nav>
 
 <div id="drawer" role="dialog" aria-modal="true" aria-label="Filtres">
 <div class="dr-bg" onclick="closePanel()"></div>

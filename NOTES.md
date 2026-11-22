@@ -20,18 +20,17 @@
   le prix barré vient toujours de la même variante soldée (`choisir_offre`) et n'est retenu que s'il est
   supérieur au prix payé. Le réseau n'est sollicité que pour les fiches sans instantané (Footshop,
   dont la page liste ne donne qu'un prix unique par produit).
-- Feuilles de style : tout est dans `style.css` (papier chaud, sérif Newsreader, mono Courier Prime,
-  filets d'encre, un seul bleu #2C4A8F réservé au texte et aux traits, aucun arrondi, et un seul
-  dégradé : le reflet de texte de `shiny.js`, jamais utilisé comme aplat).
-- Contraste : le gris des mentions secondaires `--mut` (#58606D) donne 5,25:1 sur le papier et
-  4,74:1 sur le papier 2, au-dessus du seuil AA de 4,5:1 y compris pour les petites majuscules.
-- Polices : intégrées au site dans `fonts/` (sous-ensemble latin, `@font-face` en tête de `style.css`).
-  Newsreader est servie en deux fichiers variables (romain, italique, poids 400–600) et Courier Prime
-  en trois (romain, gras, italique). Plus de requête vers Google Fonts : ni bascule de police ni saut
-  de mise en page à l'arrivée, ce qui compte d'abord sur mobile. Preload des deux fichiers courants,
-  les autres sont mis en cache à la première utilisation. Total ≈ 315 Ko. Repli Georgia / Courier New.
-- Version du cache du service worker : `promos-v33` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
-  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes)
+- Feuilles de style : tout est dans `style.css`. Thème sombre `#121212`, surfaces `#181818`/
+  `#1E1E1E`, un seul accent orange `#F5A000` réservé aux badges de remise, aux CTA, au bandeau promo
+  et aux états actifs ; rayons 12–28 px (tokens `--r-*`), filets gris `#2B2B2B`.
+- Contraste : `--mut` (#A3A3A3) donne ≈ 7:1 sur `#121212`, et `--dim` (#8A8A8A) ≈ 5,4:1 : les petites
+  majuscules restent au-dessus du seuil AA de 4,5:1. L'orange #F5A000 sur #121212 dépasse 8:1.
+- Polices : titres et texte en Archivo (Google Fonts, graisses 300 à 900, `display=swap`), une seule
+  famille géométrique ; les anciens fichiers Newsreader / Courier Prime restent dans `fonts/` mais ne
+  sont plus chargés par l'accueil. Repli Helvetica Neue / Arial puis sans-serif système.
+- Version du cache du service worker : `promos-v36` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes
+  et les cinq visuels éditoriaux `img/story-*.jpg`)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
   Il écrit aussi les fiches `p/<modèle>-<hash>.html` des 40 meilleures remises : page statique
@@ -113,18 +112,27 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   fond papier + filet), donc toujours atteignable même avec des centaines de tailles. Le panneau est
   borné à `88dvh` (repli `88vh`) : il ne peut plus dépasser l'écran visible des navigateurs mobiles.
   Le contenu défile dessous ; le fond assombri et la touche Échap ferment aussi la fiche.
-- Bandeau : 58 px, wordmark sérif, liens mono (favoris, alertes, boutiques) et un carré « filtres ».
-  Recherche et tri sur une ligne fine, pastilles de filtres actifs en soulignement bleu.
-- Héro : accroche mono, titre sérif avec une phrase italique bleue, deux boutons, bandeau de
-  spécifications et wordmark étalé lettre par lettre, rogné par le bas du cadre.
+- Bandeau : 58 px, wordmark Archivo 900, liens discrets (favoris, alertes, boutiques) et un bouton
+  rond « filtres » avec pastille orange du nombre de filtres actifs. Recherche arrondie, pastilles de
+  filtres actifs en pilules.
+- Accueil éditorial : bandeau promo orange refermable (choix mémorisé), héro typographique, carrousel
+  de cinq stories (image générée, titre en capitales, texte court, flèche ronde ↗), tuiles carrées de
+  catégories en défilement horizontal, puis trending : les dix meilleures remises de la semaine,
+  dédoublonnées par marque et par type, numérotées. Chaque tuile applique sa catégorie et son type.
+- Fiche : bloc « L’HISTOIRE » (pourquoi la pièce existe, qui est derrière, ce qu’elle raconte, frise
+  création → sortie → réédition, citation, « dans le même univers »), et indicateur de bon plan
+  (« au plus bas depuis X j », « stock limité ») calculé sur l’historique et les tailles disponibles.
+  Les textes sont stockés dans `HISTOIRES` (`app.js`) : une cinquantaine de marques (Nike, adidas,
+  Carhartt WIP, Levi’s, Stone Island, Gramicci, Casablanca, Edwin, Vans, Supreme, Patta…), sinon une
+  entrée par type d’article, sinon un texte générique. Dates et faits recoupés avec les sources des
+  marques (Levi’s, Stone Island, Salomon, Gramicci, Edwin, A.P.C., Universal Works, Denim Tears).
 - Reflet de texte : portage vanilla du composant ShinyText (aucune dépendance React), dans `shiny.js`.
   Le dégradé est découpé sur les glyphes (`background-clip:text`) et sa position avancée en
-  `requestAnimationFrame` ; les lettres du grand wordmark démarrent en décalé (`data-delay`) pour une
-  vague. Les couleurs viennent du CSS (`--sh-color`, `--sh-shine`), la boucle s'arrête hors écran et
-  sous `prefers-reduced-motion` le texte reste uni.
+  `requestAnimationFrame` ; conservé pour les pages qui l’utilisent encore, l’accueil ne s’en sert plus.
 - Produit voyageur : un seul article (le premier résultat avec image) fixé en `position:fixed`, déplacé
-  et estompé au défilement, en `mix-blend-mode:multiply` pour détacher la photo blanche du papier.
-  Masqué sous 900 px et sous `prefers-reduced-motion`.
+  et estompé au défilement. Masqué sous 900 px et sous `prefers-reduced-motion`.
+- Barre mobile fixe en bas (Accueil, Rechercher, Wishlist, Catégories, Profil), 64 px + zone de
+  sécurité iOS ; le contenu est décalé d’autant et le bouton retour en haut passe au-dessus.
 - Historique : la courbe est tracée à l'ouverture (`strokeDashoffset` animé ~2 s).
 - Filtres : cinq sections — catégories (avec le type d’article et les collections sous les puces
   de catégorie), prix & boutique, tailles & marques, alertes, affichage. Le type d’article
