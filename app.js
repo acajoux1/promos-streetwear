@@ -1,6 +1,6 @@
-var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",DENS=2,PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",SYS="EU",CNT={},shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,picking=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
 var PRIX_VISITE=null,VISITE_T=0,BAISSES={};
-var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true,BUDGETS=[100,150,200];
+var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
 var PROF_KIND="haut",PROF_SYS="EU";
 var RE_OK=["Laced Run"];
@@ -12,8 +12,7 @@ var CATS=[
   ["sub","Sous-vêtements",""],
   ["acc","Accessoires",""]
 ];
-var GENS=[["all","Tous"],["h","Homme"],["f","Femme"]];
-var GL={h:"Homme",f:"Femme"},CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
+var CL={vet:"Vêtements",chau:"Chaussures",tee:"T-shirts",sub:"Sous-vêtements",acc:"Accessoires"};
 var LET=["XXS","XS","S","M","L","XL","XXL","XXXL"];
 var TOP_SIZES=["XS","S","M","L","XL","XXL"];
 var PANT_SIZES={
@@ -67,11 +66,10 @@ var o=[];
 m.forEach(function(t){if(/[a-z]/.test(t)&&/\d/.test(t)&&o.indexOf(t)<0)o.push(t)});
 return o;
 }
-function savePrefs(){ls("prefs",{gen:GEN,cat:CAT,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
+function savePrefs(){ls("prefs",{cat:CAT,tri:$("tri").value,sz:Object.keys(SZ),br:Object.keys(BR),b:$("boutique").value,r:+$("remise").value,pm:$("pmax").value,re:onlyRE,new:onlyNew,drop:onlyDrop,top:onlyTop,dup:DEDUP})}
 function loadPrefs(){
 var p=ls("prefs");
 if(!p)return;
-if(["all","h","f"].indexOf(p.gen)>=0)GEN=p.gen;
 if(["all","vet","chau","tee","sub","acc"].indexOf(p.cat)>=0)CAT=p.cat;
 if(["remise","prix","prixd","pepite"].indexOf(p.tri)>=0)$("tri").value=p.tri;
 (p.sz||[]).forEach(function(s){SZ[s]=1});
@@ -101,34 +99,6 @@ else if(SHOEB.test(txt))c="chau";
 else c="vet";
 x._c=c;return c;
 }
-function genOf(x){
-if(x._g)return x._g;
-var tg=((x.cat||[]).join(" ")).toLowerCase();
-var nom=(x.nom||"").toLowerCase();
-var txt=(nom+" "+pathOf(x).replace(/[-_\/.]/g," ")).toLowerCase();
-var g=null;
-var m=tg.match(/gender:\s*([a-z]+)/);
-if(m){
-var v=m[1];
-if(/^(womens?|women|female|femme)/.test(v))g="f";
-else if(/^(mens?|men|male|homme)/.test(v))g="h";
-else if(/^unisex/.test(v))g="u";
-else if(/^(kids?|boys?|girls?|junior|youth|infant)/.test(v))g="k";
-}
-if(!g){
-if(/\b(kids?|enfants?|junior|infant|toddler|gs|ps|td)\b/.test(txt))g="k";
-else if(/\b(wmns|wmn|womens?|women|femmes?|ladies|lady|ws)\b/.test(txt)||/(^|\s)w's\b/.test(txt)||/^w\s/.test(nom))g="f";
-else if(/\b(mens?|hommes?)\b/.test(txt)||/(^|\s)m's\b/.test(txt))g="h";
-else g="u";
-}
-x._g=g;return g;
-}
-function genOkG(x,g){
-if(g==="all")return true;
-var o=genOf(x);
-return o===g||o==="u";
-}
-function genOk(x){return genOkG(x,GEN)}
 function splitSizeLabel(raw){
 var s=String(raw||"").trim();
 if(s.indexOf("/")<0)return {taille:s,etat:""};
@@ -275,7 +245,7 @@ el.style.display="";
 el.innerHTML='<div class="lbl">'+label+'</div><div class="tabs tabs-h">'+arr.map(function(t){return '<button class="chip sz'+(SZ[t]?" on":"")+'" data-s="'+t+'">'+t+'</button>'}).join("")+'</div>';
 }
 function pruneSZBR(){
-var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
+var items=D.filter(function(x){return CAT==="all"||catOf(x)===CAT});
 var availSZ={},availBR={};
 items.forEach(function(x){
 getT(x).forEach(function(t){availSZ[t]=1});
@@ -303,7 +273,7 @@ SZ={};
 list.forEach(function(s){SZ[s]=1});
 }
 function buildSizes(){
-var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
+var items=D.filter(function(x){return CAT==="all"||catOf(x)===CAT});
 var all={};
 items.forEach(function(x){getT(x).forEach(function(t){all[t]=1})});
 var keys=Object.keys(all);
@@ -323,7 +293,7 @@ se.innerHTML='<div class="lbl">Système de pointures</div><div class="tabs tabs-
 fill("szNum",(CAT==="chau"?"Pointures":"Pointures / pantalons")+" ("+SYS+")",av[SYS]);
 }
 function buildBrands(){
-var items=D.filter(function(x){return (CAT==="all"||catOf(x)===CAT)&&genOk(x)});
+var items=D.filter(function(x){return CAT==="all"||catOf(x)===CAT});
 var c={},name={};
 items.forEach(function(x){var k=bkey(x);if(!k)return;c[k]=(c[k]||0)+1;name[k]=brandOf(x)});
 var ks=Object.keys(c);
@@ -390,13 +360,6 @@ $("cats").innerHTML=CATS.map(function(c){
 return '<button class="chip catb'+(c[0]===CAT?" on":"")+'" data-c="'+c[0]+'">'+c[1]+'</button>';
 }).join("");
 }
-function renderGens(){
-var el=$("gens");
-if(!el)return;
-el.innerHTML=GENS.map(function(g){
-return '<button class="chip gen'+(g[0]===GEN?" on":"")+'" data-g="'+g[0]+'">'+g[1]+'</button>';
-}).join("");
-}
 function syncChips(){
 var cv=$("cVisite");
 if(cv)cv.className="chip"+(onlyVisite?" on":"");
@@ -449,7 +412,6 @@ hb.title=hasAct?"Réinitialiser et revenir en haut":"Revenir en haut";
 }
 function updBtn(){
 var n=0;
-if(GEN!=="all")n++;
 if(CAT!=="all")n++;
 if($("boutique").value)n++;
 if(+$("remise").value)n++;
@@ -473,7 +435,6 @@ if(pn){var sk=Object.keys(SZ);pn.textContent=sk.length===1?"Prix de la taille "+
 updShopTab();
 renderPills();
 updHomeBtn();
-renderBudget();
 }
 function smartHome(){
 if(sheetOpen())closeSheet();
@@ -771,7 +732,6 @@ else if(drawerOpen())trapFocus(e,$("drawer"));
 })();
 
 function setDens(d){
-DENS=d;
 ls("dens",d);
 document.body.classList.toggle("dense",d===3);
 Array.prototype.forEach.call(document.querySelectorAll(".dn"),function(b){
@@ -819,8 +779,6 @@ if(j&&j.by_link&&typeof j.by_link==="object")IDX=j.by_link;
 D.forEach(function(x){delete x._ur;delete x._spm;delete x._sb;delete x._t;delete x._sol});
 return IDX;
 }
-function loadSizeIndex(){return fetchSizeIndex().then(applySizeIndex)}
-
 function loadSizeDetail(){
 if(DETAIL_P)return DETAIL_P;
 DETAIL_P=fetch("data/prix_tailles.json?"+Date.now()).then(function(r){
@@ -893,10 +851,9 @@ showWarn(j);
 updNewsAndFavBubble();
 if(!isAuto)loadPrefs();
 if(PROFIL_FILTER)syncProfFilter();
-renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
+renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(changed||!isAuto)apply(true);
 updBell();
-renderBudget();
 if(!isAuto)restoreView();
 openFromHash();
 if(!isAuto)importSharedFavs();
@@ -937,22 +894,12 @@ function toggleTop(){onlyTop=!onlyTop;syncChips();apply()}
 function toggleRE(){onlyRE=!onlyRE;syncChips();apply()}
 function toggleVisite(){onlyVisite=!onlyVisite;syncChips();apply()}
 
-function renderBudget(){
-var el=$("budget");
-if(!el)return;
-var cur=parseFloat($("pmax").value);
-var act=!isNaN(cur);
-el.innerHTML=BUDGETS.map(function(v){
-return '<button type="button" class="chip bb'+(cur===v?" on":"")+'" data-p="'+v+'">≤ '+v+' €</button>';
-}).join("")+(act?'<button type="button" class="chip bb" data-p="">Tous les prix</button>':"");
-}
-
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
+SZ={};BR={};CAT="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
 syncChips();
-renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
+renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
 if(drawerOpen()){
 dirty=true;dirtyF=true;
 updBtn();savePrefs();compute();updRes();
@@ -970,7 +917,6 @@ if(!p)return;
 var k=p.getAttribute("data-k"),v=p.getAttribute("data-v");
 if(k==="all"){resetAll();return}
 if(k==="q")$("q").value="";
-else if(k==="gen"){GEN="all";pruneSZBR();renderGens();buildSizes();buildBrands()}
 else if(k==="cat"){CAT="all";pruneSZBR();renderCats();buildSizes();buildBrands()}
 else if(k==="b")$("boutique").value="";
 else if(k==="r")$("remise").value="0";
@@ -988,14 +934,6 @@ syncChips();
 apply();
 });
 
-var gensEl=$("gens");
-if(gensEl)gensEl.addEventListener("click",function(e){
-var b=e.target.closest(".gen");
-if(!b)return;
-GEN=b.getAttribute("data-g");
-pruneSZBR();
-renderGens();buildSizes();buildBrands();apply();
-});
 $("cats").addEventListener("click",function(e){
 var b=e.target.closest(".catb");
 if(!b)return;
@@ -1025,16 +963,6 @@ if(e.target.id==="brandSearch"){
 BRQ=e.target.value;
 renderBrandList();
 }
-});
-
-var bd=$("budget");
-if(bd)bd.addEventListener("click",function(e){
-var b=e.target.closest(".bb");
-if(!b)return;
-var p=b.getAttribute("data-p");
-var cur=parseFloat($("pmax").value);
-$("pmax").value=(p&&cur!==+p)?p:"";
-apply();
 });
 
 window.addEventListener("hashchange",function(){
@@ -1107,11 +1035,10 @@ return score;
 
 function curF(){
 var pm=parseFloat($("pmax").value);
-return {q:$("q").value.trim(),gen:GEN,cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
+return {q:$("q").value.trim(),cat:CAT,b:$("boutique").value,r:+$("remise").value,pm:isNaN(pm)?null:pm,sz:Object.keys(SZ),br:Object.keys(BR),re:onlyRE};
 }
 function pass(x,F,relax){
 if(F.cat!=="all"&&catOf(x)!==F.cat)return false;
-if(!genOkG(x,F.gen))return false;
 if(F.b&&x.boutique!==F.b)return false;
 if(x.remise<F.r)return false;
 if(F.pm!=null){
@@ -1137,12 +1064,12 @@ $("q").value=F.q||"";
 $("pmax").value=F.pm==null?"":F.pm;
 $("boutique").value=F.b||"";
 $("remise").value=String(F.r||0);
-GEN=F.gen||"all";CAT=F.cat||"all";
+CAT=F.cat||"all";
 SZ={};(F.sz||[]).forEach(function(s){SZ[s]=1});
 BR={};(F.br||[]).forEach(function(b){BR[b]=1});
 onlyRE=!!F.re;onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;
 syncChips();
-renderGens();renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
+renderCats();renderProfileSection();buildSizes();buildBrands();favCount();apply();
 }
 function compute(relax){
 var F=curF();
@@ -1233,7 +1160,6 @@ function render(){
 var shown=L.slice(0,PER);
 shownN=shown.length;
 var parts=[];
-if(GEN!=="all")parts.push(GL[GEN]);
 if(CAT!=="all")parts.push(CL[CAT]);
 if($("boutique").value)parts.push($("boutique").value);
 if(Object.keys(BR).length)parts.push(Object.keys(BR).length+" marque"+(Object.keys(BR).length>1?"s":""));
@@ -1295,7 +1221,6 @@ b.textContent=on?"♥":"♡";
 function alertName(F){
 var p=[];
 if(F.q)p.push(F.q);
-if(F.gen!=="all")p.push(GL[F.gen]);
 if(F.cat!=="all")p.push(CL[F.cat]);
 if(F.br.length)p.push(F.br.map(function(k){return BRN[k]||k}).join("/"));
 if(F.sz.length)p.push("taille "+F.sz.join("/"));

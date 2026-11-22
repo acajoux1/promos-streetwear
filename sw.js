@@ -1,4 +1,4 @@
-var V="promos-v31";
+var V="promos-v32";
 // Ne pas précacher les gros JSON : l’installation du service worker ne doit pas
 // échouer lorsque les données produits dépassent le quota de cache disponible.
 var SHELL=["./","index.html","app.js","shiny.js","veille.js","style.css","manifest.json","methode.html","etat.html","icone-192.png","fonts/newsreader-latin.woff2","fonts/courier-prime-latin.woff2"];
