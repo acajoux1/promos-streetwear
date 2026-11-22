@@ -28,7 +28,7 @@
 - Polices : titres et texte en Archivo (Google Fonts, graisses 300 à 900, `display=swap`), une seule
   famille géométrique ; les anciens fichiers Newsreader / Courier Prime restent dans `fonts/` mais ne
   sont plus chargés par l'accueil. Repli Helvetica Neue / Arial puis sans-serif système.
-- Version du cache du service worker : `promos-v36` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+- Version du cache du service worker : `promos-v37` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
   `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes
   et les cinq visuels éditoriaux `img/story-*.jpg`)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
@@ -122,10 +122,11 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - Fiche : bloc « L’HISTOIRE » (pourquoi la pièce existe, qui est derrière, ce qu’elle raconte, frise
   création → sortie → réédition, citation, « dans le même univers »), et indicateur de bon plan
   (« au plus bas depuis X j », « stock limité ») calculé sur l’historique et les tailles disponibles.
-  Les textes sont stockés dans `HISTOIRES` (`app.js`) : une cinquantaine de marques (Nike, adidas,
-  Carhartt WIP, Levi’s, Stone Island, Gramicci, Casablanca, Edwin, Vans, Supreme, Patta…), sinon une
-  entrée par type d’article, sinon un texte générique. Dates et faits recoupés avec les sources des
-  marques (Levi’s, Stone Island, Salomon, Gramicci, Edwin, A.P.C., Universal Works, Denim Tears).
+  Les textes sont stockés dans `HISTOIRES` (`app.js`) : plus de soixante marques (Nike, adidas,
+  Carhartt WIP, Levi’s, Stone Island, Gramicci, Casablanca, Edwin, Vans, Supreme, Patta, Kardo,
+  Entire Studios, Homecore, Staple, Club 1984…), sinon une entrée par type d’article, sinon un texte
+  générique. Dates et faits recoupés avec les sources des marques (Levi’s, Stone Island, Salomon,
+  Gramicci, Edwin, A.P.C., Universal Works, Denim Tears, Peachy Den, Kardo, Homecore, Staple).
 - Reflet de texte : portage vanilla du composant ShinyText (aucune dépendance React), dans `shiny.js`.
   Le dégradé est découpé sur les glyphes (`background-clip:text`) et sa position avancée en
   `requestAnimationFrame` ; conservé pour les pages qui l’utilisent encore, l’accueil ne s’en sert plus.
@@ -133,6 +134,12 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   et estompé au défilement. Masqué sous 900 px et sous `prefers-reduced-motion`.
 - Barre mobile fixe en bas (Accueil, Rechercher, Wishlist, Catégories, Profil), 64 px + zone de
   sécurité iOS ; le contenu est décalé d’autant et le bouton retour en haut passe au-dessus.
+- Navigation : une seule entrée d’historique par couche (fiche produit, tiroir de filtres) ; le
+  Retour, Échap ou ✕ ferment la couche sans recharger la page. Un lien direct `#p=…` ouvre la fiche
+  sur une entrée neuve, donc la croix la ferme au lieu de la rouvrir. Recherche, filtres et onglets
+  amènent aux résultats (repère : le titre « Toutes les promos »), et l’onglet actif suit la vue
+  réelle (favoris, recherche, catégories, profil). L’onglet Profil ouvre le tiroir directement sur
+  le bloc de tailles, déplié.
 - Historique : la courbe est tracée à l'ouverture (`strokeDashoffset` animé ~2 s).
 - Filtres : cinq sections — catégories (avec le type d’article et les collections sous les puces
   de catégorie), prix & boutique, tailles & marques, alertes, affichage. Le type d’article

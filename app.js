@@ -1,4 +1,4 @@
-var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",TYPE="all",SYS="EU",shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,raf=0,topOn=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
+var PER=48,D=[],M={},SZ_MAP={},FAV={},NEWS={},hasNew=false,L=[],onlyFav=false,onlyNew=false,onlyDrop=false,onlyTop=false,onlyRE=false,tm,SZ={},BR={},BRN={},CAT="all",GEN="all",TYPE="all",SYS="EU",shownN=0,cur=null,pickedSize="",io=null,dirty=false,dirtyF=false,hs=0,ign=false,PROFILE_TAB=false,raf=0,topOn=false,MAJ="",PROFIL_FILTER=false,onlyVisite=false,RELAX=false;
 var PRIX_VISITE=null,VISITE_T=0,BAISSES={};
 var IDX={},HIST={},HIST_LOAD=null,DETAIL_P=null,DETAIL_LOADED=false,DEDUP=true;
 var BRLIST=[],BRNAME={},BRCNT={},BRQ="";
@@ -605,8 +605,12 @@ if(drawerOpen())closePanel();
 var hasAct=actives().length>0||$("tri").value!=="remise";
 if(hasAct){
 resetAll();
-}
+/* resetAll amène aux résultats : on remonte d'un coup, sans animer depuis
+   le bas de la page. */
+window.scrollTo({top:0,behavior:"auto"});
+}else{
 window.scrollTo({top:0,behavior:"smooth"});
+}
 }
 function keepView(force){
 var el=$("n");
@@ -615,11 +619,15 @@ var top=el.getBoundingClientRect().top+window.scrollY-$("bar").offsetHeight-6;
 if(top<0)top=0;
 if(force||window.scrollY>top)window.scrollTo(0,top);
 }
+/* Après un filtre, une recherche ou un changement d'onglet, amener les
+   résultats sous les yeux : le repère est le titre « Toutes les promos »,
+   pas le haut de l'accueil, qui laisse les sections éditoriales au-dessus. */
 function scrollToTopResults(){
 try{localStorage.removeItem("view")}catch(e){}
-var el=$("bar");
-var target=el?Math.max(0,el.offsetTop-4):0;
-window.scrollTo({top:target,behavior:"instant"});
+var el=$("resH"),bar=$("bar");
+if(!el){window.scrollTo(0,0);return}
+var target=Math.max(0,el.getBoundingClientRect().top+window.scrollY-(bar?bar.offsetHeight:0)-8);
+window.scrollTo({top:target,behavior:"auto"});
 }
 function drawerOpen(){return $("drawer").className==="open"}
 function sheetOpen(){return $("sheet").className==="open"}
@@ -652,6 +660,7 @@ else if(drawerOpen())hidePanel();
 });
 function togglePanel(){
 rememberFocus();
+PROFILE_TAB=false;
 $("drawer").className="open";
 $("fBtn").setAttribute("aria-expanded","true");
 document.body.style.overflow="hidden";
@@ -661,6 +670,7 @@ updBtn();
 if(hs===0)pushO();
 }
 function hidePanel(forceTop){
+PROFILE_TAB=false;
 $("drawer").className="";
 $("fBtn").setAttribute("aria-expanded","false");
 document.body.style.overflow="";
@@ -1047,7 +1057,9 @@ loadPromos(true).catch(function(){});
 },3600000);
 
 function favCount(){$("cFav").textContent="♥ "+Object.keys(FAV).length;$("cFav").className="fbtn"+(onlyFav?" on":"")}
-function onSearch(){clearTimeout(tm);tm=setTimeout(function(){apply(true)},100)}
+/* Une recherche se lit dans la grille : on y va dès qu'un mot est saisi,
+   sinon le champ, collé en haut, semble ne rien faire. */
+function onSearch(){clearTimeout(tm);tm=setTimeout(function(){apply(true,!!$("q").value.trim())},100)}
 function apply(soft,forceTop){updBtn();savePrefs();draw(soft,forceTop)}
 function toggleFav2(){onlyFav=!onlyFav;favCount();apply()}
 function toggleNew(){onlyNew=!onlyNew;syncChips();apply()}
@@ -1401,6 +1413,12 @@ var HISTOIRES={
 "mki":{w:"Un concept-store de Leeds qui a fini par produire sa propre ligne, inspirée par une tribu de Tokyo des années 60.",who:"Vik Tailor, 2010, Leeds. Le nom vient des Miyuki-Zoku, jeunes de Ginza qui ont importé le style ivy league en 1964.",what:"Vestes en cuir, pantalons larges, maille épaisse : du menswear britannique fabriqué avec des tissus japonais.",t:[[1964,"Miyuki-Zoku"],[2010,"Leeds"],[2020,"International"]],q:"Le nom est japonais, la coupe est anglaise, l’adresse est dans le Yorkshire.",m:"Leeds & Tokyo"},
 "amiri":{w:"Un designer de Los Angeles qui a commencé par des pièces de scène uniques pour des musiciens, puis a fait du denim destroy un produit de luxe.",who:"Mike Amiri, 2014, Los Angeles. Premier défilé à Paris en 2018.",what:"Skate, rock, rap : le jean MX1 et les vestes en cuir brodées ont défini le luxe streetwear américain.",t:[[2014,"Los Angeles"],[2018,"Paris"],[2023,"OTB"]],q:"Une pièce de scène faite à la main, multipliée en collection : c’est toute l’histoire d’Amiri.",m:"Rock & Los Angeles"},
 "lanvin":{w:"La plus ancienne maison de couture française encore en activité, née d’un chapeau et d’une couleur bleue inventée pour une fille.",who:"Jeanne Lanvin, 1889, Paris. Alber Elbaz dirige la maison de 2001 à 2015.",what:"Couture, parfum Arpège, sneakers à bride : la maison a traversé les époques sans jamais se figer.",t:[[1889,"Paris"],[1927,"Arpège"],[2001,"Elbaz"]],q:"Le bleu Lanvin vient d’un portrait de famille. C’est peut-être la plus belle origine de couleur du vestiaire.",m:"Couture & Paris"},
+"peachy den":{w:"Une marque londonienne née d’un manque dans le dressing d’une bande d’amies : des pantalons et des combinaisons qui tiennent sans serrer.",who:"Isabella Weatherby, janvier 2019, Londres. D’abord un side hustle expédié à l’heure du déjeuner, aujourd’hui une équipe d’une douzaine de femmes dans l’East London.",what:"Combinaison Kernel, pantalon Mimi, cardigan Celeste : des pièces en séries courtes, fabriquées à Londres, pensées pour se porter du matin au soir.",t:[[2019,"Londres"],[2020,"Kernel"],[2026,"Soho"]],q:"« Peachy » n’est pas un fruit : c’est l’état dans lequel on est censé se sentir en portant la pièce.",m:"Londres & quotidien"},
+"kardo":{w:"Un Londres-Punjab : des chemises coupées à la main en Inde, avec les tissus que l’industrie du prêt-à-porter laisse aux artisans.",who:"Rikki Kher, 2013, New Delhi. Né à Londres de parents punjabis, il dirigeait le sourcing textile avant de monter son atelier avec un tailleur et une machine.",what:"Block print du Rajasthan, ikat d’Andhra Pradesh, indigo naturel, chikankari : chaque pièce est cousue de bout en bout par un seul tailleur, la règle « ONExONE ».",t:[[2013,"New Delhi"],[2023,"Dix ans"],[2025,"Boutique"]],q:"Le tissu vient d’un village, la couture d’une seule paire de mains : la traçabilité n’est pas un argument, c’est la méthode.",m:"Artisanat & Inde"},
+"entire studios":{w:"Deux stylistes néo-zélandais passés par Yeezy ont lancé une marque unisexe avec une seule doudoune, et aucun logo.",who:"Dylan Richards Diaz et Sebastian Hunt, 2020, Los Angeles. Rencontrés ados sur Tumblr, ils ont stylé Kanye West pendant quatre ans avant de se lancer.",what:"Doudoune PFD, hoodies boxy, jersey lourd : des volumes larges et des couleurs décalées, portés par les clips et les paparazzi.",t:[[2020,"Los Angeles"],[2022,"Puffer PFD"],[2023,"Selfridges"]],q:"Une doudoune, pas de logo, et pourtant reconnaissable en une seconde : c’est la silhouette qui fait le travail.",m:"Los Angeles & volume"},
+"homecore":{w:"La première marque de streetwear française est née d’un Parisien nourri de hip-hop qui ne trouvait aucun vêtement racontant cette culture.",who:"Alexandre Guarneri et Steph Cop, 1992, Paris. Avant, ils imprimaient des t-shirts de graffiti au lycée, dès 1987.",what:"Valeurs Zulu Nation (« Peace, Love, Unity and Having Fun »), survêtements larges, puis tailoring discret : la ligne rouge dans le dos est devenue la signature.",t:[[1987,"T-shirts"],[1992,"Homecore"],[2024,"Trois décennies"]],q:"Homecore a habillé le hip-hop français avant que la mode ne sache qu’il existait.",m:"Hip-hop & Paris"},
+"staple":{w:"Un étudiant en design a imprimé un t-shirt pour lui, est entré dans une boutique de downtown Manhattan et en est ressorti avec une commande de douze pièces.",who:"Jeff Staple, 1997, New York. Le pigeon, oiseau le plus commun de la ville, devient son emblème.",what:"T-shirts, hoodies, collabs : le Nike SB Dunk « Pigeon » de 2005 a fait entrer la culture sneaker dans le grand public.",t:[[1997,"New York"],[2005,"Pigeon Dunk"],[2022,"25 ans"]],q:"Choisir le pigeon plutôt que l’aigle : c’est toute la blague, et toute la ville.",m:"New York & sneakers"},
+"club 1984":{w:"Un label londonien qui mélange le football du samedi, l’Amérique des années 80 et des visuels de souvenirs de vacances.",who:"Louis Brown, 2020, Londres ; Nathan Malcolm rejoint la direction en 2022. Les collections sont produites au Portugal et en Turquie.",what:"Hoodies lavés épais, t-shirts à graphismes, chemises cubaines : des drops limités, sans restock, vendus d’abord sur un site ouvert quelques jours par mois.",t:[[2020,"Londres"],[2022,"Direction"],[2024,"30 Under 30"]],q:"1984 n’est pas une année de naissance : c’est un point de repère culturel, et la marque le revendique.",m:"Football & nostalgie"},
 "__defaut":{w:"Chaque pièce a une raison d’exister : un besoin, un sport, un uniforme détourné. C’est cette origine qui la rend intéressante.",who:"La marque, le designer ou la collab raconte souvent plus que la fiche produit.",what:"Musique, cinéma, jeu vidéo, skate : le streetwear se nourrit d’images avant de faire des vêtements.",t:[[1950,"Origine"],[1990,"Détournement"],[2020,"Réédition"]],q:"La mode passe, les uniformes restent. C’est pour ça qu’on regarde les uniformes.",m:"Culture & vêtements"}
 };
 HISTOIRES["adidas originals"]=HISTOIRES["adidas"];
@@ -1729,6 +1747,12 @@ var i=rest.indexOf("&t=");
 if(i>=0){t=decodeURIComponent(rest.slice(i+3));rest=rest.slice(0,i)}
 var lien=decodeURIComponent(rest);
 if(!M[lien])return false;
+/* Lien direct : la fiche s'ouvre sur une entrée d'historique neuve, calquée
+   sur le reste du site. Sans cela, la fermeture revenait sur l'URL #p=… et
+   rouvrait aussitôt la fiche. */
+if(!sheetOpen()){
+try{history.replaceState(history.state||{o:1},"",location.pathname+location.search)}catch(e){}
+}
 openSheet(lien);
 if(t){pickedSize=t;renderPickedSizePrice();setHash(lien,t)}
 return true;
@@ -2125,10 +2149,20 @@ Array.prototype.forEach.call(document.querySelectorAll("#quickF .qf"),function(b
 b.classList.toggle("on",+b.getAttribute("data-r")===r);
 });
 }
+/* L'onglet actif suit la vue réelle : favoris, recherche en cours, filtres de
+   catégorie, sinon l'accueil. Le profil n'est actif que tant que son tiroir
+   est ouvert. */
 function updTabs(){
-var fav=document.getElementById("bnFav"),home=document.getElementById("bnHome");
-if(fav)fav.classList.toggle("on",onlyFav);
-if(home)home.classList.toggle("on",!onlyFav&&!actives().length);
+var nav="home";
+if(onlyFav)nav="fav";
+else if($("q")&&$("q").value.trim())nav="search";
+else if(actives().length)nav="cats";
+if(PROFILE_TAB&&drawerOpen())nav="profile";
+var ids={home:"bnHome",search:"bnSearch",fav:"bnFav",cats:"bnCats",profile:"bnProfile"};
+Object.keys(ids).forEach(function(k){
+var b=document.getElementById(ids[k]);
+if(b)b.classList.toggle("on",nav===k);
+});
 }
 (function(){
 var qf=$("quickF");
@@ -2144,11 +2178,24 @@ if(ls("promoOff")===1)band.remove();
 else $("promoX").addEventListener("click",function(){ls("promoOff",1);band.remove()});
 }
 function tab(id,fn){var b=document.getElementById(id);if(b)b.addEventListener("click",fn)}
-tab("bnHome",function(){resetAll();window.scrollTo({top:0,behavior:"smooth"})});
+tab("bnHome",function(){PROFILE_TAB=false;resetAll();window.scrollTo({top:0,behavior:"auto"})});
 tab("bnSearch",function(){window.scrollTo({top:0,behavior:"smooth"});var q=$("q");if(q)setTimeout(function(){q.focus({preventScroll:true})},260)});
 tab("bnFav",function(){onlyFav=true;onlyNew=onlyDrop=onlyTop=onlyVisite=false;syncChips();favCount();apply(true,true)});
 tab("bnCats",function(){var t=$("catTiles");if(t)t.scrollIntoView({behavior:"smooth",block:"center"})});
-tab("bnProfile",function(){if(!drawerOpen())togglePanel();setTimeout(function(){var p=$("profBox");if(p)p.scrollIntoView({block:"start"})},120)});
+tab("bnProfile",function(){
+if(!drawerOpen())togglePanel();
+PROFILE_TAB=true;
+updTabs();
+setTimeout(function(){
+var p=$("profBox"),panel=$("panel");
+if(!p||!panel)return;
+/* Le bloc est replié dans sa section : on l'ouvre, puis on y amène le
+   tiroir lui-même, pas la page derrière. */
+var d=p.closest("details");
+if(d&&!d.open)d.open=true;
+panel.scrollTop+=p.getBoundingClientRect().top-panel.getBoundingClientRect().top-10;
+},180);
+});
 })();
 /* « Dans le même univers » et le trending ouvrent une fiche. */
 document.addEventListener("click",function(e){
