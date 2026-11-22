@@ -486,18 +486,31 @@ c[t]=(c[t]||0)+1;
 });
 return c;
 }
+/* Seuls les types les plus fournis restent affichés : le tiroir doit rester
+   court. Le type choisi reste visible même replié, et une puce ouvre le reste. */
+var TYPE_MORE=false,TYPE_MAIN=8;
 function renderTypes(){
 var el=$("types");
 if(!el)return;
 var c=typeCounts();
 if(TYPE!=="all"&&!c[TYPE])TYPE="all";
 var ks=Object.keys(c).sort(function(a,b){return c[b]-c[a]});
-var tot=0;ks.forEach(function(k){tot+=c[k]});
 if(!ks.length){el.innerHTML="";return}
-var all='<button type="button" class="chip tyb'+(TYPE==="all"?" on":"")+'" data-t="all" aria-pressed="'+(TYPE==="all")+'">Tout<span class="gcnt">'+tot+'</span></button>';
-el.innerHTML=all+ks.map(function(k){
+var main=ks.slice(0,TYPE_MAIN);
+if(TYPE!=="all"&&main.indexOf(TYPE)<0)main.push(TYPE);
+var hidden=ks.filter(function(k){return main.indexOf(k)<0});
+var shown=TYPE_MORE?ks:main;
+var tot=0;ks.forEach(function(k){tot+=c[k]});
+var h='<button type="button" class="chip tyb'+(TYPE==="all"?" on":"")+'" data-t="all" aria-pressed="'+(TYPE==="all")+'">Tout<span class="gcnt">'+tot+'</span></button>';
+h+=shown.map(function(k){
 return '<button type="button" class="chip tyb'+(TYPE===k?" on":"")+'" data-t="'+k+'" aria-pressed="'+(TYPE===k)+'">'+esc(TY_NAME[k]||k)+'<span class="gcnt">'+c[k]+'</span></button>';
 }).join("");
+if(hidden.length){
+h+='<button type="button" class="chip ty-more" id="tyMore" aria-expanded="'+TYPE_MORE+'">'+(TYPE_MORE?"Moins de types":"Plus de types ("+hidden.length+")")+'</button>';
+}
+el.innerHTML=h;
+var more=$("tyMore");
+if(more)more.addEventListener("click",function(){TYPE_MORE=!TYPE_MORE;renderTypes();var b=$("tyMore");if(b&&b.focus)b.focus()});
 }
 function renderGens(){
 var el=$("gens");
@@ -1044,7 +1057,7 @@ function toggleVisite(){onlyVisite=!onlyVisite;syncChips();apply()}
 function resetAll(){
 $("q").value="";$("pmax").value="";
 $("boutique").value="";$("remise").value="0";$("tri").value="remise";
-SZ={};BR={};CAT="all";GEN="all";TYPE="all";SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
+SZ={};BR={};CAT="all";GEN="all";TYPE="all";TYPE_MORE=false;SYS="EU";BRQ="";onlyFav=false;onlyNew=false;onlyDrop=false;onlyTop=false;onlyRE=false;onlyVisite=false;
 PROFIL_FILTER=false;ls("profFiltre",false);
 syncChips();
 renderCats();renderProfileSection();buildSizes();buildBrands();favCount();
@@ -1065,7 +1078,7 @@ if(!p)return;
 var k=p.getAttribute("data-k"),v=p.getAttribute("data-v");
 if(k==="all"){resetAll();return}
 if(k==="q")$("q").value="";
-else if(k==="cat"){CAT="all";pruneSZBR();renderCats();buildSizes();buildBrands()}
+else if(k==="cat"){CAT="all";TYPE_MORE=false;pruneSZBR();renderCats();buildSizes();buildBrands()}
 else if(k==="gen")GEN="all";
 else if(k==="type"){TYPE="all";renderCats()}
 else if(k==="b")$("boutique").value="";
@@ -1088,6 +1101,7 @@ $("cats").addEventListener("click",function(e){
 var b=e.target.closest(".catb");
 if(!b)return;
 CAT=b.getAttribute("data-c");
+TYPE_MORE=false;
 pruneSZBR();
 renderCats();buildSizes();buildBrands();apply();
 });

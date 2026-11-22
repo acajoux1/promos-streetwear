@@ -130,7 +130,9 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   de catégorie), prix & boutique, tailles & marques, alertes, affichage. Le type d’article
   (manteau, veste, sweat, chemise, short, pantalon, sneakers…) est déduit du titre, du rayon et des
   étiquettes, avec son compteur par catégorie : aucun article n’est masqué sans que la puce
-  correspondante soit visible et désactivable. Seules les catégories sont
+  correspondante soit visible et désactivable. Seuls les huit types les plus fournis sont
+  affichés ; les autres sont repliés derrière « Plus de types », et le type choisi reste
+  visible même replié (puce et pastille). Seules les catégories sont
   ouvertes à l'ouverture du tiroir ; le profil tailles vit dans la section tailles au lieu d'occuper
   sa propre section. Le filtre de genre (Femme, Homme, Unisexe) est calculé, pas deviné :
   l'étiquette `gender:` de la boutique fait foi (Mens + Womens = unisexe), sinon son rayon dans

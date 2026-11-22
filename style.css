@@ -153,7 +153,8 @@ details.sec[open]>summary::after{content:"–"}
 .chip:hover{border-color:var(--ink)}
 .chip.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 .genb .gcnt,.tyb .gcnt{margin-left:5px;opacity:.6;font-size:9px}
-.tabs-types{max-height:200px;overflow-y:auto;overscroll-behavior:contain;padding-right:2px}
+.tabs-types{max-height:none;overflow:visible}
+.ty-more{border-style:dashed;color:var(--mut)}
 .prow{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .dr-foot{display:flex;gap:8px;padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--rule)}
 .dr-foot .btn{flex:1}
