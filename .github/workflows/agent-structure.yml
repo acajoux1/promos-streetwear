@@ -30,7 +30,8 @@ jobs:
       - name: Audit et proposition
         env:
           AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          AI_API_BASE: ${{ secrets.AI_API_BASE }}
-          AI_MODEL: ${{ secrets.AI_MODEL }}
+          # Secret ou, à défaut, variable de dépôt : les deux onglets fonctionnent.
+          AI_API_BASE: ${{ secrets.AI_API_BASE || vars.AI_API_BASE }}
+          AI_MODEL: ${{ secrets.AI_MODEL || vars.AI_MODEL }}
           GH_TOKEN: ${{ github.token }}
         run: python3 agents/structure.py

@@ -17,7 +17,8 @@ RACINE = Path(__file__).resolve().parent.parent
 
 
 def env(nom, defaut=""):
-    return (os.environ.get(nom) or defaut).strip()
+    # Une valeur vide ou faite d'espaces (secret non rempli) doit valoir le défaut.
+    return (os.environ.get(nom) or "").strip() or defaut
 
 
 def cle_api():

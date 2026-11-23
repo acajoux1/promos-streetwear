@@ -154,8 +154,9 @@ def main():
     args = ap.parse_args()
 
     cle = (os.environ.get("AI_API_KEY") or "").strip()
-    base = (os.environ.get("AI_API_BASE") or DEFAULT_BASE).strip()
-    modele = (os.environ.get("AI_MODEL") or DEFAULT_MODEL).strip()
+    # Une valeur vide ou faite d'espaces vaut le défaut, comme dans agents/commun.py.
+    base = (os.environ.get("AI_API_BASE") or "").strip() or DEFAULT_BASE
+    modele = (os.environ.get("AI_MODEL") or "").strip() or DEFAULT_MODEL
 
     promos = lire_json(PROMOS, {}).get("items") or []
     cache_brut = lire_json(CACHE, {})

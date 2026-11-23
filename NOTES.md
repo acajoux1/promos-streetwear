@@ -61,7 +61,8 @@
     ne passe pas est écarté. Le résultat va dans `data/histoires.json`, fusionné au
     chargement (`HIST_EXTRA`), jamais dans `app.js` ; les sources s’affichent sous la frise dans la
     fiche. Une marque refusée n’est retentée qu’après 14 jours (`_tentatives`).
-  - Les deux lisent `AI_API_KEY`, `AI_API_BASE`, `AI_MODEL` dans les secrets du dépôt. Aucun accès
+  - Les deux lisent `AI_API_KEY`, `AI_API_BASE`, `AI_MODEL` dans les secrets du dépôt (ou les
+    variables de dépôt pour les deux dernières ; une valeur vide vaut le défaut). Aucun accès
     en écriture à `main`, aux tests ou aux workflows depuis le code des agents.
 - Historique : un point par jour et par changement de prix, plafonné à 30 points par article
   (`HIST_MAX_POINTS`), et articles absents depuis 45 jours oubliés. La date de première observation
