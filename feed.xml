@@ -6,7 +6,14 @@
 <description>Les dernières baisses de prix relevées heure par heure dans cinq boutiques streetwear.</description>
 <language>fr</language>
 <atom:link href="https://acajoux1.github.io/promos-streetwear/feed.xml" rel="self" type="application/rss+xml"/>
-<lastBuildDate>Mon, 23 Nov 2026 05:16:02 +0000</lastBuildDate>
+<lastBuildDate>Mon, 23 Nov 2026 07:22:55 +0000</lastBuildDate>
+<item>
+<title>Adidas Yeezy Boost 700 Salt — 200,00 €</title>
+<link>https://dimension-stores.com/products/eg7487</link>
+<guid isPermaLink="false">https://dimension-stores.com/products/eg7487</guid>
+<pubDate>Mon, 23 Nov 2026 00:00:00 +0000</pubDate>
+<description>Ancien prix 399.00 € · remise 50 % — Tailles : 37 1/3 — Boutique : Dimension Stores</description>
+</item>
 <item>
 <title>Nike Vomero Plus Bleached Lilac/ Light Magenta/ Pink Rise — 153,49 €</title>
 <link>https://www.footshop.fr/fr/chaussures-et-baskets-femme/548401-nike-vomero-plus-bleached-lilac-light-magenta-pink-rise.html</link>
@@ -419,13 +426,6 @@
 <guid isPermaLink="false">https://www.starcowparis.com/products/dickies-eisenhower-puffer-jacket-black</guid>
 <pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
 <description>Ancien prix 252.00 € · remise 60 % — Tailles : S, M, XL — Boutique : Starcow Paris</description>
-</item>
-<item>
-<title>Dickies 874 Work Pant Rec Khaki — 34,00 €</title>
-<link>https://www.starcowparis.com/products/dickies-874-work-pant-rec-khaki</link>
-<guid isPermaLink="false">https://www.starcowparis.com/products/dickies-874-work-pant-rec-khaki</guid>
-<pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
-<description>Ancien prix 84.00 € · remise 60 % — Tailles : L30/W28, L32/W31, L34/W36 — Boutique : Starcow Paris</description>
 </item>
 </channel>
 </rss>
