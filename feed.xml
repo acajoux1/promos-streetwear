@@ -6,7 +6,7 @@
 <description>Les dernières baisses de prix relevées heure par heure dans cinq boutiques streetwear.</description>
 <language>fr</language>
 <atom:link href="https://acajoux1.github.io/promos-streetwear/feed.xml" rel="self" type="application/rss+xml"/>
-<lastBuildDate>Mon, 23 Nov 2026 21:47:09 +0000</lastBuildDate>
+<lastBuildDate>Mon, 23 Nov 2026 22:48:06 +0000</lastBuildDate>
 <item>
 <title>Adidas Yeezy Boost 700 Wave Runner — 149,00 €</title>
 <link>https://dimension-stores.com/products/b75571-fu8961-fu9005</link>
@@ -337,13 +337,6 @@
 <description>Ancien prix 90.00 € · remise 60 % — Tailles : 28, 29, 30, 31, 36, 38 — Boutique : Starcow Paris</description>
 </item>
 <item>
-<title>Levi's The Trucker Jacket Rockridge Trucker — 54,00 €</title>
-<link>https://www.starcowparis.com/products/the-trucker-jacket-rockridge-trucker</link>
-<guid isPermaLink="false">https://www.starcowparis.com/products/the-trucker-jacket-rockridge-trucker</guid>
-<pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
-<description>Ancien prix 135.00 € · remise 60 % — Tailles : XL — Boutique : Starcow Paris</description>
-</item>
-<item>
 <title>Gramicci O.G Tribal Check G-Short Tribal — 54,00 €</title>
 <link>https://www.starcowparis.com/products/gramicci-o-g-tribal-check-g-short-tribal</link>
 <guid isPermaLink="false">https://www.starcowparis.com/products/gramicci-o-g-tribal-check-g-short-tribal</guid>
@@ -426,6 +419,13 @@
 <guid isPermaLink="false">https://www.starcowparis.com/products/maharishi-original-snopant-black-copie</guid>
 <pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
 <description>Ancien prix 297.00 € · remise 60 % — Tailles : M — Boutique : Starcow Paris</description>
+</item>
+<item>
+<title>Maharishi Contour Hooded Sweat Desert — 177,00 €</title>
+<link>https://www.starcowparis.com/products/maharishi-contour-hooded-sweat-desert</link>
+<guid isPermaLink="false">https://www.starcowparis.com/products/maharishi-contour-hooded-sweat-desert</guid>
+<pubDate>Sat, 21 Nov 2026 00:00:00 +0000</pubDate>
+<description>Ancien prix 443.00 € · remise 60 % — Tailles : S — Boutique : Starcow Paris</description>
 </item>
 </channel>
 </rss>
