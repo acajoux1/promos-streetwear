@@ -28,7 +28,7 @@
 - Polices : titres et texte en Archivo (Google Fonts, graisses 300 à 900, `display=swap`), une seule
   famille géométrique ; les anciens fichiers Newsreader / Courier Prime restent dans `fonts/` mais ne
   sont plus chargés par l'accueil. Repli Helvetica Neue / Arial puis sans-serif système.
-- Version du cache du service worker : `promos-v37` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
+- Version du cache du service worker : `promos-v38` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
   `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes
   et les cinq visuels éditoriaux `img/story-*.jpg`)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
@@ -36,6 +36,33 @@
   Il écrit aussi les fiches `p/<modèle>-<hash>.html` des 40 meilleures remises : page statique
   avec balises OG, prix par taille et lien profond vers la fiche complète, ajoutée au plan du site.
   Elles servent au partage et au référencement, pas au parcours quotidien.
+- `enrich.py` (le bot) : écrit une note de deux phrases par article dans `data/descriptions.json`,
+  affichée sous « Le mot du radar » dans la fiche. Il choisit les articles sans note, puis les
+  notes de plus de `--refresh-days` (45 j), `--limit` (12) par passage, et tourne avec l’agent
+  histoire (une fois par jour), qui livre le fichier dans sa pull request. API compatible OpenAI : `AI_API_KEY`, `AI_API_BASE`
+  (défaut `https://api.z.ai/api/paas/v4`), `AI_MODEL` (défaut `glm-4-flash`), lus dans les
+  secrets du dépôt, jamais dans le code. Les réponses hors bornes (60–320 caractères, pas d’URL,
+  pas de prix, ponctuation finale) sont écartées. **Sans `AI_API_KEY`, le script ne fait rien et
+  sort en 0** : la collecte n’en dépend pas. `--dry-run` liste les articles visés sans appeler.
+- Deux agents autonomes, **jamais sur `main`** : chacun travaille sur une branche et ouvre une pull
+  request, sans fusion automatique. Les deux s’arrêtent proprement si `AI_API_KEY` manque.
+  - **Structure et expérience** (`agents/structure.py`, lundi 06:40, `agent-structure.yml`) :
+    audit déterministe (identifiants dupliqués, images sans `alt`, boutons sans texte, liens
+    internes cassés, cache du service worker, JSON, marques sans histoire), puis au plus deux
+    retouches demandées au modèle. Seuil de tolérance : 2 modifications, 3 fichiers, 120 lignes,
+    +15 % par fichier ; fichiers autorisés seulement (`index.html`, `methode.html`, `etat.html`,
+    `style.css`, `NOTES.md`), jamais `app.js` ni `data/` ; identifiants et liens protégés conservés.
+    Syntaxe JS, équilibre HTML/CSS et suite de tests vérifiés : au premier échec, tout est annulé.
+  - **Histoires** (`agents/histoire.py`, tous les jours à 05:20, `agent-histoire.yml`) : repère les
+    marques du catalogue sans histoire, demande une fiche et ses sources, puis **vérifie** chaque
+    source — domaine de confiance (ou site officiel exact de la marque, table `OFFICIELS`),
+    page accessible, marque citée, et chacune des années de la frise présente dans le texte.
+    Un domaine qui contient juste le nom de la marque (`kardo-magasin.test`) est refusé. Ce qui
+    ne passe pas est écarté. Le résultat va dans `data/histoires.json`, fusionné au
+    chargement (`HIST_EXTRA`), jamais dans `app.js` ; les sources s’affichent sous la frise dans la
+    fiche. Une marque refusée n’est retentée qu’après 14 jours (`_tentatives`).
+  - Les deux lisent `AI_API_KEY`, `AI_API_BASE`, `AI_MODEL` dans les secrets du dépôt. Aucun accès
+    en écriture à `main`, aux tests ou aux workflows depuis le code des agents.
 - Historique : un point par jour et par changement de prix, plafonné à 30 points par article
   (`HIST_MAX_POINTS`), et articles absents depuis 45 jours oubliés. La date de première observation
   est gardée à part (`d`) pour que les badges annoncent l'ancienneté réelle du suivi même après
@@ -122,11 +149,21 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - Fiche : bloc « L’HISTOIRE » (pourquoi la pièce existe, qui est derrière, ce qu’elle raconte, frise
   création → sortie → réédition, citation, « dans le même univers »), et indicateur de bon plan
   (« au plus bas depuis X j », « stock limité ») calculé sur l’historique et les tailles disponibles.
-  Les textes sont stockés dans `HISTOIRES` (`app.js`) : plus de soixante marques (Nike, adidas,
-  Carhartt WIP, Levi’s, Stone Island, Gramicci, Casablanca, Edwin, Vans, Supreme, Patta, Kardo,
-  Entire Studios, Homecore, Staple, Club 1984…), sinon une entrée par type d’article, sinon un texte
+  Les textes sont stockés dans `HISTOIRES` (`app.js`) : 79 entrées, soit près de soixante-dix
+  marques (Nike, adidas, Carhartt WIP, Levi’s, Stone Island, Gramicci, Casablanca, Edwin, Vans,
+  Supreme, Patta, Kardo, Entire Studios, Homecore, Staple, Club 1984, Prada, Burberry, Acne
+  Studios, Barbour, Butter Goods, TALA…), sinon une entrée par type d’article, sinon un texte
   générique. Dates et faits recoupés avec les sources des marques (Levi’s, Stone Island, Salomon,
-  Gramicci, Edwin, A.P.C., Universal Works, Denim Tears, Peachy Den, Kardo, Homecore, Staple).
+  Gramicci, Edwin, A.P.C., Universal Works, Denim Tears, Peachy Den, Kardo, Homecore, Staple,
+  Prada, Burberry, Acne Studios, Barbour, Butter Goods, TALA).
+- Identité : `SIG` (`app.js`) donne une année de naissance et une signature courte par marque ;
+  la carte l’affiche sous le nom, la fiche en tête (« Depuis 1985 · … »). Repli par type d’article
+  sans date pour les marques inconnues, jamais de date inventée.
+- La paire du jour : `PAIRES` (`app.js`) réunit une trentaine de modèles dont la date de sortie et
+  l’idée d’origine sont documentées (swoosh, semelle liège, air visible, split tongue…). Le bloc
+  change chaque jour, passe en tête le jour de l’anniversaire quand la date exacte est connue
+  (Air Max 1 le 26 mars, Vans le 16 mars), et propose la fiche de la paire si elle est en promo,
+  sinon les sneakers du jour. Aucun classement payé n’entre dans le choix.
 - Reflet de texte : portage vanilla du composant ShinyText (aucune dépendance React), dans `shiny.js`.
   Le dégradé est découpé sur les glyphes (`background-clip:text`) et sa position avancée en
   `requestAnimationFrame` ; conservé pour les pages qui l’utilisent encore, l’accueil ne s’en sert plus.
@@ -134,6 +171,9 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   et estompé au défilement. Masqué sous 900 px et sous `prefers-reduced-motion`.
 - Barre mobile fixe en bas (Accueil, Rechercher, Wishlist, Catégories, Profil), 64 px + zone de
   sécurité iOS ; le contenu est décalé d’autant et le bouton retour en haut passe au-dessus.
+- Carte produit : toute la surface ouvre la fiche — image, marque, nom, prix, tailles. Seul le
+  bouton « Voir l’offre » garde son lien boutique (`target="_blank"`), et le cœur reste
+  indépendant de la carte.
 - Navigation : une seule entrée d’historique par couche (fiche produit, tiroir de filtres) ; le
   Retour, Échap ou ✕ ferment la couche sans recharger la page. Un lien direct `#p=…` ouvre la fiche
   sur une entrée neuve, donc la croix la ferme au lieu de la rouvrir. Recherche, filtres et onglets

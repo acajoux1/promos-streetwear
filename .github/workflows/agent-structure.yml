@@ -1,0 +1,36 @@
+name: Agent structure
+
+on:
+  schedule:
+    - cron: "40 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: agent-structure
+  cancel-in-progress: false
+
+jobs:
+  structure:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntaxe
+        run: python3 -m py_compile agents/commun.py agents/structure.py
+      - name: Audit et proposition
+        env:
+          AI_API_KEY: ${{ secrets.AI_API_KEY }}
+          AI_API_BASE: ${{ secrets.AI_API_BASE }}
+          AI_MODEL: ${{ secrets.AI_MODEL }}
+          GH_TOKEN: ${{ github.token }}
+        run: python3 agents/structure.py

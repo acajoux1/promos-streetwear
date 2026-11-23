@@ -60,6 +60,15 @@
   <p>Deux veilles de plus, sans compte : le <b>retour en stock</b> d’une pointure surveillée depuis une fiche, et « <b>moins cher ailleurs</b> » quand un article dont vous suivez le prix se trouve à 15 % de moins dans une autre boutique du même modèle. Le bandeau d’accueil signale enfin ce qui a <b>baissé depuis votre dernière visite</b>, d’après une photo des prix conservée localement d’une visite à l’autre.</p>
   <p><b>Limite assumée :</b> un site statique ne peut pas se réveiller seul. La veille sonne quand le site est ouvert, ou tant que l’onglet reste en arrière-plan. Nous préférons l’écrire que le laisser croire.</p>
 
+  <h2>Les textes, entre la marque et le bot</h2>
+  <p>L’histoire d’une fiche vient d’un texte de marque écrit à la main : date de création, fondateur, pièce qui a fait la marque et citation. Il ne change pas d’un article à l’autre et ne raconte jamais la disponibilité du jour.</p>
+  <p>Sous la ligne « Le mot du radar », un <b>bot</b> rédige une note de deux phrases sur la pièce elle-même, à partir de son nom, de sa marque et de sa catégorie. Il tourne chaque jour, quelques articles à la fois, et réécrit une note au bout de quelques semaines. Il n’a accès ni au prix ni au stock, et ses réponses trop longues, trop publicitaires ou inventant une matière sont écartées. Ces notes sont donc des <b>repères de style</b>, pas des fiches techniques : la seule description qui fait foi reste celle de la boutique, atteignable par « Voir l’offre ».</p>
+  <p>La <b>paire du jour</b> ne suit aucune mise en avant commerciale : elle tourne chaque jour dans une liste de modèles dont la date de sortie et l’idée d’origine sont documentées, et passe en tête le jour de son anniversaire quand la date exacte est connue.</p>
+
+  <h2>Ce qui est automatisé, et ce que ça ne change pas</h2>
+  <p>Deux agents tournent à côté de la collecte, et <b>aucun ne publie directement</b>. Le premier, une fois par semaine, audite les pages (identifiants, textes alternatifs, liens, cache, cohérence des histoires) et propose au plus deux petites retouches de présentation sur une branche séparée : elles attendent une relecture, et tout est annulé si la syntaxe ou les tests ne passent pas. Il ne touche jamais à la logique du site ni aux prix.</p>
+  <p>Le second, chaque jour, repère une marque du catalogue qui n’a pas encore d’histoire, écrit une fiche courte et fournit ses sources. Chaque source est ouverte et contrôlée : la marque doit y être citée et chacune des dates de la frise doit s’y retrouver. Une fiche dont une seule date n’est pas vérifiable est écartée, pas corrigée au hasard. Les liens de ces sources sont affichés sous la frise des fiches concernées — vous pouvez donc refaire le contrôle vous-même.</p>
+
   <h2>Ce que le site ne fait pas</h2>
   <ul>
     <li>il ne vérifie pas le stock au moment où vous cliquez : la boutique peut avoir vendu la dernière pièce entre deux relevés ;</li>

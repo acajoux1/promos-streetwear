@@ -1045,6 +1045,10 @@ else setTimeout(run,1500);
 })();
 
 chargerVisite();
+/* Les deux caches sont optionnels : sans eux, la fiche s'affiche exactement
+   comme avant. */
+loadDescs();
+loadHistoiresExtra();
 loadPromos(false).catch(function(){
 $("g").innerHTML="";
 $("maj").textContent="Données introuvables : connectez-vous ou lancez la tâche dans Actions.";
@@ -1419,6 +1423,12 @@ var HISTOIRES={
 "homecore":{w:"La première marque de streetwear française est née d’un Parisien nourri de hip-hop qui ne trouvait aucun vêtement racontant cette culture.",who:"Alexandre Guarneri et Steph Cop, 1992, Paris. Avant, ils imprimaient des t-shirts de graffiti au lycée, dès 1987.",what:"Valeurs Zulu Nation (« Peace, Love, Unity and Having Fun »), survêtements larges, puis tailoring discret : la ligne rouge dans le dos est devenue la signature.",t:[[1987,"T-shirts"],[1992,"Homecore"],[2024,"Trois décennies"]],q:"Homecore a habillé le hip-hop français avant que la mode ne sache qu’il existait.",m:"Hip-hop & Paris"},
 "staple":{w:"Un étudiant en design a imprimé un t-shirt pour lui, est entré dans une boutique de downtown Manhattan et en est ressorti avec une commande de douze pièces.",who:"Jeff Staple, 1997, New York. Le pigeon, oiseau le plus commun de la ville, devient son emblème.",what:"T-shirts, hoodies, collabs : le Nike SB Dunk « Pigeon » de 2005 a fait entrer la culture sneaker dans le grand public.",t:[[1997,"New York"],[2005,"Pigeon Dunk"],[2022,"25 ans"]],q:"Choisir le pigeon plutôt que l’aigle : c’est toute la blague, et toute la ville.",m:"New York & sneakers"},
 "club 1984":{w:"Un label londonien qui mélange le football du samedi, l’Amérique des années 80 et des visuels de souvenirs de vacances.",who:"Louis Brown, 2020, Londres ; Nathan Malcolm rejoint la direction en 2022. Les collections sont produites au Portugal et en Turquie.",what:"Hoodies lavés épais, t-shirts à graphismes, chemises cubaines : des drops limités, sans restock, vendus d’abord sur un site ouvert quelques jours par mois.",t:[[2020,"Londres"],[2022,"Direction"],[2024,"30 Under 30"]],q:"1984 n’est pas une année de naissance : c’est un point de repère culturel, et la marque le revendique.",m:"Football & nostalgie"},
+"butter goods":{w:"Deux amis de Perth trouvaient que les marques de skate australiennes avaient disparu : ils ont monté la leur, dans la ville la plus isolée du pays.",who:"Garth Mariano et Matt Evans, 2008, Perth. Ils quittent leur travail en 2007 pour étudier le graphisme, puis impriment leurs premiers t-shirts.",what:"Graphismes empruntés au jazz et au skate des années 90, coupes larges, pantalons en velours côtelé : une vraie ligne de skate, portée par une équipe.",t:[[2008,"Perth"],[2015,"International"],[2020,"Lo-Fi"]],q:"L’isolement de Perth a fait le style : personne à qui plaire, donc des idées à soi.",m:"Skate & Perth"},
+"barbour":{w:"Une maison du Northumberland qui habillait marins et fermiers de vêtements huilés, devenue le manteau des campagnes anglaises puis de la ville.",who:"John Barbour, 1894, South Shields. La Bedale (1980) et la Beaufort (1983) restent les deux coupes les plus portées.",what:"La wax jacket : coton huilé, doublure tartan, poches profondes. Faite pour le mauvais temps en mer, portée aujourd’hui par-dessus un sweat.",t:[[1894,"South Shields"],[1980,"Bedale"],[1983,"Beaufort"]],q:"Le tartan n’a jamais été décoratif : c’est la doublure qui sèche le dos après la pluie.",m:"Campagne & pluie"},
+"acne studios":{w:"Une maison suédoise née d’un projet de jeans : cent paires de brut données à des amis, puis une marque de mode qui garde un pied dans la rue.",who:"Jonny Johansson et trois associés, 1996, Stockholm. Le nom vient d’« Ambition to Create Novel Expressions ».",what:"Denim brut, coupes larges, maille douce, couleurs franches : une mode scandinave qui ne ressemble pas au minimalisme scandinave.",t:[[1996,"Cent jeans"],[2006,"Défilé"],[2017,"Parfums"]],q:"Cent paires de jeans distribuées à des amis : le premier marketing d’Acne était un cadeau.",m:"Stockholm & denim"},
+"prada":{w:"Une maison de maroquinerie milanaise devenue maison de couture, qui a mis le nylon industriel dans le vestiaire de luxe.",who:"Mario Prada, 1913, Milan. Miuccia Prada reprend la maison en 1978 et lance le nylon en 1984.",what:"Le sac en nylon, les lignes sobres, les couleurs acides : le luxe italien sans ornement.",t:[[1913,"Milan"],[1978,"Miuccia"],[1984,"Nylon"]],q:"Le nylon était un tissu de sac militaire : c’est précisément ce qui en a fait du luxe.",m:"Milan & nylon"},
+"burberry":{w:"Un drapier du Hampshire qui a inventé un tissu imperméable pour les tranchées, et dont le tartan est devenu un motif mondial.",who:"Thomas Burberry, 1856, Basingstoke. La gabardine est brevetée en 1879 ; le trench est adopté par les officiers britanniques pendant la Première Guerre mondiale.",what:"Trench, gabardine, doublure à carreaux : un vestiaire militaire devenu signe de reconnaissance.",t:[[1856,"Basingstoke"],[1879,"Gabardine"],[1914,"Trench"]],q:"Le trench n’a pas été dessiné pour la mode : il a été dessiné pour la boue des tranchées.",m:"Londres & pluie"},
+"tala":{w:"Une marque de sportswear féminin née sur les réseaux, qui fabrique ses leggings en matières recyclées et les vend en direct.",who:"Grace Beverley, 2019, Londres. La marque est passée des réseaux sociaux à une gamme complète de sport.",what:"Leggings, brassières, sweats assortis, tailles inclusives : du sport pensé pour la salle et pour la rue.",t:[[2019,"Londres"],[2021,"Sweat"],[2024,"Tailles"]],q:"Le legging n’est plus un vêtement de sport : c’est devenu la base du dressing.",m:"Londres & sport"},
 "__defaut":{w:"Chaque pièce a une raison d’exister : un besoin, un sport, un uniforme détourné. C’est cette origine qui la rend intéressante.",who:"La marque, le designer ou la collab raconte souvent plus que la fiche produit.",what:"Musique, cinéma, jeu vidéo, skate : le streetwear se nourrit d’images avant de faire des vêtements.",t:[[1950,"Origine"],[1990,"Détournement"],[2020,"Réédition"]],q:"La mode passe, les uniformes restent. C’est pour ça qu’on regarde les uniformes.",m:"Culture & vêtements"}
 };
 HISTOIRES["adidas originals"]=HISTOIRES["adidas"];
@@ -1428,9 +1438,18 @@ HISTOIRES["billionaire boys club/ice cream"]=HISTOIRES["billionaire boys club"];
 HISTOIRES["fear of god essentials"]=HISTOIRES["essentials"];
 HISTOIRES["hoka®"]=HISTOIRES["hoka"];
 HISTOIRES["levis"]=HISTOIRES["levi's"];
+/* Histoires ajoutées par l'agent, avec leurs sources (data/histoires.json).
+   Les textes écrits à la main restent prioritaires : ce fichier ne fait
+   qu'ajouter des marques qui n'en avaient pas. */
+var HIST_EXTRA={},HIST_EXTRA_P=null;
+function loadHistoiresExtra(){
+if(HIST_EXTRA_P)return HIST_EXTRA_P;
+HIST_EXTRA_P=fetch("data/histoires.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():{}}).then(function(j){HIST_EXTRA=(j&&j.items)||{};return HIST_EXTRA}).catch(function(){HIST_EXTRA={};return HIST_EXTRA});
+return HIST_EXTRA_P;
+}
 function histoireOf(x){
 var k=bkey(x);
-return HISTOIRES[k]||HISTOIRES["type:"+typeOf(x)]||HISTOIRES.__defaut;
+return HIST_EXTRA[k]||HISTOIRES[k]||HISTOIRES["type:"+typeOf(x)]||HISTOIRES.__defaut;
 }
 function drawScribble(){
 return '<svg class="scribble" viewBox="0 0 300 160" aria-hidden="true"><path d="M18 96c34-46 62-58 84-38 18 16 6 48-16 50-24 2-22-38 8-56 32-19 74-6 98 18 20 20 44 12 72-14"/><path d="M212 36c14-8 30-12 44-6"/></svg>';
@@ -1498,6 +1517,7 @@ return '<button type="button" class="trend-item" data-l="'+esc(x.lien)+'">'+
 }).join("");
 }
 function renderHome(){
+renderPaire();
 renderStories();
 renderCatTiles();
 renderTrending();
@@ -1532,6 +1552,13 @@ return list.slice(0,4);
 function storyBlockHtml(x){
 var h=histoireOf(x);
 var same=sameUniverse(x);
+var srcHtml="";
+if(h.src&&h.src.length){
+srcHtml='<p class="story-src">Faits recoupés sur '+h.src.map(function(u){
+var d=String(u).replace(/^https?:\/\/(www\.)?/,"").split("/")[0];
+return '<a href="'+esc(u)+'" target="_blank" rel="noopener">'+esc(d)+'</a>';
+}).join(" · ")+'</p>';
+}
 var sameHtml="";
 if(same.length){
 sameHtml='<div class="same"><div class="same-h"><strong class="lbl" style="margin:0">Dans le même univers</strong><span>'+esc(h.m)+'</span></div><div class="same-list">'+
@@ -1543,7 +1570,217 @@ return '<section class="story-box" aria-labelledby="storyH"><p class="story-kick
 '<p class="story-lead">'+esc(h.w)+'</p>'+
 '<div class="story-grid"><div><h4>Qui est derrière</h4><p>'+esc(h.who)+'</p></div><div><h4>Ce que ça raconte</h4><p>'+esc(h.what)+'</p></div><div><h4>Le bon plan</h4><p>−'+x.remise+' % chez '+esc(x.boutique)+', soit '+f(x.ancien_prix-x.prix)+' de moins. '+(x.inf?'Prix barré à vérifier chez la boutique.':(x._grpN>1?'Même pièce comparée chez '+x._grpN+' boutiques.':'Prix relevé directement sur la fiche boutique.'))+'</p></div></div>'+
 '<ol class="timeline">'+h.t.map(function(p){return '<li><b>'+p[0]+'</b><span>'+esc(p[1])+'</span></li>'}).join("")+'</ol>'+
-'<blockquote class="story-quote">'+esc(h.q)+'<cite>'+esc(h.m)+'</cite></blockquote>'+sameHtml+'</section>';
+'<blockquote class="story-quote">'+esc(h.q)+'<cite>'+esc(h.m)+'</cite></blockquote>'+srcHtml+sameHtml+'</section>';
+}
+
+/* ---------- Identité : ce qui rattache une pièce à une marque ----------
+   Une année de naissance et une signature courte par marque, reprises sur
+   la carte et en tête de fiche. Ce sont les repères des HISTOIRES ci-dessus,
+   rien d'inventé et aucune date décorative. */
+var SIG={
+"nike":[1964,"Le swoosh de 1964 : la course avant la mode"],
+"jordan":[1985,"La paire que la NBA a voulu interdire"],
+"adidas":[1949,"Les trois bandes, nées sur un terrain"],
+"adidas originals":[1949,"Le trèfle : la rue avant le stade"],
+"new balance":[1906,"Des semelles orthopédiques devenues sneakers"],
+"asics":[1949,"Onitsuka, le tigre de Kobe"],
+"salomon":[1947,"L’alpinisme devenu mode"],
+"hoka":[2009,"Le maximum d’amorti, né dans les Alpes"],
+"converse":[1908,"La Chuck Taylor, universelle depuis 1917"],
+"vans":[1966,"La semelle gaufrée du skate"],
+"the north face":[1966,"Le Nuptse, né pour l’expédition"],
+"carhartt wip":[1889,"Le workwear de Detroit"],
+"dickies":[1922,"Le 874, pantalon d’atelier"],
+"puma":[1948,"La Suede et le poing levé de 1968"],
+"birkenstock":[1774,"La semelle liège de 1774"],
+"ugg":[1978,"La botte de mouton des surfeurs"],
+"levi's":[1853,"Le 501, riveté en 1873"],
+"stone island":[1982,"Le badge amovible et le Tela Stella"],
+"cp company":[1971,"La lentille et la teinture à froid"],
+"off-white":[2013,"Le zip orange et les guillemets"],
+"essentials":[2018,"Le basique Fear of God, sans logo"],
+"casablanca":[2018,"La chemise cubaine et le tennis des 80’s"],
+"gramicci":[1982,"Le pantalon d’escalade à entrejambe en V"],
+"balenciaga":[1917,"La couture espagnole passée au streetwear"],
+"dior":[1946,"Le tailleur Bar de 1947"],
+"louis vuitton":[1854,"La malle plate de 1854"],
+"ami paris":[2011,"Le cœur rouge d’Ami"],
+"jacquemus":[2009,"Le minimalisme solaire du Sud"],
+"billionaire boys club":[2005,"Le garçon riche de Pharrell"],
+"skims":[2019,"La shapewear réécrite par Kim Kardashian"],
+"edwin":[1947,"Le denim japonais de Tokyo"],
+"palm angels":[2015,"Le skate vu de Milan"],
+"calvin klein":[1968,"Le jean et la campagne de 1980"],
+"universal works":[2009,"Le workwear de Nottingham"],
+"patagonia":[1973,"Le fleece fait de bouteilles"],
+"clarks":[1825,"La Wallabee et sa semelle crêpe"],
+"a.p.c.":[1987,"Le jean brut sans logo"],
+"supreme":[1994,"La box logo de Lafayette Street"],
+"denim tears":[2019,"Le coton et l’histoire noire américaine"],
+"on":[2010,"La semelle en tuyaux d’arrosage"],
+"umbro":[1924,"Le double losange du football anglais"],
+"saucony":[1898,"La Jazz, née sur les routes"],
+"cole buxton":[2014,"Le sweat lourd de Manchester"],
+"a bathing ape":[1993,"Le camo et le singe de Tokyo"],
+"patta":[2004,"Le Suriname à Amsterdam"],
+"gucci":[1921,"Le monogramme GG de Florence"],
+"damson madder":[2020,"Les imprimés hauts en couleur de Londres"],
+"mki":[2010,"Le Yorkshire, coupe japonaise"],
+"amiri":[2014,"Le denim destroy de Los Angeles"],
+"lanvin":[1889,"Le bleu Lanvin de 1889"],
+"peachy den":[2019,"La combinaison qui tient sans serrer"],
+"kardo":[2013,"La chemise cousue par un seul tailleur"],
+"entire studios":[2020,"La doudoune sans logo"],
+"homecore":[1992,"Le premier streetwear français"],
+"staple":[1997,"Le pigeon de New York"],
+"club 1984":[2020,"Le football et la nostalgie des 80’s"],
+"prada":[1913,"Le nylon de 1984"],
+"burberry":[1856,"Le trench et le tartan"],
+"barbour":[1894,"La wax jacket du Northumberland"],
+"acne studios":[1996,"Cent jeans bruts pour commencer"],
+"butter goods":[2008,"Le skate de Perth, loin de tout"],
+"tala":[2019,"Le legging britannique, sans détour"]
+};
+SIG["air jordan"]=SIG["jordan"];
+SIG["icecream"]=SIG["billionaire boys club"];
+SIG["billionaire boys club/ice cream"]=SIG["billionaire boys club"];
+SIG["hoka®"]=SIG["hoka"];
+SIG["levis"]=SIG["levi's"];
+SIG["fear of god essentials"]=SIG["essentials"];
+/* Repli par type : une identité large, sans date, pour les marques inconnues. */
+var SIGTYPE={
+"sneaker":[0,"La chaussure, l’uniforme de la rue"],
+"botte":[0,"La botte, née pour marcher loin"],
+"veste":[0,"La veste, la pièce qui tient la silhouette"],
+"manteau":[0,"Le manteau, l’hiver en une couche"],
+"sweat":[0,"Le sweat, le confort devenu vêtement de ville"],
+"tshirt":[0,"Le t-shirt, la première toile"],
+"pantalon":[0,"Le pantalon, la coupe avant le logo"],
+"short":[0,"Le short, l’été en coupe large"],
+"chemise":[0,"La chemise, empruntée au vestiaire du travail"],
+"pull":[0,"Le pull, la maille héritée du sport"],
+"sac":[0,"Le sac, la poche que l’on emporte"],
+"couvre-chef":[0,"Le couvre-chef, le signe avant le vêtement"]
+};
+function sigOf(x){
+var s=SIG[bkey(x)];
+if(!s)s=SIGTYPE[typeOf(x)];
+if(!s)return null;
+return {y:s[0],t:s[1]};
+}
+function sigLine(x){
+var s=sigOf(x);
+if(!s)return "";
+return '<div class="sig">'+(s.y?s.y+" · ":"")+esc(s.t)+'</div>';
+}
+
+/* ---------- La paire du jour -------------------------------------------
+   Une sélection de modèles dont la date de création et l’idée d’origine sont
+   documentées. Une paire différente chaque jour ; le jour de son anniversaire
+   exact (deux dates connues au jour près), c’est elle qui passe devant. */
+var PAIRES=[
+{md:"03-26",exact:true,date:"26 mars 1987",y:1987,m:"Nike",n:"Air Max 1",k:["air max 1"],idee:"Tinker Hatfield coupe une running pour laisser voir la poche d’air, en s’inspirant du Centre Pompidou et de ses tuyaux apparents.",pour:"La première Air visible a fait de la technologie un motif : depuis, on dessine la semelle autour de l’air."},
+{md:"03-16",exact:true,date:"16 mars 1966",y:1966,m:"Vans",n:"Authentic",k:["authentic"],idee:"Paul Van Doren ouvre ce jour-là une fabrique-boutique à Anaheim : la semelle gaufrée adhère au béton du skate.",pour:"Première Vans vendue le jour même de sa fabrication, elle a fixé la règle de la marque : faire des chaussures pour ceux qui les usent."},
+{md:"04-01",date:"avril 1985",y:1985,m:"Nike",n:"Air Jordan 1",k:["air jordan 1","jordan 1"],idee:"Nike construit la légende sur une paire « interdite » par la NBA, quand l’amende visait en réalité la Air Ship.",pour:"La campagne a inventé le marketing de la sneaker comme objet de désir, et le mythe tient encore quarante ans après."},
+{md:"03-01",date:"1985",y:1985,m:"Nike",n:"Dunk",k:["dunk"],idee:"Un programme « College Colors » pour les équipes universitaires : deux couleurs, une semelle plate, rien d’autre.",pour:"Quinze ans plus tard, les skateurs en font leur chaussure ; la SB de 2002 transforme un modèle de basket en objet de collection."},
+{md:"01-01",date:"1995",y:1995,m:"Nike",n:"Air Max 95",k:["air max 95","am95"],idee:"Sergio Lozano dessine la chaussure comme un corps humain : la colonne vertébrale devient la semelle, les côtes les bandes.",pour:"Deux bulles d’air visibles, une silhouette de squelette : la 95 est la sneaker la plus imitée de la décennie."},
+{md:"01-01",date:"1997",y:1997,m:"Nike",n:"Air Max 97",k:["air max 97","am97"],idee:"Christian Tresser s’inspire des trains à grande vitesse japonais : une ligne de métal, de l’air sur toute la longueur.",pour:"La première Air Max à air intégral a donné la sneaker la plus futuriste du catalogue."},
+{md:"01-01",date:"1972",y:1972,m:"Nike",n:"Cortez",k:["cortez"],idee:"Bill Bowerman veut une running légère pour la piste : la mousse remplace les semelles en cuir.",pour:"Première Nike à porter le swoosh, elle a traversé le cinéma et le rap sans jamais changer de forme."},
+{md:"01-01",date:"1969",y:1969,m:"adidas",n:"Superstar",k:["superstar"],idee:"Une coque en caoutchouc protège l’avant-pied des pivots sur le parquet : la « shell toe ».",pour:"En 1986, Run-DMC en fait un uniforme et signe le premier contrat de rap avec une marque de sport."},
+{md:"01-01",date:"1971",y:1971,m:"adidas",n:"Stan Smith",k:["stan smith"],idee:"Une chaussure de tennis en cuir, signée d’un joueur : le nom suffit comme logo.",pour:"Renommée du nom de Stan Smith en 1978, elle reste l’une des sneakers les plus vendues au monde."},
+{md:"01-01",date:"1950",y:1950,m:"adidas",n:"Samba",k:["samba"],idee:"Une semelle en gomme pour les terrains gelés, une tige souple : la chaussure d’entraînement du football.",pour:"Soixante-dix ans plus tard, elle est devenue une sneaker de ville, sans une seule campagne publicitaire."},
+{md:"01-01",date:"1966",y:1966,m:"adidas",n:"Gazelle",k:["gazelle"],idee:"Une tige en daim et des bandes blanches : la Gazelle était faite pour la piste et les terrains secs.",pour:"Le daim a installé la sneaker dans la vie quotidienne, avant que le sportswear ne devienne une garde-robe."},
+{md:"01-01",date:"1917",y:1917,m:"Converse",n:"Chuck Taylor",k:["chuck taylor","all star"],idee:"Une toile et une semelle en caoutchouc, dessinées pour le basket naissant.",pour:"Chuck Taylor, joueur puis vendeur, la fait adopter par les équipes : la première sneaker devenue universelle."},
+{md:"01-01",date:"1977",y:1977,m:"Vans",n:"Old Skool",k:["old skool"],idee:"Paul Van Doren dessine une vague sur le côté, d’abord comme un simple gribouillis, et la garde.",pour:"La sidestripe est devenue la ligne la plus copiée du skate : un trait suffit à reconnaître la marque."},
+{md:"01-01",date:"1968",y:1968,m:"Puma",n:"Suede",k:["suede"],idee:"Une tige en daim, une semelle fine, un profil bas : la chaussure de basket la plus simple possible.",pour:"Aux Jeux de 1968, Tommie Smith monte sur le podium avec : la Suede devient l’image d’un geste politique."},
+{md:"01-01",date:"1982",y:1982,m:"New Balance",n:"990",k:["990"],idee:"Une running fabriquée aux États-Unis et vendue 100 dollars : le prix le plus élevé du marché.",pour:"La « dad shoe » est née là : une chaussure de père de famille devenue objet de mode quarante ans plus tard."},
+{md:"01-01",date:"1989",y:1989,m:"New Balance",n:"550",k:["550"],idee:"Une chaussure de basket des années 80, sortie discrètement et oubliée pendant trente ans.",pour:"Relancée en 2020 avec Aimé Leon Dore, elle a remis New Balance au centre du vestiaire."},
+{md:"01-01",date:"1993",y:1993,m:"Asics",n:"Gel-Kayano",k:["gel kayano","kayano"],idee:"Une stabilité maximale pour les coureurs qui pronation : le gel visible dans le talon.",pour:"Trente ans de versions plus tard, la Kayano est devenue la running la plus « mode » d’Asics."},
+{md:"01-01",date:"1990",y:1990,m:"Asics",n:"Gel-Lyte III",k:["gel lyte iii"],idee:"Une languette fendue en deux pour ne pas irriter le dessus du pied : le split tongue.",pour:"La languette ouverte est devenue l’argument de collection : une pièce qu’on reconnaît de profil."},
+{md:"01-01",date:"1981",y:1981,m:"Saucony",n:"Jazz",k:["jazz"],idee:"Une running légère avec une semelle triangulaire : le premier vrai succès de Saucony.",pour:"Elle a porté la marque pendant vingt ans avant de revenir par la mode et les collaborations."},
+{md:"01-01",date:"1985",y:1985,m:"Reebok",n:"Club C",k:["club c"],idee:"Une chaussure de tennis en cuir, sans logo apparent, dessinée pour les clubs.",pour:"Le minimalisme des années 80 est redevenu une référence du vestiaire contemporain."},
+{md:"01-01",date:"2013",y:2013,m:"Salomon",n:"XT-6",k:["xt 6"],idee:"Une chaussure de trail pour l’ultra : le châssis, les crampons, la maille technique.",pour:"Sortie du sentier, elle est devenue en 2020 la sneaker des villes : la performance comme style."},
+{md:"01-01",date:"2014",y:2014,m:"Hoka",n:"Clifton",k:["clifton"],idee:"Une semelle démesurée et une chaussure légère : le maximum d’amorti sans le poids.",pour:"Le « max cushion » a changé la course à pied, puis la mode, qui a adopté la semelle haute."},
+{md:"01-01",date:"1988",y:1988,m:"Jordan",n:"Air Jordan 3",k:["air jordan 3","jordan 3"],idee:"Tinker Hatfield sauve la ligne avec une tige en cuir, un imprimé éléphant et le premier Jumpman visible.",pour:"Le logo a remplacé le swoosh : la marque Jordan pouvait exister sans Nike sur le côté."},
+{md:"01-01",date:"1989",y:1989,m:"Jordan",n:"Air Jordan 4",k:["air jordan 4","jordan 4"],idee:"Des ailettes de maintien et un filet sur le côté, pensés comme des éléments de protection.",pour:"Portée dans « Do the Right Thing » de Spike Lee, elle a fait entrer le basket dans le cinéma."},
+{md:"01-01",date:"1995",y:1995,m:"Jordan",n:"Air Jordan 11",k:["air jordan 11","jordan 11"],idee:"Du cuir verni sur une chaussure de basket : une idée de tenue de soirée sur un parquet.",pour:"Le « Concord » est devenu la Jordan la plus portée hors du terrain, avec un costume."},
+{md:"02-01",date:"février 2015",y:2015,m:"adidas",n:"Yeezy Boost 750",k:["yeezy 750"],idee:"Kanye West et adidas couvrent toute la semelle de Boost et laissent la chaussure quasi monochrome.",pour:"La première Yeezy a installé la sneaker lifestyle à semelle mousse et les files d’attente."},
+{md:"01-01",date:"2017",y:2017,m:"Balenciaga",n:"Triple S",k:["triple s"],idee:"Trois semelles empilées et une tige en filet : une chaussure volontairement lourde et usée d’avance.",pour:"Le « chunky » est entré dans le luxe et a ouvert la voie aux sneakers massives des années 2020."},
+{md:"01-01",date:"1967",y:1967,m:"Clarks",n:"Wallabee",k:["wallabee"],idee:"Une tige en daim cousue sur une semelle crêpe : la chaussure des îles, importée de l’artisanat.",pour:"Adoptée par le hip-hop new-yorkais dans les années 90, la Wallabee est devenue un classique de la rue."},
+{md:"01-01",date:"1979",y:1979,m:"Birkenstock",n:"Boston",k:["boston"],idee:"La semelle liège d’une sandale, fermée en sabot : le confort orthopédique sans les lanières.",pour:"Le sabot est devenu la chaussure de bureau des créatifs, du laboratoire à la rue."},
+{md:"01-01",date:"1992",y:1992,m:"The North Face",n:"Nuptse",k:["nuptse"],idee:"Une doudoune d’expédition à 700 cuin, coupée pour l’altitude.",pour:"Trente ans plus tard, elle se porte en ville par-dessus un sweat : l’équipement est devenu vêtement."},
+{md:"01-01",date:"1973",y:1973,m:"Timberland",n:"6-Inch Boot",k:["6 inch","yellow boot"],idee:"Une botte de chantier étanche, en cuir nubuck et semelle crantée.",pour:"Adoptée par le hip-hop de New York au début des années 90, elle a changé le vocabulaire de la rue."}
+];
+function doyOf(d){return Math.floor((Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())-Date.UTC(d.getFullYear(),0,0))/86400000)}
+function mdDay(md){var p=md.split("-");return doyOf(new Date(2001,+p[0]-1,+p[1]))}
+function paireDuJour(){
+var now=new Date(),t=doyOf(now),p=null;
+for(var i=0;i<PAIRES.length;i++){
+var q=PAIRES[i];
+if(q.exact&&mdDay(q.md)===t){p=q;break}
+}
+var anniv=!!p;
+if(!p){var n=Math.floor(Date.UTC(now.getFullYear(),now.getMonth(),now.getDate())/86400000)%PAIRES.length;p=PAIRES[n]}
+return {p:p,anniv:anniv};
+}
+function pairePromo(p){
+var best=null;
+D.forEach(function(x){
+if(catOf(x)!=="chau")return;
+var t=x._titleClean||cleanSearchStr((x.marque||"")+" "+(x.nom||""));
+for(var i=0;i<p.k.length;i++){
+if(t.indexOf(p.k[i])>=0){
+if(!best||(x.remise||0)>(best.remise||0))best=x;
+break;
+}
+}
+});
+return best;
+}
+function renderPaire(){
+var sec=$("paireSec"),box=$("paire");
+if(!sec||!box)return;
+var r=paireDuJour(),p=r.p,x=pairePromo(p);
+var vis;
+if(x&&x.image){
+vis='<div class="paire-vis"><img src="'+esc(thumb(x.image,700))+'" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span class="paire-deal">−'+x.remise+' %</span></div>';
+}else{
+vis='<div class="paire-vis paire-typo"><span>'+p.y+'</span><b>'+esc(p.m)+'</b></div>';
+}
+var act='<button type="button" class="btn ghost" onclick="homeFilter(\'chau\',\'sneaker\')">Les sneakers en promo</button>';
+if(x)act='<button type="button" class="btn paire-go" data-l="'+esc(x.lien)+'">Voir la fiche · −'+x.remise+' %</button>'+act;
+box.innerHTML='<div class="paire-txt"><p class="kicker">'+esc(p.m)+' · sortie en '+esc(p.date)+'</p>'+
+'<h3 class="paire-n">'+esc(p.n)+'</h3>'+
+'<div class="paire-cols"><div><h4>L’idée</h4><p>'+esc(p.idee)+'</p></div><div><h4>Ce qui reste</h4><p>'+esc(p.pour)+'</p></div></div>'+
+'<div class="paire-act">'+act+'</div></div>'+vis;
+var note=$("paireNote");
+if(note)note.textContent=r.anniv?"anniversaire aujourd’hui":new Date().toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"});
+var b=box.querySelector(".paire-go");
+if(b)b.addEventListener("click",function(){openSheet(b.getAttribute("data-l"))});
+sec.hidden=false;
+}
+
+/* ---------- Descriptions écrites par le bot (data/descriptions.json) ---- */
+var DESC=null,DESC_P=null;
+function loadDescs(){
+if(DESC_P)return DESC_P;
+DESC_P=fetch("data/descriptions.json?"+Date.now(),{cache:"no-store"}).then(function(r){return r.ok?r.json():{}}).then(function(j){DESC=(j&&j.items)||{};return DESC}).catch(function(){DESC={};return DESC});
+return DESC_P;
+}
+function descOf(l){var v=DESC&&DESC[l];if(!v)return "";return typeof v==="string"?v:(v.d||"")}
+function motBlockHtml(x){
+return '<div class="mot" id="shMot" hidden></div>';
+}
+function paintMot(l){
+var paint=function(){
+var e=$("shMot");
+if(!e||cur!==l)return;
+var d=descOf(l);
+if(!d){e.hidden=true;e.innerHTML="";return}
+e.innerHTML='<p class="mot-k">Le mot du radar</p><p class="mot-p">'+esc(d)+'</p>';
+e.hidden=false;
+};
+if(DESC)paint();else loadDescs().then(paint);
 }
 
 function cardHtml(x){
@@ -1567,7 +1804,7 @@ var href=/^https?:\/\//.test(x.lien)?esc(x.lien):"#";
 /* L’image et le texte gardent l’ouverture de la fiche (comportement JS) ;
    le bouton « Voir l’offre » est un vrai lien boutique, avec l’affiliation
    intacte, et ouvre un nouvel onglet. */
-return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a class="cardlink" href="'+href+'" target="_blank" rel="noopener" aria-label="Voir la fiche : '+alt+'">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'</a><div class="in"><div class="b">'+esc(x.marque)+" · "+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div><div><span class="now">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc(uSizes.join(", "))+'</div>'+tags+'<a class="offer" href="'+href+'" target="_blank" rel="noopener">Voir l’offre ↗</a></div></div>';
+return '<div class="card'+(x.gone?" gone":"")+'" data-l="'+esc(x.lien)+'"><button class="fav'+(fv?" on":"")+'" data-l="'+esc(x.lien)+'" aria-label="Favori">'+(fv?"♥":"♡")+'</button><a class="cardlink" href="'+href+'" target="_blank" rel="noopener" aria-label="Voir la fiche : '+alt+'">'+(x.gone?"":'<span class="pct">−'+x.remise+' %</span>')+img+'</a><div class="in"><div class="b">'+esc(x.marque)+" · "+esc(x.boutique)+'</div><div class="t">'+esc(x.nom)+'</div>'+sigLine(x)+'<div><span class="now">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span></div><div class="s">'+esc(uSizes.join(", "))+'</div>'+tags+'<a class="offer" href="'+href+'" target="_blank" rel="noopener">Voir l’offre ↗</a></div></div>';
 }
 
 function render(){
@@ -2076,11 +2313,14 @@ var szHtml=szBlockHtml(x)+'<div id="szPickBox" class="sz-pick-price" style="disp
 var alt=cmpBlockHtml(x);
 var seuil=window.Veille?Veille.ficheHtml(x):"";
 var small=thumb(x.image),big=thumb(x.image,700);
+var sg=sigOf(x);
+var idHtml=sg?'<div class="sh-id">'+(sg.y?"Depuis "+sg.y+" · ":"")+esc(sg.t)+'</div>':"";
 var img=x.image?'<img class="sh-img" id="shImg" referrerpolicy="no-referrer" src="'+esc(small)+'" alt="" onerror="this.style.visibility=\'hidden\'">':"";
-$("shBody").innerHTML=img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div><div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div><div class="deal-signal">'+dealSignal(x)+'</div>'+szHtml+'<div id="histWrap" class="hist"></div>'+alt+storyBlockHtml(x)+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir l’offre ↗</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>'+seuil;
+$("shBody").innerHTML=img+'<div class="b">'+esc(x.marque)+' · '+esc(x.boutique)+'</div><div class="sh-t">'+esc(x.nom)+'</div>'+idHtml+'<div><span class="now big">'+priceRangeLabel(x)+'</span><span class="old">'+f(x.ancien_prix)+'</span><span class="pct2">−'+x.remise+' %</span></div><div class="deal-signal">'+dealSignal(x)+'</div>'+motBlockHtml(x)+szHtml+'<div id="histWrap" class="hist"></div>'+alt+storyBlockHtml(x)+'<div class="sh-act"><a class="go" href="'+esc(x.lien)+'" target="_blank" rel="noopener">Voir l’offre ↗</a><button class="fbtn" id="shFav" aria-label="Favori">'+(FAV[l]?"♥":"♡")+'</button><button class="fbtn" id="shShare">Partager</button></div>'+seuil;
 $("shBody").scrollTop=0;
 showSheet("Fiche produit");
 setHash(l,"");
+paintMot(l);
 loadHistory().then(function(){if(cur===l)renderHistBlock(M[l]||FAV[l])});
 if(!DETAIL_LOADED)loadSizeDetail().then(function(){if(cur===l)renderSheetSizes()});
 if(x.image&&big&&big!==small){
@@ -2134,11 +2374,12 @@ btn.textContent=FAV[l]?"♥":"♡";
 }
 return;
 }
-var a=e.target.closest(".card a");
-if(a){
-if(a.classList.contains("offer"))return;
+/* Toute la carte ouvre la fiche : l'image, mais aussi la zone noire (marque,
+   nom, prix, tailles). Seul « Voir l'offre » garde son lien boutique. */
+var card=e.target.closest(".card");
+if(card&&!e.target.closest(".offer")){
 e.preventDefault();
-openSheet(a.closest(".card").getAttribute("data-l"));
+openSheet(card.getAttribute("data-l"));
 }
 });
 

@@ -15,6 +15,11 @@ dépendance), données collectées chaque heure par GitHub Actions et publiées 
 - `sw.js`, `manifest.json` : service worker et installation en PWA.
 - `scraper.py`, `size_prices.py`, `feed.py`, `verifie_sante.py` : collecte horaire, prix par taille,
   flux RSS et fiches SEO, contrôle de santé.
+- `enrich.py` : notes de style par article, écrites avec un modèle et affichées dans la fiche.
+- `agents/` et `.github/workflows/agent-*.yml` : deux agents autonomes — structure et expérience
+  utilisateur d’un côté, histoires de marques vérifiées par leurs sources de l’autre. Ils travaillent
+  sur une branche et ouvrent une pull request, jamais sur `main` ; sans `AI_API_KEY`, ils s’arrêtent
+  sans rien changer.
 - `data/` : promos, historique, prix par taille, index des tailles, état des collectes.
 
 ## Vérifier en local
