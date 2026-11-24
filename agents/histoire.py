@@ -254,7 +254,7 @@ def main():
                 SYSTEME,
                 "Marque : %s\nNombre d'articles au catalogue : %d\nAnnée courante : %d\n"
                 "Écris la fiche et ses sources." % (marque, n, ANNEES_MAX),
-                temperature=0.2, max_tokens=1200,
+                temperature=0.2, max_tokens=1200, json_mode=True,
             )
             obj = c.extraire_json(reponse)
         except (RuntimeError, ValueError) as e:

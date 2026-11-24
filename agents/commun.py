@@ -80,23 +80,39 @@ def ecrire_texte(chemin, texte):
     (RACINE / chemin).write_text(texte, encoding="utf-8")
 
 
-def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2):
-    """Un tour de conversation. Lève RuntimeError après le dernier échec."""
-    corps = json.dumps({
-        "model": modele(),
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": utilisateur},
-        ],
-    }).encode("utf-8")
+def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, json_mode=False):
+    """Un tour de conversation. Lève RuntimeError après le dernier échec.
+
+    La réflexion est désactivée : les modèles GLM récents raisonnent avant de
+    répondre, et cette réflexion peut manger tout `max_tokens` au point de
+    renvoyer un `content` vide. `json_mode` demande en plus une sortie JSON.
+    """
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": utilisateur},
+    ]
+    options = {"thinking": {"type": "disabled"}}
+    if json_mode:
+        options["response_format"] = {"type": "json_object"}
+
+    def corps():
+        charge = {
+            "model": modele(),
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+            "messages": messages,
+        }
+        charge.update(options)
+        return json.dumps(charge).encode("utf-8")
+
     url = base_api().rstrip("/") + "/chat/completions"
     derniere = "inconnue"
-    for i in range(essais):
+    tentatives = essais
+    while tentatives > 0:
+        tentatives -= 1
         req = urllib.request.Request(
             url,
-            data=corps,
+            data=corps(),
             headers={
                 "Content-Type": "application/json",
                 "Authorization": "Bearer " + cle_api(),
@@ -105,18 +121,42 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=90) as r:
+            with urllib.request.urlopen(req, timeout=120) as r:
                 j = json.loads(r.read().decode("utf-8"))
-            return j["choices"][0]["message"]["content"]
         except urllib.error.HTTPError as e:
-            derniere = "HTTP %s" % e.code
-            if e.code in (429, 500, 502, 503) and i + 1 < essais:
-                time.sleep(5)
+            detail = ""
+            try:
+                detail = e.read().decode("utf-8", "ignore")[:300]
+            except OSError:
+                pass
+            # Un point d'accès compatible OpenAI qui ne connaît pas ces options
+            # répond 400 : on réessaie sans elles au lieu d'abandonner.
+            if e.code == 400 and options and any(
+                    m in detail for m in ("thinking", "response_format", "json_object")):
+                options = {}
+                tentatives += 1
+                continue
+            derniere = "HTTP %s%s" % (e.code, " : " + detail.strip()[:200] if detail.strip() else "")
+            if e.code in (429, 500, 502, 503) and tentatives > 0:
+                time.sleep(10)
                 continue
             break
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError, KeyError) as e:
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
             derniere = str(e)
             break
+        choix = (j.get("choices") or [{}])[0] if isinstance(j, dict) else {}
+        texte = ((choix.get("message") or {}).get("content") or "").strip()
+        if texte:
+            return texte
+        fin = choix.get("finish_reason") or "inconnu"
+        derniere = "réponse vide (finish_reason=%s)" % fin
+        if tentatives > 0 and fin == "length":
+            max_tokens *= 2  # budget mangé par la réflexion : on en redonne
+            continue
+        if tentatives > 0:
+            time.sleep(5)
+            continue
+        break
     raise RuntimeError("appel au modèle impossible (%s)" % derniere)
 
 
@@ -131,7 +171,7 @@ def extraire_json(texte):
             return obj
         except ValueError:
             continue
-    raise ValueError("aucun objet JSON dans la réponse")
+    raise ValueError("aucun objet JSON dans la réponse : %r" % ((texte or "")[:160],))
 
 
 def telecharger(url, timeout=20, limite=400_000):

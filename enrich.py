@@ -106,25 +106,54 @@ def prompt(x):
     return "\n".join(bouts)
 
 
-def appeler(base, modele, cle, texte, timeout=40):
-    corps = json.dumps({
-        "model": modele,
-        "temperature": 0.5,
-        "max_tokens": 220,
-        "messages": [
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": texte},
-        ],
-    }).encode("utf-8")
-    req = urllib.request.Request(
-        base.rstrip("/") + "/chat/completions",
-        data=corps,
-        headers={"Content-Type": "application/json", "Authorization": "Bearer " + cle},
-        method="POST",
-    )
-    with urllib.request.urlopen(req, timeout=timeout) as r:
-        j = json.loads(r.read().decode("utf-8"))
-    return j["choices"][0]["message"]["content"]
+def appeler(base, modele, cle, texte, timeout=40, essais=3):
+    """Une note de style. Réessaie sur 429 : l'offre gratuite limite le débit.
+
+    `thinking` est désactivé : un modèle GLM récent raisonne avant de répondre
+    et peut passer tout `max_tokens` en réflexion, en renvoyant un texte vide.
+    """
+    url = base.rstrip("/") + "/chat/completions"
+
+    def corps(avec_reflexion):
+        charge = {
+            "model": modele,
+            "temperature": 0.5,
+            "max_tokens": 300,
+            "messages": [
+                {"role": "system", "content": SYSTEM},
+                {"role": "user", "content": texte},
+            ],
+        }
+        if avec_reflexion:
+            charge["thinking"] = {"type": "disabled"}
+        return json.dumps(charge).encode("utf-8")
+
+    avec_reflexion = True
+    for i in range(essais):
+        req = urllib.request.Request(
+            url,
+            data=corps(avec_reflexion),
+            headers={"Content-Type": "application/json", "Authorization": "Bearer " + cle},
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as r:
+                j = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            try:
+                detail = e.read().decode("utf-8", "ignore")[:300]
+            except OSError:
+                detail = ""
+            # Point d'accès qui ne connaît pas le paramètre : on réessaie sans.
+            if e.code == 400 and avec_reflexion and "thinking" in detail:
+                avec_reflexion = False
+                continue
+            if e.code in (429, 500, 502, 503) and i + 1 < essais:
+                time.sleep(10 * (i + 1))
+                continue
+            raise
+        return (j["choices"][0].get("message") or {}).get("content") or ""
+    return ""
 
 
 def nettoyer(texte):

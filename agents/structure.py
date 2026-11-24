@@ -324,7 +324,7 @@ def main():
         return 0
     try:
         reponse = c.appeler(SYSTEME, "AUDIT\n" + rapport_txt + "\n\n" + contexte(),
-                            temperature=0.2, max_tokens=2000)
+                            temperature=0.2, max_tokens=2000, json_mode=True)
         proposition = c.extraire_json(reponse)
     except (RuntimeError, ValueError) as e:
         c.log("Proposition ignorée :", e)
