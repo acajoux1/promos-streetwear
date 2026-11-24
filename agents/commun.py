@@ -33,6 +33,80 @@ def modele():
     return env("AI_MODEL", "glm-4-flash")
 
 
+# Repli quand le fournisseur principal refuse : clé refusée (401/403), quota
+# épuisé (429), modèle ou route disparue (404/400). Gemini par défaut : offre
+# gratuite sans carte bancaire, et la même API compatible OpenAI (endpoint
+# `/v1beta/openai/chat/completions`). Une clé se crée sur aistudio.google.com.
+BASE_REPLI = "https://generativelanguage.googleapis.com/v1beta/openai"
+MODELE_REPLI = "gemini-3.8-flash"
+
+# Statuts qui ne valent pas un réessai sur le même fournisseur : la main passe
+# tout de suite au suivant quand il y en a un. Un 500/502/503 garde l'ancien
+# comportement (réessai sur place, pas de bascule).
+BASCULE = (400, 401, 403, 404, 429)
+
+# Noms lisibles dans le journal du workflow : on lit l'hôte, pas une étiquette
+# recopiée à la main qui finirait par mentir.
+HOTES = {
+    "api.z.ai": "Z.ai",
+    "api.groq.com": "Groq",
+    "api.openai.com": "OpenAI",
+    "openrouter.ai": "OpenRouter",
+    "generativelanguage.googleapis.com": "Gemini",
+    "api.mistral.ai": "Mistral",
+    "api.cerebras.ai": "Cerebras",
+    "integrate.api.nvidia.com": "NVIDIA",
+    "api.cohere.ai": "Cohere",
+}
+
+
+def nom_fournisseur(base):
+    hote = re.sub(r"^https?://", "", (base or "").strip()).split("/")[0].lower()
+    hote = hote.split(":")[0]  # sans le port, sinon la table ne reconnaît rien
+    return HOTES.get(hote) or hote or "fournisseur inconnu"
+
+
+def _liste(nom):
+    """Une variable peut porter plusieurs valeurs, séparées par des virgules."""
+    return [v.strip() for v in env(nom).split(",") if v.strip()]
+
+
+def _valeur(nom, rang, defaut):
+    """La n-ième valeur, sinon la dernière, sinon le défaut.
+
+    Ainsi une seule base (ou un seul modèle) vaut pour toutes les clés d'un
+    coup, et deux clés de fournisseurs différents peuvent avoir chacune la leur.
+    """
+    valeurs = _liste(nom)
+    if not valeurs:
+        return defaut
+    return valeurs[rang] if rang < len(valeurs) else valeurs[-1]
+
+
+def fournisseurs():
+    """Le principal, puis chaque clé de secours dans l'ordre.
+
+    `AI_API_KEY_BACKUP` peut contenir plusieurs clés séparées par des virgules ;
+    `AI_API_BASE_BACKUP` et `AI_MODEL_BACKUP` les suivent dans le même ordre.
+    Sans clé de secours, il n'y a que le principal, comme avant.
+    """
+    liste = [{
+        "nom": nom_fournisseur(base_api()),
+        "base": base_api(),
+        "modele": modele(),
+        "cle": cle_api(),
+    }]
+    for rang, cle in enumerate(_liste("AI_API_KEY_BACKUP")):
+        base = _valeur("AI_API_BASE_BACKUP", rang, BASE_REPLI)
+        liste.append({
+            "nom": nom_fournisseur(base),
+            "base": base,
+            "modele": _valeur("AI_MODEL_BACKUP", rang, MODELE_REPLI),
+            "cle": cle,
+        })
+    return liste
+
+
 def log(*args):
     print(*args, flush=True)
 
@@ -80,24 +154,63 @@ def ecrire_texte(chemin, texte):
     (RACINE / chemin).write_text(texte, encoding="utf-8")
 
 
-def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, json_mode=False):
-    """Un tour de conversation. Lève RuntimeError après le dernier échec.
+class Echec(RuntimeError):
+    """Un fournisseur a échoué ; `code` porte le statut HTTP s'il y en a un."""
 
-    La réflexion est désactivée : les modèles GLM récents raisonnent avant de
-    répondre, et cette réflexion peut manger tout `max_tokens` au point de
-    renvoyer un `content` vide. `json_mode` demande en plus une sortie JSON.
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code
+
+
+def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, json_mode=False):
+    """Un tour de conversation, avec repli automatique. Lève RuntimeError à la fin.
+
+    Le principal (`AI_API_*`) répond en premier. S'il refuse pour clé (401/403),
+    quota (429), route ou modèle inconnu (400/404) et qu'un repli est configuré
+    (`AI_API_KEY_BACKUP`), la main passe au suivant sans attendre les réessais —
+    inutiles quand la limite est journalière. Le journal nomme chaque fournisseur
+    essayé et celui qui a répondu, pour qu'un run vert ne laisse rien deviner.
     """
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": utilisateur},
     ]
+    liste = fournisseurs()
+    problemes = []
+    for i, f in enumerate(liste):
+        dernier = i + 1 == len(liste)
+        try:
+            texte = _appeler(f, messages, temperature, max_tokens, essais, json_mode,
+                             abandonner_sur=() if dernier else BASCULE)
+        except Echec as e:
+            problemes.append("%s : %s" % (f["nom"], e))
+            if not dernier and e.code in BASCULE:
+                log("%s indisponible (%s) → repli sur %s." % (f["nom"], e, liste[i + 1]["nom"]))
+                continue
+            raise RuntimeError("appel au modèle impossible (%s)" % " ; ".join(problemes))
+        if i:
+            log("Réponse de %s (%s), après l'échec de %s." % (f["nom"], f["modele"], liste[0]["nom"]))
+        else:
+            log("Réponse de %s (%s)." % (f["nom"], f["modele"]))
+        return texte
+    # Inatteignable : la dernière tentative lève toujours.
+    raise RuntimeError("appel au modèle impossible (%s)" % " ; ".join(problemes))
+
+
+def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner_sur=()):
+    """Un seul fournisseur, avec ses réessais. Lève Echec en cas d'échec.
+
+    La réflexion est désactivée : les modèles GLM récents raisonnent avant de
+    répondre, et cette réflexion peut manger tout `max_tokens` au point de
+    renvoyer un `content` vide. `json_mode` demande en plus une sortie JSON.
+    """
     options = {"thinking": {"type": "disabled"}}
     if json_mode:
         options["response_format"] = {"type": "json_object"}
 
     def corps():
         charge = {
-            "model": modele(),
+            "model": f["modele"],
             "temperature": temperature,
             "max_tokens": max_tokens,
             "messages": messages,
@@ -105,8 +218,8 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
         charge.update(options)
         return json.dumps(charge).encode("utf-8")
 
-    url = base_api().rstrip("/") + "/chat/completions"
-    derniere = "inconnue"
+    url = f["base"].rstrip("/") + "/chat/completions"
+    derniere, code = "inconnue", None
     tentatives = essais
     while tentatives > 0:
         tentatives -= 1
@@ -115,7 +228,7 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
             data=corps(),
             headers={
                 "Content-Type": "application/json",
-                "Authorization": "Bearer " + cle_api(),
+                "Authorization": "Bearer " + f["cle"],
                 "User-Agent": "promos-agents/1.0",
             },
             method="POST",
@@ -130,26 +243,29 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
             except OSError:
                 pass
             # Un point d'accès compatible OpenAI qui ne connaît pas ces options
-            # répond 400 : on réessaie sans elles au lieu d'abandonner.
-            if e.code == 400 and options and any(
-                    m in detail for m in ("thinking", "response_format", "json_object")):
+            # répond 400 (le message ne dit pas toujours laquelle) : on réessaie
+            # une fois sans elles au lieu d'abandonner.
+            if e.code == 400 and options:
                 options = {}
                 tentatives += 1
                 continue
-            derniere = "HTTP %s%s" % (e.code, " : " + detail.strip()[:200] if detail.strip() else "")
+            derniere, code = "HTTP %s%s" % (
+                e.code, " : " + detail.strip()[:200] if detail.strip() else ""), e.code
+            if e.code in abandonner_sur:
+                break  # quota ou clé : un réessai ne changerait rien, le repli prend le relais
             if e.code in (429, 500, 502, 503) and tentatives > 0:
                 time.sleep(10)
                 continue
             break
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
-            derniere = str(e)
+            derniere, code = str(e), None
             break
         choix = (j.get("choices") or [{}])[0] if isinstance(j, dict) else {}
         texte = ((choix.get("message") or {}).get("content") or "").strip()
         if texte:
             return texte
         fin = choix.get("finish_reason") or "inconnu"
-        derniere = "réponse vide (finish_reason=%s)" % fin
+        derniere, code = "réponse vide (finish_reason=%s)" % fin, None
         if tentatives > 0 and fin == "length":
             max_tokens *= 2  # budget mangé par la réflexion : on en redonne
             continue
@@ -157,7 +273,7 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
             time.sleep(5)
             continue
         break
-    raise RuntimeError("appel au modèle impossible (%s)" % derniere)
+    raise Echec(derniere, code)
 
 
 def extraire_json(texte):

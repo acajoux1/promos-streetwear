@@ -64,6 +64,22 @@
   - Les deux lisent `AI_API_KEY`, `AI_API_BASE`, `AI_MODEL` dans les secrets du dépôt (ou les
     variables de dépôt pour les deux dernières ; une valeur vide vaut le défaut). Aucun accès
     en écriture à `main`, aux tests ou aux workflows depuis le code des agents.
+  - **Repli automatique** (`agents/commun.py`) : si le principal répond **401/403** (clé refusée),
+    **429** (quota épuisé), **404/400** (modèle ou route inconnue), l'appel passe au fournisseur
+    suivant sans attendre les réessais, inutiles quand la limite est journalière. Un 500/502/503
+    garde l'ancien comportement : réessai sur place, pas de bascule.
+    Le secours par défaut est **Gemini** (Google AI Studio, `gemini-3.8-flash`,
+    `https://generativelanguage.googleapis.com/v1beta/openai`), gratuit sans carte bancaire et
+    compatible OpenAI ; la clé se crée sur `aistudio.google.com/apikey`. Les variables :
+    `AI_API_KEY_BACKUP` en **secret**, `AI_API_BASE_BACKUP` et `AI_MODEL_BACKUP` en variables
+    (facultatives, elles servent à changer de fournisseur sans toucher au code). Plusieurs clés
+    de secours se mettent à la suite, séparées par des virgules ; base et modèle les suivent dans
+    le même ordre (une seule valeur vaut pour toutes). Les deux workflows transmettent ces trois
+    valeurs. Le journal dit toujours qui a répondu — « Réponse de Z.ai (…). » ou « Z.ai
+    indisponible (HTTP 429 …) → repli sur Gemini. » — pour qu'un run vert ne laisse jamais
+    deviner le fournisseur. Sans `AI_API_KEY_BACKUP`, le comportement est celui d'avant (réessais
+    sur le principal). `enrich.py` garde son propre appel : le repli ne couvre pas encore les
+    notes de style.
 - Historique : un point par jour et par changement de prix, plafonné à 30 points par article
   (`HIST_MAX_POINTS`), et articles absents depuis 45 jours oubliés. La date de première observation
   est gardée à part (`d`) pour que les badges annoncent l'ancienneté réelle du suivi même après
