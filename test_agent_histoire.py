@@ -316,3 +316,39 @@ class TestDiagnostic(unittest.TestCase):
                 mock.patch.object(histoire.c, "resumer") as resume:
             self.assertEqual(histoire.main(), 0)
         self.assertIn("Aucune marque", resume.call_args[0][0])
+
+
+class TestFusionDeLaPr(unittest.TestCase):
+    """La PR ouverte doit finir dans `main`, sinon le run échoue franchement."""
+
+    def appeler(self, etat, url="https://exemple.test/pull/3"):
+        with mock.patch.object(histoire, "candidats", return_value=[(8, "kardo")]), \
+                mock.patch.object(histoire.c, "lire_json", return_value={"items": {}}), \
+                mock.patch.object(histoire.c, "a_une_cle", return_value=True), \
+                mock.patch.object(histoire.c, "lancer", return_value=(0, "")), \
+                mock.patch.object(histoire, "fiche", return_value=(None, ["refus"], False)), \
+                mock.patch.object(histoire.c, "ecrire_json"), \
+                mock.patch.object(histoire.c, "resumer"), \
+                mock.patch.object(histoire.c, "branche_libre",
+                                  return_value="agents/histoire-20261125") as libre, \
+                mock.patch.object(histoire.c, "creer_pr", return_value=url) as pr, \
+                mock.patch.object(histoire.c, "fusionner_pr", return_value=etat) as fusion:
+            code = histoire.main()
+        self.assertTrue(libre.called)
+        return code, pr, fusion
+
+    def test_pr_fusionnee_sort_a_zero(self):
+        code, pr, fusion = self.appeler("fusionnée")
+        self.assertEqual(code, 0)
+        self.assertEqual(pr.call_args[0][2], "agents/histoire-20261125")
+        fusion.assert_called_once_with("agents/histoire-20261125")
+
+    def test_pr_non_fusionnee_sort_en_echec(self):
+        code, _, fusion = self.appeler("contrôles en échec : tests")
+        self.assertEqual(code, 1)
+        fusion.assert_called_once()
+
+    def test_sans_pull_request_ne_fusionne_rien(self):
+        code, _, fusion = self.appeler("fusionnée", url=None)
+        self.assertEqual(code, 0)
+        fusion.assert_not_called()

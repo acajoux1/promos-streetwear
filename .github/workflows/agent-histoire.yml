@@ -8,6 +8,7 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  checks: read  # lecture des contrôles de la PR avant fusion
 
 concurrency:
   group: agent-histoire
@@ -41,5 +42,8 @@ jobs:
       # produire ne doit pas être vert.
       - name: Diagnostic des fournisseurs
         run: python3 agents/histoire.py --diagnostic
+      # Ouvre la PR puis la fusionne en squash dès que ses contrôles passent.
+      # Le script sort en échec si la fusion n'a pas eu lieu : un run vert ne
+      # doit pas laisser croire que `main` a reçu les fiches.
       - name: Histoires vérifiées
         run: python3 agents/histoire.py

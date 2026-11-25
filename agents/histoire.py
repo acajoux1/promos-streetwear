@@ -9,8 +9,10 @@ candidates (page Wikipédia renommée) : la première qui répond est gardée.
 Ce qui ne passe pas est écarté.
 
 Le résultat va dans `data/histoires.json`, jamais dans `app.js` : le site fusionne
-ce fichier au chargement. L'agent ouvre une pull request, ne fusionne pas et
-n'écrit pas sur `main`. Les marques déjà décrites à la main gardent leur texte.
+ce fichier au chargement. L'agent ouvre une pull request et la fusionne en squash
+dès que ses contrôles passent ; sans contrôle, la fusion est immédiate. Si la
+branche du jour porte déjà une PR fusionnée ou fermée, il en ouvre une neuve sous
+un nom variante. Les marques déjà décrites à la main gardent leur texte.
 """
 import re
 import sys
@@ -429,11 +431,24 @@ def main():
     else:
         lignes += ["## Histoires", "", "Aucune fiche n'a passé la vérification ce passage.", ""]
     lignes += ["Les marques déjà documentées à la main gardent leur texte. "
-               "Aucune fusion automatique.", ""]
-    if c.creer_pr(c.titre_date("Agent histoire"), "\n".join(lignes),
-                  "agents/histoire-" + time.strftime("%Y%m%d")) is None and not ajouts:
+               "La pull request est fusionnée en squash dans `main` dès que ses "
+               "contrôles passent.", ""]
+    branche = c.branche_libre("agents/histoire-" + time.strftime("%Y%m%d"))
+    url = c.creer_pr(c.titre_date("Agent histoire"), "\n".join(lignes), branche)
+    if url is None:
+        c.resumer("## Fusion\n\nRien à proposer ce passage : pas de pull request.")
         c.log("Aucune nouveauté ce passage : pas de pull request.")
-    return 0
+        return 0
+    etat = c.fusionner_pr(branche)
+    if etat == "fusionnée":
+        c.resumer("## Fusion\n\nPull request fusionnée dans `main` "
+                  "(branche `%s`) : %s" % (branche, url))
+        return 0
+    # `main` n'a rien reçu : le run doit le dire, pas afficher un vert trompeur.
+    c.resumer("## Fusion\n\nPull request **non fusionnée** — %s.\n\nÀ reprendre "
+              "à la main : %s" % (etat, url))
+    c.log("Fusion impossible :", etat)
+    return 1
 
 
 if __name__ == "__main__":

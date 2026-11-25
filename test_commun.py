@@ -69,7 +69,7 @@ class TestActualiserPr(unittest.TestCase):
         def faux(args, timeout=300):
             appels.append(list(args))
             if args[2:3] == ["view"]:
-                return reponses.get("view", (0, "https://exemple.test/pull/2\n"))
+                return reponses.get("view", (0, "OPEN https://exemple.test/pull/2\n"))
             if args[2:3] == ["edit"]:
                 return reponses.get("edit", (0, ""))
             raise AssertionError(args)
@@ -98,6 +98,128 @@ class TestActualiserPr(unittest.TestCase):
         url, appels = self.appeler({"view": (1, "no pull requests found")})
         self.assertIsNone(url)
         self.assertEqual([a for a in appels if a[2:3] == ["edit"]], [])
+
+    def test_pr_fusionnee_n_est_pas_retouchee(self):
+        url, appels = self.appeler({"view": (0, "MERGED https://exemple.test/pull/2\n")})
+        self.assertEqual(url, "https://exemple.test/pull/2")
+        self.assertEqual([a for a in appels if a[2:3] == ["edit"]], [])
+
+
+class TestBrancheLibre(unittest.TestCase):
+    """Une branche dont la PR est morte doit laisser la place à une variante."""
+
+    def choisir(self, table):
+        vus = []
+
+        def faux(branche):
+            vus.append(branche)
+            return table.get(branche)
+
+        with mock.patch.object(commun, "etat_pr", side_effect=faux):
+            nom = commun.branche_libre("agents/histoire-20261125")
+        return nom, vus
+
+    def test_sans_pr_garde_le_nom_du_jour(self):
+        nom, vus = self.choisir({})
+        self.assertEqual(nom, "agents/histoire-20261125")
+        self.assertEqual(vus, ["agents/histoire-20261125"])
+
+    def test_pr_ouverte_reprend_la_meme_branche(self):
+        nom, _ = self.choisir({"agents/histoire-20261125": "OPEN"})
+        self.assertEqual(nom, "agents/histoire-20261125")
+
+    def test_pr_fusionnee_passe_a_une_variante(self):
+        nom, vus = self.choisir({"agents/histoire-20261125": "MERGED"})
+        self.assertEqual(nom, "agents/histoire-20261125-2")
+        self.assertEqual(vus, ["agents/histoire-20261125", "agents/histoire-20261125-2"])
+
+    def test_variante_deja_fusionnee_passe_a_la_suivante(self):
+        nom, _ = self.choisir({"agents/histoire-20261125": "MERGED",
+                               "agents/histoire-20261125-2": "MERGED"})
+        self.assertEqual(nom, "agents/histoire-20261125-3")
+
+    def test_pr_fermee_aussi_change_de_branche(self):
+        nom, _ = self.choisir({"agents/histoire-20261125": "CLOSED"})
+        self.assertEqual(nom, "agents/histoire-20261125-2")
+
+
+class TestControles(unittest.TestCase):
+    def test_aucun_controle(self):
+        self.assertEqual(commun.controles(None), ([], []))
+        self.assertEqual(commun.controles([]), ([], []))
+
+    def test_tout_au_vert(self):
+        rollup = [
+            {"name": "tests", "status": "COMPLETED", "conclusion": "SUCCESS"},
+            {"context": "ci", "state": "SUCCESS"},
+            {"name": "lint", "status": "COMPLETED", "conclusion": "SKIPPED"},
+        ]
+        self.assertEqual(commun.controles(rollup), ([], []))
+
+    def test_en_cours_et_en_echec(self):
+        rollup = [
+            {"name": "tests", "status": "IN_PROGRESS", "conclusion": None},
+            {"name": "lint", "status": "COMPLETED", "conclusion": "FAILURE"},
+            {"context": "ci", "state": "PENDING"},
+        ]
+        en_attente, echecs = commun.controles(rollup)
+        self.assertEqual(en_attente, ["tests", "ci"])
+        self.assertEqual(echecs, ["lint"])
+
+
+class TestFusionnerPr(unittest.TestCase):
+    def lancer(self, vues, fusion=(0, ""), attente=120):
+        appels = []
+        vues = list(vues)
+
+        def faux(args, timeout=300):
+            appels.append(list(args))
+            if args[2:3] == ["view"]:
+                return vues.pop(0) if len(vues) > 1 else vues[0]
+            if args[2:3] == ["merge"]:
+                return fusion
+            raise AssertionError(args)
+
+        with mock.patch.object(commun, "lancer", side_effect=faux), \
+                mock.patch.object(commun.time, "sleep"):
+            etat = commun.fusionner_pr("agents/histoire-20261125", attente=attente, pause=0)
+        return etat, appels
+
+    def test_sans_controle_fusionne_en_squash_et_supprime_la_branche(self):
+        etat, appels = self.lancer([(0, '{"state":"OPEN","statusCheckRollup":[]}')])
+        self.assertEqual(etat, "fusionnée")
+        merges = [a for a in appels if a[2:3] == ["merge"]]
+        self.assertEqual(len(merges), 1)
+        self.assertIn("--squash", merges[0])
+        self.assertIn("--delete-branch", merges[0])
+
+    def test_controle_en_echec_ne_fusionne_pas(self):
+        vue = ('{"state":"OPEN","statusCheckRollup":[{"name":"tests",'
+               '"status":"COMPLETED","conclusion":"FAILURE"}]}')
+        etat, appels = self.lancer([(0, vue)])
+        self.assertIn("contrôles en échec", etat)
+        self.assertIn("tests", etat)
+        self.assertEqual([a for a in appels if a[2:3] == ["merge"]], [])
+
+    def test_controle_en_attente_puis_vert(self):
+        en_cours = ('{"state":"OPEN","statusCheckRollup":[{"name":"tests",'
+                    '"status":"IN_PROGRESS"}]}')
+        vert = ('{"state":"OPEN","statusCheckRollup":[{"name":"tests",'
+                '"status":"COMPLETED","conclusion":"SUCCESS"}]}')
+        etat, appels = self.lancer([(0, en_cours), (0, vert)])
+        self.assertEqual(etat, "fusionnée")
+        self.assertEqual(len([a for a in appels if a[2:3] == ["view"]]), 2)
+
+    def test_pr_deja_fusionnee_ne_refusionne_pas(self):
+        etat, appels = self.lancer([(0, '{"state":"MERGED"}')])
+        self.assertEqual(etat, "fusionnée")
+        self.assertEqual([a for a in appels if a[2:3] == ["merge"]], [])
+
+    def test_fusion_refusee_rend_la_raison(self):
+        etat, _ = self.lancer([(0, '{"state":"OPEN","statusCheckRollup":[]}')],
+                              fusion=(1, "X Pull request is not mergeable"), attente=0)
+        self.assertIn("fusion refusée", etat)
+        self.assertIn("not mergeable", etat)
 
 
 class TestResumer(unittest.TestCase):

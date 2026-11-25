@@ -1,8 +1,9 @@
 """Outils partagés par les deux agents.
 
-Aucun agent ne pousse sur `main` : ils travaillent sur une branche et ouvrent
-une pull request. Les seuils et les interdictions restent dans le module de
-chaque agent, pour qu'on les lise à l'endroit où ils s'appliquent.
+Aucun agent ne pousse sur `main` : ils travaillent sur une branche, ouvrent une
+pull request et ne la fusionnent que si ses contrôles passent. Les seuils et les
+interdictions restent dans le module de chaque agent, pour qu'on les lise à
+l'endroit où ils s'appliquent.
 """
 import json
 import os
@@ -463,13 +464,20 @@ def actualiser_pr(branche, corps_path, echec=""):
     `gh pr create` échoue quand la branche du jour a déjà sa pull request ;
     sans cette mise à jour, le corps restait celui de la première exécution et
     pouvait annoncer « aucune fiche » alors que les suivantes en ont produit.
-    Retourne l'URL, ou None si la branche n'a pas de pull request.
+    Une PR déjà fusionnée ou fermée n'est pas retouchée : son corps appartient
+    à l'historique. Retourne l'URL, ou None si la branche n'a pas de pull request.
     """
-    code, url = lancer(["gh", "pr", "view", branche, "--json", "url", "-q", ".url"])
+    code, sortie = lancer(["gh", "pr", "view", branche, "--json", "state,url",
+                           "-q", '.state + " " + .url'])
+    etat, _, url = sortie.strip().partition(" ")
     url = url.strip()
     if code or not url:
         log("Échec de la pull request :", (echec or url)[:600])
         return None
+    if etat.upper() != "OPEN":
+        log("Pull request déjà %s, corps laissé tel quel : %s"
+            % ("fusionnée" if etat.upper() == "MERGED" else "fermée", url))
+        return url
     code, sortie = lancer(["gh", "pr", "edit", branche, "--body-file", str(corps_path)])
     if code:
         log("Pull request déjà ouverte, corps non mis à jour :", url)
@@ -477,6 +485,117 @@ def actualiser_pr(branche, corps_path, echec=""):
     else:
         log("Pull request déjà ouverte, corps mis à jour :", url)
     return url
+
+
+def etat_pr(branche):
+    """État de la PR ouverte sur cette branche : « OPEN », « MERGED », « CLOSED ».
+
+    None quand il n'y a pas de PR — ou quand `gh` ne répond pas (poste local
+    sans authentification) : on ne bloque pas un run pour ça.
+    """
+    code, sortie = lancer(["gh", "pr", "view", branche, "--json", "state",
+                           "-q", ".state"])
+    etat = sortie.strip().upper()
+    if code or etat not in ("OPEN", "MERGED", "CLOSED"):
+        return None
+    return etat
+
+
+def branche_libre(base, essais=9):
+    """La branche du jour, ou la première variante dont la PR est encore utile.
+
+    Une PR fusionnée (ou fermée) garde son nom : repousser dessus ne créerait
+    pas de nouvelle PR — `gh pr create` refuse, et le corps d'une PR morte
+    serait réécrit. On prend donc `base-2`, `base-3`… pour une PR neuve.
+    Après une fusion avec suppression de branche, le nom de base est libre et
+    `gh` ne retrouve plus la PR : la première exécution d'une journée le réutilise.
+    """
+    nom = base
+    for n in range(2, essais + 2):
+        etat = etat_pr(nom)
+        if etat not in ("MERGED", "CLOSED"):
+            return nom
+        nom = "%s-%d" % (base, n)
+        log("PR de %s déjà %s : nouvelle branche %s pour une PR neuve."
+            % (base, "fusionnée" if etat == "MERGED" else "fermée", nom))
+    return nom
+
+
+def controles(rollup):
+    """(contrôles en attente, contrôles en échec) d'un `statusCheckRollup`.
+
+    Un contrôle peut être un check run (statut + conclusion) ou un statut
+    d'ancienne génération (`state`). Un `SKIPPED` ou un `NEUTRAL` ne bloque pas.
+    """
+    en_attente, echecs = [], []
+    for ctl in rollup or []:
+        if not isinstance(ctl, dict):
+            continue
+        nom = ctl.get("name") or ctl.get("context") or "contrôle"
+        if "status" in ctl or "conclusion" in ctl:
+            if (ctl.get("status") or "").upper() not in ("", "COMPLETED"):
+                en_attente.append(nom)
+            elif (ctl.get("conclusion") or "").upper() not in (
+                    "", "SUCCESS", "NEUTRAL", "SKIPPED"):
+                echecs.append(nom)
+        else:
+            etat = (ctl.get("state") or "").upper()
+            if etat in ("", "PENDING", "EXPECTED"):
+                en_attente.append(nom)
+            elif etat != "SUCCESS":
+                echecs.append(nom)
+    return en_attente, echecs
+
+
+def fusionner_pr(branche, attente=900, pause=20):
+    """Fusionne la PR en squash dès que ses contrôles sont verts.
+
+    Les contrôles peuvent n'arriver qu'après la création de la PR : on attend,
+    sans dépasser `attente` secondes. Un contrôle en échec arrête tout de suite —
+    fusionner malgré un rouge serait justement ce qu'on veut éviter. Sans aucun
+    contrôle (le cas de ce dépôt), la fusion part immédiatement, avec quelques
+    réessais le temps que GitHub calcule la fusionnabilité.
+
+    Retourne un état lisible : « fusionnée », « contrôles en échec : … »,
+    « contrôles toujours en attente : … », « fusion refusée : … », « PR fermée
+    sans fusion » ou « PR illisible : … ». L'appelant en fait un succès ou un
+    échec du run, plutôt que de laisser croire que `main` a reçu les données.
+    """
+    echeance = time.monotonic() + attente
+    refus = ""
+    while True:
+        code, sortie = lancer(["gh", "pr", "view", branche, "--json",
+                               "state,statusCheckRollup"])
+        try:
+            info = None if code else json.loads(sortie)
+        except ValueError:
+            info = None
+        if not isinstance(info, dict):
+            return "PR illisible : %s" % ((sortie.strip() or "aucune réponse de gh")[:200])
+        etat = (info.get("state") or "").upper()
+        if etat == "MERGED":
+            return "fusionnée"
+        if etat == "CLOSED":
+            return "PR fermée sans fusion"
+        en_attente, echecs = controles(info.get("statusCheckRollup"))
+        if echecs:
+            return "contrôles en échec : %s" % ", ".join(echecs[:5])
+        if not en_attente:
+            code, sortie = lancer(["gh", "pr", "merge", branche, "--squash",
+                                   "--delete-branch"])
+            if not code:
+                log("Pull request fusionnée dans main :", branche)
+                return "fusionnée"
+            refus = ((sortie.strip().splitlines() or [""])[-1])[:200]
+            log("Fusion refusée pour l'instant :", refus or "raison inconnue")
+        if time.monotonic() >= echeance:
+            if en_attente:
+                return "contrôles toujours en attente : %s" % ", ".join(en_attente[:5])
+            return "fusion refusée : %s" % (refus or "raison inconnue")
+        if en_attente:
+            log("Contrôles en attente (%s) : nouvelle vérification dans %d s."
+                % (", ".join(en_attente[:5]), pause))
+        time.sleep(pause)
 
 
 def titre_date(prefixe):
