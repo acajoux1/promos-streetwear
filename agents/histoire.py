@@ -254,6 +254,42 @@ def valide(obj, marque):
     return pbs
 
 
+def demander(marque, n, pbs=None):
+    """Un tour au modèle ; les problèmes du tour précédent lui sont rappelés."""
+    question = ("Marque : %s\nNombre d'articles au catalogue : %d\nAnnée courante : %d\n"
+                "Écris la fiche et ses sources." % (marque, n, ANNEES_MAX))
+    if pbs:
+        question += ("\nLa réponse précédente a été refusée : %s. "
+                     "Corrige-la et renvoie le JSON complet." % " ; ".join(pbs))
+    return c.extraire_json(c.appeler(
+        SYSTEME, question, temperature=0.2, max_tokens=1200, json_mode=True))
+
+
+def fiche(marque, n):
+    """Une fiche valide, ou la raison du refus.
+
+    Un premier refus de forme (frise de 2 ou 5 repères, champ hors bornes) est
+    redemandé une fois en disant au modèle ce qui clochait : le rejeter du
+    premier coup perdait la marque pour quatorze jours sur une virgule.
+    Retourne (objet, problèmes, transitoire) ; `transitoire` signale une
+    surcharge du fournisseur, qui ne dit rien de la marque elle-même.
+    """
+    pbs = None
+    for tour in (1, 2):
+        try:
+            obj = demander(marque, n, pbs)
+        except (RuntimeError, ValueError) as e:
+            c.log("  réponse inutilisable :", e)
+            return None, None, getattr(e, "code", None) == 429
+        pbs = valide(obj, marque)
+        if not pbs:
+            return obj, None, False
+        if tour == 1:
+            c.log("  écartée : %s — fiche corrigée redemandée." % " ; ".join(pbs))
+    c.log("  écartée : " + " ; ".join(pbs))
+    return None, pbs, False
+
+
 def main():
     hist = c.lire_json("data/histoires.json", {}) or {}
     if not isinstance(hist, dict):
@@ -278,23 +314,12 @@ def main():
     for n, marque in cible:
         c.log("— %s (%d articles)" % (marque, n))
         essai = {"marque": marque, "articles": n}
-        try:
-            reponse = c.appeler(
-                SYSTEME,
-                "Marque : %s\nNombre d'articles au catalogue : %d\nAnnée courante : %d\n"
-                "Écris la fiche et ses sources." % (marque, n, ANNEES_MAX),
-                temperature=0.2, max_tokens=1200, json_mode=True,
-            )
-            obj = c.extraire_json(reponse)
-        except (RuntimeError, ValueError) as e:
-            c.log("  réponse inutilisable :", e)
-            essais[marque] = time.strftime("%Y-%m-%d")
-            continue
-        pbs = valide(obj, marque)
-        if pbs:
-            c.log("  écartée : " + " ; ".join(pbs))
-            essais[marque] = time.strftime("%Y-%m-%d")
-            essai["refus"] = pbs
+        obj, pbs, transitoire = fiche(marque, n)
+        if obj is None:
+            if not transitoire:
+                essais[marque] = time.strftime("%Y-%m-%d")
+            if pbs:
+                essai["refus"] = pbs
             continue
         annees = [p[0] for p in obj["t"]]
         ok, detail = sources_ok(marque, annees, obj.get("src"))

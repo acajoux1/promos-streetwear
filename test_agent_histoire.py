@@ -185,5 +185,72 @@ class TestDomainesSources(unittest.TestCase):
         self.assertIn("kardo-magasin.test", detail)
 
 
+BONNE = ('{"cle":"kardo","w":"%s","who":"%s","what":"%s",'
+         '"t":[[2019,"fondation à Paris"],[2021,"première collection"],'
+         '[2024,"ouverture à Londres"]],"q":"%s","m":"pantalons parisiens",'
+         '"src":["https://fr.wikipedia.org/wiki/Kardo"]}')
+
+
+def fiche_json(w=None, who=None, what=None, q=None, frise=None):
+    """Une fiche conforme, avec un champ à remplacer pour la rendre fautive."""
+    base = BONNE % (w or "Kardo habille les amateurs de pantalons larges depuis son atelier parisien.",
+                    who or "Fondée en 2019 par deux amis parisiens, la marque reste indépendante.",
+                    what or "Des pantalons amples coupés dans des tissus épais, fabriqués en Europe.",
+                    q or "Le pantalon large comme manifeste.")
+    if frise is not None:
+        base = base.replace('[[2019,"fondation à Paris"],[2021,"première collection"],'
+                            '[2024,"ouverture à Londres"]]', frise)
+    return base
+
+
+class TestFicheRedemandee(unittest.TestCase):
+    def appels(self, reponses):
+        with mock.patch.object(histoire.c, "appeler", side_effect=reponses) as m:
+            resultat = histoire.fiche("kardo", 8)
+        return resultat, m.call_args_list
+
+    def test_frise_refusee_redemandee_avec_les_problemes(self):
+        obj, pbs, transitoire = self.appels([
+            fiche_json(frise='[[2019,"fondation à Paris"],[2021,"première collection"]]'),
+            fiche_json(),
+        ])[0]
+        self.assertIsNone(pbs)
+        self.assertFalse(transitoire)
+        self.assertIsNotNone(obj)
+        self.assertEqual(len(obj["t"]), 3)
+
+    def test_la_seconde_demande_dit_ce_qui_clochait(self):
+        _, appels = self.appels([
+            fiche_json(frise='[[2019,"fondation à Paris"]]'),
+            fiche_json(),
+        ])
+        self.assertEqual(len(appels), 2)
+        seconde = appels[1].args[1]
+        self.assertIn("frise : 3 ou 4 repères attendus", seconde)
+
+    def test_deux_refus_ecartent_la_marque(self):
+        obj, pbs, transitoire = self.appels([
+            fiche_json(frise='[[2019,"fondation"]]'),
+            fiche_json(frise='[[2019,"fondation"]]'),
+        ])[0]
+        self.assertIsNone(obj)
+        self.assertIn("frise : 3 ou 4 repères attendus", pbs)
+        self.assertFalse(transitoire)
+
+    def test_surcharge_429_marquee_transitoire(self):
+        with mock.patch.object(histoire.c, "appeler",
+                               side_effect=histoire.c.Echec("HTTP 429 : 1305", 429)):
+            obj, pbs, transitoire = histoire.fiche("kardo", 8)
+        self.assertIsNone(obj)
+        self.assertTrue(transitoire)
+
+    def test_erreur_non_transitoire_garde_la_marque_gelee(self):
+        with mock.patch.object(histoire.c, "appeler",
+                               side_effect=histoire.c.Echec("HTTP 401", 401)):
+            obj, pbs, transitoire = histoire.fiche("kardo", 8)
+        self.assertIsNone(obj)
+        self.assertFalse(transitoire)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
