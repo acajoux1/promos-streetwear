@@ -13,6 +13,78 @@ def page(texte=PAGE):
     return mock.patch.object(histoire.c, "telecharger", return_value=(200, texte))
 
 
+def pages(par_url, defaut=(200, PAGE)):
+    """Réponse différente par URL ; tout ce qui n'est pas prévu renvoie `defaut`."""
+    return mock.patch.object(histoire.c, "telecharger",
+                             side_effect=lambda u: par_url.get(u, defaut))
+
+
+class TestCandidatesSources(unittest.TestCase):
+    def test_page_wikipedia_renommee_rattrapee_apres_deux_404(self):
+        bon = "https://fr.wikipedia.org/wiki/Star_Cow_(marque)"
+        with pages({"https://fr.wikipedia.org/wiki/StarCow": (404, "introuvable"),
+                    "https://fr.wikipedia.org/wiki/Star_Cow": (404, "introuvable"),
+                    bon: (200, PAGE)}):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019],
+                [["https://fr.wikipedia.org/wiki/StarCow",
+                  "https://fr.wikipedia.org/wiki/Star_Cow", bon],
+                 "https://www.vogue.com/article/kardo"],
+            )
+        self.assertTrue(ok, detail)
+        self.assertEqual(detail, [bon, "https://www.vogue.com/article/kardo"])
+
+    def test_candidate_sans_la_marque_ecartee_au_profit_de_la_suivante(self):
+        homonyme = "https://fr.wikipedia.org/wiki/Kardo_(film)"
+        bon = "https://fr.wikipedia.org/wiki/Kardo"
+        with pages({homonyme: (200, "Bienvenue sur la boutique. " * 30), bon: (200, PAGE)}):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019],
+                [[homonyme, bon], "https://www.vogue.com/article/kardo"],
+            )
+        self.assertTrue(ok, detail)
+        self.assertEqual(detail[0], bon)
+
+    def test_candidates_toutes_mortes_refusent_la_source(self):
+        with pages({}, defaut=(404, "introuvable")):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019],
+                [["https://fr.wikipedia.org/wiki/Kardo",
+                  "https://fr.wikipedia.org/wiki/Kardo_(marque)"],
+                 "https://www.vogue.com/article/kardo"],
+            )
+        self.assertFalse(ok)
+        self.assertIn("injoignable", detail)
+
+    def test_candidate_hors_liste_refusee(self):
+        with pages({}):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019],
+                [["https://fr.wikipedia.org/wiki/Kardo", "https://kardo-magasin.test/histoire"],
+                 "https://www.vogue.com/article/kardo"],
+            )
+        self.assertFalse(ok)
+        self.assertIn("kardo-magasin.test", detail)
+
+    def test_candidate_non_https_refusee(self):
+        with pages({}):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019],
+                [["https://fr.wikipedia.org/wiki/Kardo", "http://fr.wikipedia.org/wiki/Kardo"],
+                 "https://www.vogue.com/article/kardo"],
+            )
+        self.assertFalse(ok)
+        self.assertIn("non https", detail)
+
+    def test_liste_vide_refusee_sans_planter(self):
+        with pages({}):
+            ok, detail = histoire.sources_ok(
+                "kardo", [2019], [[], "https://www.vogue.com/article/kardo"],
+            )
+        self.assertFalse(ok)
+        self.assertIn("sans URL", detail)
+
+
 class TestDomainesSources(unittest.TestCase):
     def test_domaine_usurpe_avec_le_nom_de_la_marque_refuse(self):
         with mock.patch.object(histoire.c, "telecharger") as telecharger:

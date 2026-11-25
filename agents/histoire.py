@@ -4,7 +4,9 @@
 Chaque jour, il repère les marques présentes au catalogue qui n'ont pas encore
 d'histoire, demande au modèle une fiche courte et ses sources, puis **vérifie**
 chaque source : page accessible, marque citée, et chacune des dates de la frise
-retrouvée dans le texte des pages. Ce qui ne passe pas est écarté.
+retrouvée dans le texte des pages. Une source peut proposer plusieurs URL
+candidates (page Wikipédia renommée) : la première qui répond est gardée.
+Ce qui ne passe pas est écarté.
 
 Le résultat va dans `data/histoires.json`, jamais dans `app.js` : le site fusionne
 ce fichier au chargement. L'agent ouvre une pull request, ne fusionne pas et
@@ -23,6 +25,7 @@ MAX_PAR_PASSAGE = 2
 NOTES_PAR_PASSAGE = 12
 MIN_ARTICLES = 6
 RETENTE_JOURS = 14
+MAX_CANDIDATS = 3  # URL candidates essayées par source, dans l'ordre donné
 ANNEES_MIN, ANNEES_MAX = 1800, time.localtime().tm_year
 
 # Sources acceptées d'office : encyclopédies, presse mode et culture.
@@ -87,15 +90,19 @@ SYSTEME = (
     "Tu n'écris que des faits établis : date de création, fondateur, ville, pièce "
     "ou invention qui a fait la marque. Si tu n'es pas sûr d'une date, tu ne la "
     "mets pas dans la frise. "
-    "Tu fournis 2 à 4 URL https réellement consultables (Wikipédia, presse, site "
-    "officiel de la marque, domaine racine exact) qui mentionnent la marque ET les "
-    "années de la frise. "
+    "Tu fournis 2 à 4 sources, chacune avec une URL https réellement consultable "
+    "(Wikipédia, presse, site officiel de la marque, domaine racine exact) qui "
+    "mentionne la marque ET les années de la frise. Quand le titre d'une page peut "
+    "avoir changé (article Wikipédia renommé), donne 2 ou 3 URL candidates pour "
+    "cette même source, de la plus sûre à la moins sûre : la première qui répond "
+    "sera utilisée. "
     "Aucune citation attribuée à quelqu'un : « q » est une phrase de ton cru. "
     "Réponds uniquement par un JSON : "
     '{"cle":"nom de marque en minuscules","w":"pourquoi la marque existe, 2 phrases",'
     '"who":"fondateur, année, ville, 2 phrases","what":"ce qu elle fait, 2 phrases",'
     '"t":[[1985,"repere court"],[1990,"repere"],[2000,"repere"]],'
-    '"q":"une phrase de synthèse","m":"deux ou trois mots","src":["https://...","https://..."]}'
+    '"q":"une phrase de synthèse","m":"deux ou trois mots",'
+    '"src":["https://...",["https://...","https://..."]]}'
 )
 
 
@@ -168,22 +175,44 @@ def source_autorisee(marque, hote):
 
 
 def sources_ok(marque, annees, urls):
-    """Vérifie que chaque source existe et porte la marque et les dates."""
+    """Vérifie que chaque source existe et porte la marque et les dates.
+
+    Une entrée de `src` est une URL, ou une liste d'URL candidates pour la même
+    source (plusieurs titres Wikipédia possibles). La première candidate qui
+    répond, cite la marque et tient le domaine passe : une page renommée (404)
+    ne fait donc plus perdre la marque, qui n'est retentée qu'après RETENTE_JOURS.
+    """
     if not isinstance(urls, list) or not (2 <= len(urls) <= 4):
         return False, "2 à 4 sources attendues"
     mot = sans_accent(marque).split()[0]
     textes, gardees = [], []
-    for u in urls:
-        if not isinstance(u, str) or not u.startswith("https://"):
-            return False, "URL non https : %r" % u
-        hote = hote_de(u)
-        if not source_autorisee(marque, hote):
-            return False, "source hors liste (domaine non reconnu) : %s" % hote
-        code, txt = c.telecharger(u)
-        if code != 200 or len(txt) < 500:
-            return False, "source injoignable (%s) : %s" % (code, u)
-        textes.append(sans_accent(txt))
-        gardees.append(u)
+    for entree in urls:
+        # Une entrée de `src` est une URL seule, ou une liste de candidates.
+        cands = (entree if isinstance(entree, list) else [entree])[:MAX_CANDIDATS]
+        if not cands:
+            return False, "source sans URL : %r" % (entree,)
+        for u in cands:
+            if not isinstance(u, str) or not u.startswith("https://"):
+                return False, "URL non https : %r" % u
+            hote = hote_de(u)
+            if not source_autorisee(marque, hote):
+                return False, "source hors liste (domaine non reconnu) : %s" % hote
+        echecs = []
+        for u in cands:
+            code, txt = c.telecharger(u)
+            if code != 200 or len(txt) < 500:
+                echecs.append("source injoignable (%s) : %s" % (code, u))
+                continue
+            texte = sans_accent(txt)
+            # Avec plusieurs candidates, la marque sert à choisir la bonne page.
+            if len(cands) > 1 and mot not in texte:
+                echecs.append("la marque n'est pas citée : %s" % u)
+                continue
+            textes.append(texte)
+            gardees.append(u)
+            break
+        else:
+            return False, " ; ".join(echecs)
     corpus = "\n".join(textes)
     if mot not in corpus:
         return False, "la marque n'est pas citée dans les sources"
