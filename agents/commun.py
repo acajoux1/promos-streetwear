@@ -335,6 +335,34 @@ def git(*args, verifier=True):
     return r
 
 
+def pousser_branche(branche, essais=2):
+    """Pousse la branche, en ne forçant que sur une distante réellement lue.
+
+    `--force-with-lease` compare la distante à la référence de suivi locale :
+    dans un clone superficiel (celui d'`actions/checkout`) cette référence
+    n'existe pas, et git refuse alors le push en « stale info » dès qu'une
+    exécution précédente a déjà poussé la branche du jour. On récupère donc la
+    distante avant chaque essai et on donne le commit attendu explicitement.
+    Sans distante, le push est ordinaire : rien à écraser, et il échoue plutôt
+    que d'écraser une branche créée entre-temps par une autre exécution.
+    """
+    suivi = "refs/remotes/origin/" + branche
+    for essai in range(essais):
+        git("fetch", "--depth=1", "origin",
+            "+refs/heads/%s:%s" % (branche, suivi), verifier=False)
+        lue = git("rev-parse", "--verify", "--quiet", suivi, verifier=False)
+        args = ["push", "-u", "origin", branche]
+        if lue.returncode == 0 and lue.stdout.strip():
+            args.append("--force-with-lease=refs/heads/%s:%s" % (branche, lue.stdout.strip()))
+        try:
+            git(*args)
+            return
+        except RuntimeError:
+            if essai + 1 >= essais:
+                raise
+            log("Push refusé sur %s, nouvelle tentative après relecture de la distante." % branche)
+
+
 def creer_pr(titre, corps, branche, base="main"):
     """Commit, push et pull request. Retourne l'URL, ou None s'il n'y a rien."""
     git("config", "user.name", "agents-promos")
@@ -348,7 +376,7 @@ def creer_pr(titre, corps, branche, base="main"):
     git("checkout", "-b", branche)
     git("commit", "-m", titre)
     # Branche de l'agent uniquement : une réexécution le même jour la remplace.
-    git("push", "-u", "origin", branche, "--force-with-lease")
+    pousser_branche(branche)
     corps_path = RACINE / ".pr-corps.md"
     corps_path.write_text(corps, encoding="utf-8")
     code, sortie = lancer([
