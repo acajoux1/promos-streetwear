@@ -65,7 +65,8 @@ class InterfaceTest(unittest.TestCase):
         n = self.page.eval_on_selector_all("#g .card:not(.sk)", "els => els.length")
         self.assertGreater(n, 10)
         total = self.page.inner_text("#n")
-        self.assertRegex(total, r"\d+ articles?")
+        # inner_text rend le texte transformé par le CSS (#n est en majuscules).
+        self.assertRegex(total, r"(?i)\d+ articles?")
 
     def test_02_pas_de_debordement(self):
         m = self.page.evaluate(

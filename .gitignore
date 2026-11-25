@@ -4,3 +4,6 @@ data/variantes.json
 
 # Captures de vérification, jamais publiées.
 artifacts/
+
+# Environnement local des tests d'interface (Playwright + Chromium).
+.venv/
