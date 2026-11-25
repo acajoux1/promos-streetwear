@@ -1,9 +1,10 @@
 """Vérification de non-régression de l'interface, dans un vrai navigateur.
 
-Le test est ignoré si Playwright n'est pas installé (le workflow horaire ne
-l'installe pas) ; en local :
+Le workflow maj.yml installe Playwright et Chromium avant de lancer ces
+tests ; le module reste ignoré si Playwright est absent de l'environnement.
+En local :
 
-    pip install playwright && python -m playwright install chromium
+    pip install playwright && python -m playwright install --with-deps chromium
     python -m unittest test_interface
 """
 import functools

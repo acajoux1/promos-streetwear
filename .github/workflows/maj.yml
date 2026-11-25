@@ -29,6 +29,12 @@ jobs:
           python-version: "3.12"
       - name: Syntaxe JavaScript
         run: node --check app.js && node --check veille.js && node --check sw.js
+      # Chromium et ses bibliothèques système : sans cela les tests
+      # d'interface de test_interface.py seraient ignorés.
+      - name: Navigateur des tests d'interface
+        run: |
+          python -m pip install --disable-pip-version-check playwright
+          python -m playwright install --with-deps chromium
       - name: Tests des prix par taille
         run: python -m unittest discover -p 'test*.py' -v
       - name: Mise à jour des promotions
