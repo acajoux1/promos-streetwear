@@ -235,8 +235,8 @@ def main():
     c.log("%d marque(s) à documenter." % len(cible))
     if not cible:
         return 0
-    if not c.cle_api():
-        c.log("AI_API_KEY absente : rien de nouveau, aucune pull request.")
+    if not c.a_une_cle():
+        c.log("Aucune clé d'API (ni AI_API_KEY ni AI_API_KEY_BACKUP) : rien de nouveau, aucune pull request.")
         return 0
 
     # Volet 1 : les notes de style des articles (même agent, même branche).

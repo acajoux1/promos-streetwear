@@ -318,8 +318,8 @@ def main():
         "problemes": [{"gravite": g, "fichier": f, "message": m} for g, f, m in pbs],
     })
     # L'audit seul ne justifie pas une branche : on ne propose que du concret.
-    if not c.cle_api():
-        c.log("AI_API_KEY absente : audit écrit, aucune retouche proposée.")
+    if not c.a_une_cle():
+        c.log("Aucune clé d'API (ni AI_API_KEY ni AI_API_KEY_BACKUP) : audit écrit, aucune retouche proposée.")
         laisser_audit()
         return 0
     try:

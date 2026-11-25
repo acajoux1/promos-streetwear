@@ -78,8 +78,8 @@
     valeurs. Le journal dit toujours qui a répondu — « Réponse de Z.ai (…). » ou « Z.ai
     indisponible (HTTP 429 …) → repli sur Gemini. » — pour qu'un run vert ne laisse jamais
     deviner le fournisseur. Sans `AI_API_KEY_BACKUP`, le comportement est celui d'avant (réessais
-    sur le principal). `enrich.py` garde son propre appel : le repli ne couvre pas encore les
-    notes de style.
+    sur le principal). `enrich.py` (les notes de style) passe par le même `commun.appeler()` :
+    il hérite du repli, et les 429 sur les descriptions ne bloquent plus le passage.
 - Historique : un point par jour et par changement de prix, plafonné à 30 points par article
   (`HIST_MAX_POINTS`), et articles absents depuis 45 jours oubliés. La date de première observation
   est gardée à part (`d`) pour que les badges annoncent l'ancienneté réelle du suivi même après

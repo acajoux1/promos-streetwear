@@ -107,6 +107,15 @@ def fournisseurs():
     return liste
 
 
+def a_une_cle():
+    """Vrai dès qu'un fournisseur a une clé : principal ou secours.
+
+    Un dépôt peut n'avoir que `AI_API_KEY_BACKUP` (Gemini sans clé Z.ai) ; les
+    scripts ne doivent pas se croire sans clé pour autant.
+    """
+    return any(f["cle"] for f in fournisseurs())
+
+
 def log(*args):
     print(*args, flush=True)
 
@@ -177,6 +186,7 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
     ]
     liste = fournisseurs()
     problemes = []
+    dernier_code = None
     for i, f in enumerate(liste):
         dernier = i + 1 == len(liste)
         try:
@@ -184,17 +194,20 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
                              abandonner_sur=() if dernier else BASCULE)
         except Echec as e:
             problemes.append("%s : %s" % (f["nom"], e))
+            dernier_code = e.code
             if not dernier and e.code in BASCULE:
                 log("%s indisponible (%s) → repli sur %s." % (f["nom"], e, liste[i + 1]["nom"]))
                 continue
-            raise RuntimeError("appel au modèle impossible (%s)" % " ; ".join(problemes))
+            # `Echec` est un `RuntimeError` : les appelants qui attrapent
+            # RuntimeError continuent de fonctionner, et `code` reste lisible.
+            raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes), dernier_code)
         if i:
             log("Réponse de %s (%s), après l'échec de %s." % (f["nom"], f["modele"], liste[0]["nom"]))
         else:
             log("Réponse de %s (%s)." % (f["nom"], f["modele"]))
         return texte
     # Inatteignable : la dernière tentative lève toujours.
-    raise RuntimeError("appel au modèle impossible (%s)" % " ; ".join(problemes))
+    raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes), dernier_code)
 
 
 def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner_sur=()):

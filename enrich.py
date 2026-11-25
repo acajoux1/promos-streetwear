@@ -7,31 +7,37 @@ demande un texte court au modèle, vérifie la réponse puis l'écrit dans
 `data/descriptions.json`. Le site lit ce fichier à la demande : s'il est absent
 ou vide, les fiches s'affichent exactement comme avant.
 
-Aucune clé n'est écrite ici. Sans `AI_API_KEY`, le script ne fait rien et sort
-avec le code 0, donc la tâche de collecte n'échoue jamais à cause de lui.
+Aucune clé n'est écrite ici. Sans aucune clé (principal ni secours), le script
+ne fait rien et sort avec le code 0, donc la tâche de collecte n'échoue jamais
+à cause de lui.
+
+L'appel passe par `agents/commun.py`, comme les deux agents : il hérite donc du
+repli automatique (`AI_API_KEY_BACKUP`, Gemini par défaut) quand le principal
+refuse pour clé, quota ou modèle inconnu.
 
 Variables d'environnement :
-  AI_API_KEY    clé de l'API (obligatoire pour agir)
-  AI_API_BASE   base compatible OpenAI (défaut : Z.ai)
-  AI_MODEL      modèle (défaut : glm-4-flash)
+  AI_API_KEY           clé du fournisseur principal
+  AI_API_BASE          base compatible OpenAI (défaut : Z.ai)
+  AI_MODEL             modèle (défaut : glm-4-flash)
+  AI_API_KEY_BACKUP    clé(s) de secours, séparées par des virgules
+  AI_API_BASE_BACKUP   base(s) de secours (défaut : Gemini)
+  AI_MODEL_BACKUP      modèle(s) de secours (défaut : gemini-3.8-flash)
 """
 import argparse
 import json
-import os
 import re
 import sys
 import time
-import urllib.error
-import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT / "agents"))
+import commun  # noqa: E402 — le module partagé porte l'appel et son repli
+
 PROMOS = ROOT / "data" / "promos.json"
 CACHE = ROOT / "data" / "descriptions.json"
 
-DEFAULT_BASE = "https://api.z.ai/api/paas/v4"
-DEFAULT_MODEL = "glm-4-flash"
 MIN_LEN, MAX_LEN = 60, 320
 
 SYSTEM = (
@@ -106,54 +112,13 @@ def prompt(x):
     return "\n".join(bouts)
 
 
-def appeler(base, modele, cle, texte, timeout=40, essais=3):
-    """Une note de style. Réessaie sur 429 : l'offre gratuite limite le débit.
+def appeler(texte):
+    """Une note de style, par le module partagé : repli Gemini inclus.
 
-    `thinking` est désactivé : un modèle GLM récent raisonne avant de répondre
-    et peut passer tout `max_tokens` en réflexion, en renvoyant un texte vide.
+    Les réessais, la désactivation de `thinking` et la bascule sur refus
+    (401/403/404/429) sont dans `commun.appeler()`, pas ici.
     """
-    url = base.rstrip("/") + "/chat/completions"
-
-    def corps(avec_reflexion):
-        charge = {
-            "model": modele,
-            "temperature": 0.5,
-            "max_tokens": 300,
-            "messages": [
-                {"role": "system", "content": SYSTEM},
-                {"role": "user", "content": texte},
-            ],
-        }
-        if avec_reflexion:
-            charge["thinking"] = {"type": "disabled"}
-        return json.dumps(charge).encode("utf-8")
-
-    avec_reflexion = True
-    for i in range(essais):
-        req = urllib.request.Request(
-            url,
-            data=corps(avec_reflexion),
-            headers={"Content-Type": "application/json", "Authorization": "Bearer " + cle},
-            method="POST",
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=timeout) as r:
-                j = json.loads(r.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            try:
-                detail = e.read().decode("utf-8", "ignore")[:300]
-            except OSError:
-                detail = ""
-            # Point d'accès qui ne connaît pas le paramètre : on réessaie sans.
-            if e.code == 400 and avec_reflexion and "thinking" in detail:
-                avec_reflexion = False
-                continue
-            if e.code in (429, 500, 502, 503) and i + 1 < essais:
-                time.sleep(10 * (i + 1))
-                continue
-            raise
-        return (j["choices"][0].get("message") or {}).get("content") or ""
-    return ""
+    return commun.appeler(SYSTEM, texte, temperature=0.5, max_tokens=300, essais=3)
 
 
 def nettoyer(texte):
@@ -182,18 +147,13 @@ def main():
     ap.add_argument("--dry-run", action="store_true", help="n'appelle pas l'API")
     args = ap.parse_args()
 
-    cle = (os.environ.get("AI_API_KEY") or "").strip()
-    # Une valeur vide ou faite d'espaces vaut le défaut, comme dans agents/commun.py.
-    base = (os.environ.get("AI_API_BASE") or "").strip() or DEFAULT_BASE
-    modele = (os.environ.get("AI_MODEL") or "").strip() or DEFAULT_MODEL
-
     promos = lire_json(PROMOS, {}).get("items") or []
     cache_brut = lire_json(CACHE, {})
     cache = cache_brut.get("items") if isinstance(cache_brut, dict) else {}
     cache = cache if isinstance(cache, dict) else {}
 
-    if not cle:
-        print("AI_API_KEY absente : descriptions inchangées.")
+    if not commun.a_une_cle():
+        print("Aucune clé d'API (ni AI_API_KEY ni AI_API_KEY_BACKUP) : descriptions inchangées.")
         return 0
 
     cible = choisir(promos, cache, args.limit, args.refresh_days)
@@ -207,17 +167,14 @@ def main():
     for x in cible:
         lien = x["lien"]
         try:
-            brut = appeler(base, modele, cle, prompt(x))
-        except urllib.error.HTTPError as e:
-            print("HTTP %s sur %s" % (e.code, lien[:60]))
+            brut = appeler(prompt(x))
+        except commun.Echec as e:
+            # Le repli a déjà fait son travail ; `code` dit ce qui a bloqué à la fin.
+            print("%s sur %s" % (e, lien[:60]))
             echecs += 1
-            if e.code in (401, 403, 429):
-                break
+            if e.code is None or e.code in (401, 403, 429):
+                break  # clé, quota ou réseau : insister sur 11 autres articles ne sert à rien
             continue
-        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
-            print("Erreur réseau (%s) : arrêt du passage." % e)
-            echecs += 1
-            break
         texte = nettoyer(brut)
         if not valide(texte):
             print("Réponse écartée (%d car.) pour %s" % (len(texte), lien[:60]))
