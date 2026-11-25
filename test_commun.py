@@ -1,5 +1,6 @@
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 from unittest import mock
@@ -56,3 +57,43 @@ class TestPousserBranche(unittest.TestCase):
                              attendre_echec=True)
         self.assertEqual(len([a for a, _ in appels if a[0] == "fetch"]), 2)
         self.assertEqual(len([a for a, _ in appels if a[0] == "push"]), 2)
+
+
+class TestActualiserPr(unittest.TestCase):
+    """Une PR déjà ouverte doit prendre le corps du passage, pas celui d'avant."""
+
+    def appeler(self, reponses, corps="## Histoires\n\nAucune fiche.\n"):
+        appels = []
+
+        def faux(args, timeout=300):
+            appels.append(list(args))
+            if args[2:3] == ["view"]:
+                return reponses.get("view", (0, "https://exemple.test/pull/2\n"))
+            if args[2:3] == ["edit"]:
+                return reponses.get("edit", (0, ""))
+            raise AssertionError(args)
+
+        with tempfile.TemporaryDirectory() as d:
+            chemin = Path(d) / ".pr-corps.md"
+            chemin.write_text(corps, encoding="utf-8")
+            with mock.patch.object(commun, "lancer", side_effect=faux):
+                url = commun.actualiser_pr("agents/histoire-20261125", chemin)
+        return url, appels
+
+    def test_pr_ouverte_recoit_le_nouveau_corps(self):
+        url, appels = self.appeler({})
+        self.assertEqual(url, "https://exemple.test/pull/2")
+        edits = [a for a in appels if a[2:3] == ["edit"]]
+        self.assertEqual(len(edits), 1)
+        self.assertIn("--body-file", edits[0])
+        self.assertIn(".pr-corps.md", edits[0][-1])
+
+    def test_echec_de_mise_a_jour_garde_l_url(self):
+        url, appels = self.appeler({"edit": (1, "boom")})
+        self.assertEqual(url, "https://exemple.test/pull/2")
+        self.assertEqual(len([a for a in appels if a[2:3] == ["edit"]]), 1)
+
+    def test_sans_pr_rien_a_mettre_a_jour(self):
+        url, appels = self.appeler({"view": (1, "no pull requests found")})
+        self.assertIsNone(url)
+        self.assertEqual([a for a in appels if a[2:3] == ["edit"]], [])

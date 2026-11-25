@@ -379,26 +379,45 @@ def creer_pr(titre, corps, branche, base="main"):
     pousser_branche(branche)
     corps_path = RACINE / ".pr-corps.md"
     corps_path.write_text(corps, encoding="utf-8")
-    code, sortie = lancer([
-        "gh", "pr", "create",
-        "--base", base,
-        "--head", branche,
-        "--title", titre,
-        "--body-file", str(corps_path),
-    ])
     try:
-        corps_path.unlink()
-    except OSError:
-        pass
-    if code:
-        code2, url = lancer(["gh", "pr", "view", branche, "--json", "url", "-q", ".url"])
-        if code2 == 0 and url.strip():
-            log("Pull request déjà ouverte :", url.strip())
-            return url.strip()
-        log("Échec de la pull request :", sortie.strip()[:600])
+        code, sortie = lancer([
+            "gh", "pr", "create",
+            "--base", base,
+            "--head", branche,
+            "--title", titre,
+            "--body-file", str(corps_path),
+        ])
+        if not code:
+            log("Pull request :", sortie.strip())
+            return sortie.strip()
+        return actualiser_pr(branche, corps_path, sortie.strip())
+    finally:
+        try:
+            corps_path.unlink()
+        except OSError:
+            pass
+
+
+def actualiser_pr(branche, corps_path, echec=""):
+    """PR déjà ouverte : son corps reçoit le texte du passage, pas celui d'avant.
+
+    `gh pr create` échoue quand la branche du jour a déjà sa pull request ;
+    sans cette mise à jour, le corps restait celui de la première exécution et
+    pouvait annoncer « aucune fiche » alors que les suivantes en ont produit.
+    Retourne l'URL, ou None si la branche n'a pas de pull request.
+    """
+    code, url = lancer(["gh", "pr", "view", branche, "--json", "url", "-q", ".url"])
+    url = url.strip()
+    if code or not url:
+        log("Échec de la pull request :", (echec or url)[:600])
         return None
-    log("Pull request :", sortie.strip())
-    return sortie.strip()
+    code, sortie = lancer(["gh", "pr", "edit", branche, "--body-file", str(corps_path)])
+    if code:
+        log("Pull request déjà ouverte, corps non mis à jour :", url)
+        log(sortie.strip()[:600])
+    else:
+        log("Pull request déjà ouverte, corps mis à jour :", url)
+    return url
 
 
 def titre_date(prefixe):
