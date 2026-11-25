@@ -3,6 +3,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import urllib.error
 from pathlib import Path
 from unittest import mock
 
@@ -276,6 +277,62 @@ class TestBasculeSurPanneServeur(unittest.TestCase):
             self.lancer({"Z.ai": 502, "Gemini": 502})
         self.assertIn("Gemini", str(ctx.exception))
         self.assertEqual(ctx.exception.code, 502)
+
+
+class TestBasculeSurErreurReseau(unittest.TestCase):
+    """Un timeout ou une coupure réseau du principal doit mener au repli."""
+
+    LISTE = [{"nom": "Z.ai", "modele": "glm", "cle": "z"},
+             {"nom": "Gemini", "modele": "g", "cle": "x"}]
+
+    def tearDown(self):
+        commun.oublier_dernier_appel()
+
+    def lancer(self, echecs):
+        vus = []
+
+        def faux(f, messages, *args, **kwargs):
+            vus.append(f["nom"])
+            if f["nom"] in echecs:
+                raise echecs[f["nom"]]
+            return "ok"
+
+        with mock.patch.object(commun, "fournisseurs", return_value=self.LISTE), \
+                mock.patch.object(commun, "_appeler", side_effect=faux):
+            return commun.appeler("systeme", "utilisateur"), vus
+
+    def test_un_timeout_sur_le_principal_passe_au_repli(self):
+        texte, vus = self.lancer({"Z.ai": commun.Echec("timed out", None, reseau=True)})
+        self.assertEqual(texte, "ok")
+        self.assertEqual(vus, ["Z.ai", "Gemini"])
+
+    def test_une_coupure_sur_les_deux_rend_un_echec_lisible(self):
+        def panne():
+            return commun.Echec("<urlopen error timed out>", None, reseau=True)
+
+        with self.assertRaises(commun.Echec) as ctx:
+            self.lancer({"Z.ai": panne(), "Gemini": panne()})
+        self.assertIn("Gemini", str(ctx.exception))
+        self.assertIsNone(ctx.exception.code, "un timeout n'a pas de statut HTTP")
+        self.assertTrue(ctx.exception.reseau)
+
+    def test_une_reponse_vide_ne_bascule_pas(self):
+        # Un modèle qui répond du vide n'est pas une panne de transport : le
+        # repli n'a pas à être sollicité pour ça.
+        vide = commun.Echec("réponse vide (finish_reason=stop)", None)
+        with self.assertRaises(commun.Echec):
+            self.lancer({"Z.ai": vide})
+        self.assertFalse(vide.reseau)
+
+    def test_le_transport_marque_l_echec_comme_reseau(self):
+        f = {"nom": "Z.ai", "base": "https://exemple.test", "modele": "m", "cle": "k"}
+        with mock.patch.object(commun.urllib.request, "urlopen",
+                               side_effect=urllib.error.URLError("timed out")):
+            with self.assertRaises(commun.Echec) as ctx:
+                commun._appeler(f, [{"role": "user", "content": "x"}], 0.3, 16, 1, False)
+        self.assertTrue(ctx.exception.reseau)
+        self.assertIsNone(ctx.exception.code)
+        self.assertIn("timed out", str(ctx.exception))
 
 
 class TestDiagnosticFournisseurs(unittest.TestCase):

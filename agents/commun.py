@@ -45,7 +45,9 @@ MODELE_REPLI = "gemini-3.8-flash"
 # tout de suite au suivant quand il y en a un. Les erreurs serveur (500/502/503)
 # en font partie : un incident passager chez le principal ne doit pas coûter une
 # marque alors qu'un repli est configuré. Sans repli (dernier fournisseur), le
-# réessai sur place reste la seule chance et `_appeler` s'en charge.
+# réessai sur place reste la seule chance et `_appeler` s'en charge. Une panne de
+# transport (timeout, DNS, connexion coupée) n'a pas de statut HTTP : `_appeler`
+# la marque `Echec.reseau` et elle bascule de la même façon.
 BASCULE = (400, 401, 403, 404, 429, 500, 502, 503)
 
 # Noms lisibles dans le journal du workflow : on lit l'hôte, pas une étiquette
@@ -195,23 +197,30 @@ def ecrire_texte(chemin, texte):
 
 
 class Echec(RuntimeError):
-    """Un fournisseur a échoué ; `code` porte le statut HTTP s'il y en a un."""
+    """Un fournisseur a échoué ; `code` porte le statut HTTP s'il y en a un.
 
-    def __init__(self, message, code=None):
+    `reseau` distingue une panne de transport (timeout, DNS, connexion coupée,
+    réponse illisible) d'une réponse vide : la première n'a aucun statut HTTP et
+    doit basculer vers le repli comme une erreur serveur.
+    """
+
+    def __init__(self, message, code=None, reseau=False):
         super().__init__(message)
         self.code = code
+        self.reseau = reseau
 
 
 def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, json_mode=False):
     """Un tour de conversation, avec repli automatique. Lève RuntimeError à la fin.
 
     Le principal (`AI_API_*`) répond en premier. S'il refuse pour clé (401/403),
-    quota (429), route ou modèle inconnu (400/404) ou erreur serveur (500/502/503)
-    et qu'un repli est configuré (`AI_API_KEY_BACKUP`), la main passe au suivant
-    sans attendre les réessais — inutiles quand la limite est journalière, et
-    risqués quand le service est momentanément en panne. Le journal nomme chaque
-    fournisseur essayé et celui qui a répondu, pour qu'un run vert ne laisse rien
-    deviner.
+    quota (429), route ou modèle inconnu (400/404), s'il répond par une erreur
+    serveur (500/502/503) ou si le transport casse (timeout, DNS, connexion
+    coupée : aucun statut HTTP) et qu'un repli est configuré
+    (`AI_API_KEY_BACKUP`), la main passe au suivant sans attendre les réessais —
+    inutiles quand la limite est journalière, et risqués quand le service est
+    momentanément en panne. Le journal nomme chaque fournisseur essayé et celui
+    qui a répondu, pour qu'un run vert ne laisse rien deviner.
     """
     messages = [
         {"role": "system", "content": system},
@@ -219,7 +228,7 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
     ]
     liste = fournisseurs()
     problemes = []
-    dernier_code = None
+    dernier_code, dernier_reseau = None, False
     for i, f in enumerate(liste):
         dernier = i + 1 == len(liste)
         try:
@@ -227,13 +236,17 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
                              abandonner_sur=() if dernier else BASCULE)
         except Echec as e:
             problemes.append("%s : %s" % (f["nom"], e))
-            dernier_code = e.code
-            if not dernier and e.code in BASCULE:
+            dernier_code, dernier_reseau = e.code, e.reseau
+            # Une panne de transport n'a pas de statut : elle compte comme une
+            # erreur serveur, sinon un simple timeout perdrait la marque alors
+            # qu'un repli est configuré.
+            if not dernier and (e.reseau or e.code in BASCULE):
                 log("%s indisponible (%s) → repli sur %s." % (f["nom"], e, liste[i + 1]["nom"]))
                 continue
             # `Echec` est un `RuntimeError` : les appelants qui attrapent
             # RuntimeError continuent de fonctionner, et `code` reste lisible.
-            raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes), dernier_code)
+            raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes),
+                        dernier_code, reseau=dernier_reseau)
         if i:
             log("Réponse de %s (%s), après l'échec de %s." % (f["nom"], f["modele"], liste[0]["nom"]))
         else:
@@ -266,7 +279,7 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
         return json.dumps(charge).encode("utf-8")
 
     url = f["base"].rstrip("/") + "/chat/completions"
-    derniere, code = "inconnue", None
+    derniere, code, reseau = "inconnue", None, False
     tentatives = essais
     while tentatives > 0:
         tentatives -= 1
@@ -307,7 +320,9 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
                 continue
             break
         except (urllib.error.URLError, TimeoutError, OSError, ValueError) as e:
-            derniere, code = str(e), None
+            # Timeout, DNS, connexion coupée ou réponse illisible : aucun statut
+            # HTTP, mais rien ne dit que le fournisseur de secours échouera.
+            derniere, code, reseau = str(e), None, True
             break
         choix = (j.get("choices") or [{}])[0] if isinstance(j, dict) else {}
         texte = ((choix.get("message") or {}).get("content") or "").strip()
@@ -322,7 +337,7 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
             time.sleep(5)
             continue
         break
-    raise Echec(derniere, code)
+    raise Echec(derniere, code, reseau=reseau)
 
 
 def diagnostic_fournisseurs():
