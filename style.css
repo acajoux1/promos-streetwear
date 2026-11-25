@@ -1,11 +1,6 @@
 /* PROMOS. — feuille unique. Noir charbon, blanc, un seul orange. */
 
-/* Archivo est chargée depuis Google Fonts (une seule famille, plusieurs graisses).
-   Les anciennes polices locales restent servies aux pages qui les demandent. */
-@font-face{font-family:'Newsreader';font-style:normal;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-latin.woff2) format('woff2')}
-@font-face{font-family:'Newsreader';font-style:italic;font-weight:400 600;font-display:swap;src:url(fonts/newsreader-italic-latin.woff2) format('woff2')}
-@font-face{font-family:'Courier Prime';font-style:normal;font-weight:400;font-display:swap;src:url(fonts/courier-prime-latin.woff2) format('woff2')}
-@font-face{font-family:'Courier Prime';font-style:normal;font-weight:700;font-display:swap;src:url(fonts/courier-prime-bold-latin.woff2) format('woff2')}
+/* Archivo est chargée depuis Google Fonts (une seule famille, plusieurs graisses). */
 
 :root{
 --bg:#121212;
@@ -33,8 +28,6 @@
 --sp-5:28px;
 --sp-6:40px;
 --sans:'Archivo','Helvetica Neue',Arial,sans-serif;
---serif:'Newsreader',Georgia,serif;
---mono:'Courier Prime','Courier New',monospace;
 --nav:58px;
 --tab:64px;
 }
@@ -492,11 +485,6 @@ input,select{font-size:16px}
 .fiche .go{display:inline-block;flex:0 0 auto;text-decoration:none}
 .altl b em{font-style:normal;font-size:11px;color:var(--dim)}
 
-/* ShinyText : conservé pour les pages qui l'utilisent encore. */
-.shiny{display:inline-block;--sh-color:currentColor;--sh-shine:var(--accent);--sh-spread:120deg}
-@supports ((-webkit-background-clip:text) or (background-clip:text)){
-.shiny{background-image:linear-gradient(var(--sh-spread),var(--sh-color) 0%,var(--sh-color) 35%,var(--sh-shine) 50%,var(--sh-color) 65%,var(--sh-color) 100%);background-size:200% auto;background-position:150% center;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
-}
 .traveller{position:fixed;left:0;top:0;width:clamp(160px,20vw,280px);z-index:4;pointer-events:none;opacity:0;visibility:hidden;display:none;border-radius:var(--r)}
 .traveller img{display:block;width:100%;height:auto;border-radius:var(--r)}
 @media(min-width:900px){.traveller{display:block}}

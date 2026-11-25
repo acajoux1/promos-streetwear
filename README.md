@@ -26,7 +26,7 @@ dépendance), données collectées chaque heure par GitHub Actions et publiées 
 
 ```sh
 python3 -m http.server 3001        # puis http://127.0.0.1:3001
-node --check app.js && node --check veille.js && node --check sw.js && node --check shiny.js
+node --check app.js && node --check veille.js && node --check sw.js
 python3 -m unittest discover -p 'test*.py'
 ```
 

@@ -28,7 +28,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Syntaxe JavaScript
-        run: node --check app.js && node --check veille.js && node --check sw.js && node --check shiny.js
+        run: node --check app.js && node --check veille.js && node --check sw.js
       - name: Tests des prix par taille
         run: python -m unittest discover -p 'test*.py' -v
       - name: Mise à jour des promotions

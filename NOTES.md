@@ -26,11 +26,11 @@
 - Contraste : `--mut` (#A3A3A3) donne ≈ 7:1 sur `#121212`, et `--dim` (#8A8A8A) ≈ 5,4:1 : les petites
   majuscules restent au-dessus du seuil AA de 4,5:1. L'orange #F5A000 sur #121212 dépasse 8:1.
 - Polices : titres et texte en Archivo (Google Fonts, graisses 300 à 900, `display=swap`), une seule
-  famille géométrique ; les anciens fichiers Newsreader / Courier Prime restent dans `fonts/` mais ne
-  sont plus chargés par l'accueil. Repli Helvetica Neue / Arial puis sans-serif système.
-- Version du cache du service worker : `promos-v38` (`sw.js` ; shell = index, `app.js`, `shiny.js`,
-  `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192, deux polices courantes
-  et les cinq visuels éditoriaux `img/story-*.jpg`)
+  famille géométrique, chargée depuis Google Fonts ; aucune police locale n'est servie. Repli
+  Helvetica Neue / Arial puis sans-serif système.
+- Version du cache du service worker : `promos-v39` (`sw.js` ; shell = index, `app.js`, `veille.js`,
+  `style.css`, `manifest.json`, pages méthode et état, icône 192 et les cinq visuels éditoriaux
+  `img/story-*.jpg`)
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
   Il écrit aussi les fiches `p/<modèle>-<hash>.html` des 40 meilleures remises : page statique
@@ -183,9 +183,6 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
   change chaque jour, passe en tête le jour de l’anniversaire quand la date exacte est connue
   (Air Max 1 le 26 mars, Vans le 16 mars), et propose la fiche de la paire si elle est en promo,
   sinon les sneakers du jour. Aucun classement payé n’entre dans le choix.
-- Reflet de texte : portage vanilla du composant ShinyText (aucune dépendance React), dans `shiny.js`.
-  Le dégradé est découpé sur les glyphes (`background-clip:text`) et sa position avancée en
-  `requestAnimationFrame` ; conservé pour les pages qui l’utilisent encore, l’accueil ne s’en sert plus.
 - Produit voyageur : un seul article (le premier résultat avec image) fixé en `position:fixed`, déplacé
   et estompé au défilement. Masqué sous 900 px et sous `prefers-reduced-motion`.
 - Barre mobile fixe en bas (Accueil, Rechercher, Wishlist, Catégories, Profil), 64 px + zone de

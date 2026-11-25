@@ -1,7 +1,7 @@
-var V="promos-v38";
+var V="promos-v39";
 // Ne pas précacher les gros JSON : l’installation du service worker ne doit pas
 // échouer lorsque les données produits dépassent le quota de cache disponible.
-var SHELL=["./","index.html","app.js","shiny.js","veille.js","style.css","manifest.json","methode.html","etat.html","icone-192.png","fonts/newsreader-latin.woff2","fonts/courier-prime-latin.woff2","img/story-rue.jpg","img/story-anime.jpg","img/story-skate.jpg","img/story-vente.jpg","img/story-basket.jpg"];
+var SHELL=["./","index.html","app.js","veille.js","style.css","manifest.json","methode.html","etat.html","icone-192.png","img/story-rue.jpg","img/story-anime.jpg","img/story-skate.jpg","img/story-vente.jpg","img/story-basket.jpg"];
 
 self.addEventListener("install",function(e){
   e.waitUntil(caches.open(V).then(function(c){
