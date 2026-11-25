@@ -17,6 +17,18 @@ jobs:
   histoire:
     if: github.repository == 'acajoux1/promos-streetwear'
     runs-on: ubuntu-latest
+    env:
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      # Secret ou, à défaut, variable de dépôt : les deux onglets fonctionnent.
+      AI_API_BASE: ${{ secrets.AI_API_BASE || vars.AI_API_BASE }}
+      AI_MODEL: ${{ secrets.AI_MODEL || vars.AI_MODEL }}
+      # Repli quand le principal refuse (401/403/404/429). Gemini par défaut ;
+      # plusieurs clés possibles, séparées par des virgules, avec leur base et
+      # leur modèle dans le même ordre.
+      AI_API_KEY_BACKUP: ${{ secrets.AI_API_KEY_BACKUP }}
+      AI_API_BASE_BACKUP: ${{ secrets.AI_API_BASE_BACKUP || vars.AI_API_BASE_BACKUP }}
+      AI_MODEL_BACKUP: ${{ secrets.AI_MODEL_BACKUP || vars.AI_MODEL_BACKUP }}
+      GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -24,17 +36,10 @@ jobs:
           python-version: "3.12"
       - name: Syntaxe
         run: python3 -m py_compile agents/commun.py agents/histoire.py
+      # Un appel minimal par fournisseur, écrit dans l'onglet Summary. Le job
+      # s'arrête en échec si personne ne répond : un passage qui ne peut rien
+      # produire ne doit pas être vert.
+      - name: Diagnostic des fournisseurs
+        run: python3 agents/histoire.py --diagnostic
       - name: Histoires vérifiées
-        env:
-          AI_API_KEY: ${{ secrets.AI_API_KEY }}
-          # Secret ou, à défaut, variable de dépôt : les deux onglets fonctionnent.
-          AI_API_BASE: ${{ secrets.AI_API_BASE || vars.AI_API_BASE }}
-          AI_MODEL: ${{ secrets.AI_MODEL || vars.AI_MODEL }}
-          # Repli quand le principal refuse (401/403/404/429). Gemini par défaut ;
-          # plusieurs clés possibles, séparées par des virgules, avec leur base et
-          # leur modèle dans le même ordre.
-          AI_API_KEY_BACKUP: ${{ secrets.AI_API_KEY_BACKUP }}
-          AI_API_BASE_BACKUP: ${{ secrets.AI_API_BASE_BACKUP || vars.AI_API_BASE_BACKUP }}
-          AI_MODEL_BACKUP: ${{ secrets.AI_MODEL_BACKUP || vars.AI_MODEL_BACKUP }}
-          GH_TOKEN: ${{ github.token }}
         run: python3 agents/histoire.py

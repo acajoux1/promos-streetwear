@@ -290,6 +290,62 @@ def fiche(marque, n):
     return None, pbs, False
 
 
+def cellule(texte):
+    """Une valeur de tableau markdown : pas de saut de ligne ni de colonne en trop."""
+    return (str(texte or "").replace("|", "/").replace("\n", " ")).strip()[:160]
+
+
+def resume(resultats, total):
+    """Le tableau des marques tentées, pour l'onglet Summary du run."""
+    lignes = ["## Résultats par marque", ""]
+    if resultats:
+        lignes += ["| Marque | Articles | Résultat | Détail | Fournisseur |",
+                   "| --- | --- | --- | --- | --- |"]
+        for r in resultats:
+            lignes.append("| %s | %d | %s | %s | %s |" % (
+                cellule(r["marque"]), r["articles"], cellule(r["etat"]),
+                cellule(r["detail"]) or "—", cellule(r["fournisseur"]) or "—"))
+        lignes.append("")
+    gardees = sum(1 for r in resultats if r["etat"] == "retenue")
+    lignes.append("%d marque(s) tentée(s), **%d retenue(s)**, %d sans fiche ; "
+                  "le fichier compterait %d fiche(s) après fusion." % (
+                      len(resultats), gardees, len(resultats) - gardees, total))
+    lignes.append("")
+    return "\n".join(lignes)
+
+
+def diagnostic():
+    """Qui répond, avant de tenter la moindre marque. 1 si personne ne répond.
+
+    Un passage sans fournisseur ne doit pas être vert : il ne produirait rien
+    et laisserait croire que tout va bien. Sortir ici évite aussi d'inscrire
+    des gels de quatorze jours pour une simple panne d'infrastructure.
+    """
+    if not c.a_une_cle():
+        c.resumer("## Diagnostic des fournisseurs\n\n"
+                  "**Aucune clé configurée** (`AI_API_KEY` ni `AI_API_KEY_BACKUP`) : "
+                  "le passage s'arrête, aucune marque n'est tentée.")
+        return 1
+    essais = c.diagnostic_fournisseurs()
+    lignes = ["## Diagnostic des fournisseurs", "",
+              "| Fournisseur | Modèle | État | Détail | Durée |",
+              "| --- | --- | --- | --- | --- |"]
+    for f in essais:
+        lignes.append("| %s | %s | %s | %s | %.1f s |" % (
+            cellule(f["nom"]), cellule(f["modele"]), "répond" if f["ok"] else "muet",
+            cellule(f["detail"]) or "—", f["duree"]))
+    repond = [f for f in essais if f["ok"]]
+    if repond:
+        lignes += ["", "Les marques de ce passage seront demandées à **%s** (%s)." % (
+            repond[0]["nom"], repond[0]["modele"])]
+    else:
+        lignes += ["", "**Aucun fournisseur ne répond** : le passage s'arrête ici, "
+                   "aucune marque n'est tentée et aucun gel n'est écrit. "
+                   "Vérifier le secret `AI_API_KEY_BACKUP` (Settings → Secrets and variables → Actions)."]
+    c.resumer("\n".join(lignes))
+    return 0 if repond else 1
+
+
 def main():
     hist = c.lire_json("data/histoires.json", {}) or {}
     if not isinstance(hist, dict):
@@ -299,9 +355,11 @@ def main():
     cible = candidats(hist)
     c.log("%d marque(s) à documenter." % len(cible))
     if not cible:
+        c.resumer("## Résultats par marque\n\nAucune marque à documenter ce passage.")
         return 0
     if not c.a_une_cle():
-        c.log("Aucune clé d'API (ni AI_API_KEY ni AI_API_KEY_BACKUP) : rien de nouveau, aucune pull request.")
+        c.resumer("## Résultats par marque\n\n**Aucune clé d'API** "
+                  "(ni `AI_API_KEY` ni `AI_API_KEY_BACKUP`) : rien de nouveau, aucune pull request.")
         return 0
 
     # Volet 1 : les notes de style des articles (même agent, même branche).
@@ -311,12 +369,22 @@ def main():
 
     # Volet 2 : les histoires de marques, vérifiées par leurs sources.
     ajouts = {}
+    resultats = []
     for n, marque in cible:
         c.log("— %s (%d articles)" % (marque, n))
+        ligne = {"marque": marque, "articles": n, "etat": "refusée",
+                 "detail": "", "fournisseur": ""}
+        resultats.append(ligne)
         essai = {"marque": marque, "articles": n}
+        c.oublier_dernier_appel()
         obj, pbs, transitoire = fiche(marque, n)
+        ligne["fournisseur"] = c.dernier_appel().get("nom", "")
         if obj is None:
-            if not transitoire:
+            if transitoire:
+                ligne["etat"] = "panne fournisseur"
+                ligne["detail"] = "aucune réponse exploitable ; marque non gelée"
+            else:
+                ligne["detail"] = (" ; ".join(pbs)) if pbs else "réponse inutilisable"
                 essais[marque] = time.strftime("%Y-%m-%d")
             if pbs:
                 essai["refus"] = pbs
@@ -325,6 +393,8 @@ def main():
         ok, detail = sources_ok(marque, annees, obj.get("src"))
         if not ok:
             c.log("  sources refusées : " + detail)
+            ligne["etat"] = "sources refusées"
+            ligne["detail"] = detail
             essais[marque] = time.strftime("%Y-%m-%d")
             continue
         items[marque] = {
@@ -333,6 +403,8 @@ def main():
         }
         ajouts[marque] = items[marque]
         essais[marque] = time.strftime("%Y-%m-%d")
+        ligne["etat"] = "retenue"
+        ligne["detail"] = "%d source(s) vérifiée(s)" % len(detail)
         c.log("  retenue (%d sources vérifiées)." % len(detail))
 
     if ajouts:
@@ -341,6 +413,8 @@ def main():
             "items": items,
             "_tentatives": essais,
         })
+
+    c.resumer(resume(resultats, len(items)))
 
     lignes = ["Deux volets dans cette branche : les notes de style du jour "
               "(`data/descriptions.json`) et les histoires de marques vérifiées.", ""]
@@ -363,4 +437,6 @@ def main():
 
 
 if __name__ == "__main__":
+    if "--diagnostic" in sys.argv[1:]:
+        sys.exit(diagnostic())
     sys.exit(main())

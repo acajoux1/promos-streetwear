@@ -107,6 +107,19 @@ def fournisseurs():
     return liste
 
 
+# Fournisseur qui a répondu au dernier appel réussi, pour le résumé du passage.
+_dernier = {}
+
+
+def dernier_appel():
+    return dict(_dernier)
+
+
+def oublier_dernier_appel():
+    """À appeler avant une nouvelle marque : le fournisseur affiché sera le sien."""
+    _dernier.clear()
+
+
 def a_une_cle():
     """Vrai dès qu'un fournisseur a une clé : principal ou secours.
 
@@ -118,6 +131,21 @@ def a_une_cle():
 
 def log(*args):
     print(*args, flush=True)
+
+
+def resumer(markdown):
+    """Ajoute un bloc au résumé du run (l'onglet Summary d'GitHub).
+
+    Hors Actions, `GITHUB_STEP_SUMMARY` n'existe pas : le texte part alors
+    seulement dans le journal, pour que les tests et un run local restent
+    lisibles.
+    """
+    chemin = os.environ.get("GITHUB_STEP_SUMMARY")
+    if chemin:
+        with open(chemin, "a", encoding="utf-8") as f:
+            f.write(markdown.rstrip() + "\n")
+    else:
+        log(markdown.rstrip())
 
 
 def lire_json(chemin, defaut=None):
@@ -205,6 +233,7 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
             log("Réponse de %s (%s), après l'échec de %s." % (f["nom"], f["modele"], liste[0]["nom"]))
         else:
             log("Réponse de %s (%s)." % (f["nom"], f["modele"]))
+        _dernier.update(nom=f["nom"], modele=f["modele"])
         return texte
     # Inatteignable : la dernière tentative lève toujours.
     raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes), dernier_code)
@@ -287,6 +316,36 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
             continue
         break
     raise Echec(derniere, code)
+
+
+def diagnostic_fournisseurs():
+    """Un appel minimal par fournisseur : qui répond, et en combien de temps.
+
+    Une photo, pas une bataille : un seul essai par fournisseur, pour que le
+    diagnostic dure quelques secondes même quand tout est à terre. Un
+    fournisseur sans clé est signalé sans être appelé (un 401 ne dirait rien
+    de plus).
+    """
+    messages = [
+        {"role": "system", "content": "Réponds par un seul mot, sans phrase."},
+        {"role": "user", "content": "Écris : ok"},
+    ]
+    resultats = []
+    for f in fournisseurs():
+        depart = time.monotonic()
+        if not f["cle"]:
+            resultats.append({"nom": f["nom"], "modele": f["modele"], "ok": False,
+                              "detail": "aucune clé configurée", "duree": 0.0})
+            continue
+        try:
+            _appeler(f, messages, temperature=0, max_tokens=16, essais=1,
+                     json_mode=False, abandonner_sur=BASCULE)
+            ok, detail = True, "—"
+        except Echec as e:
+            ok, detail = False, str(e)
+        resultats.append({"nom": f["nom"], "modele": f["modele"], "ok": ok,
+                          "detail": detail, "duree": time.monotonic() - depart})
+    return resultats
 
 
 def extraire_json(texte):

@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import tempfile
@@ -97,3 +98,46 @@ class TestActualiserPr(unittest.TestCase):
         url, appels = self.appeler({"view": (1, "no pull requests found")})
         self.assertIsNone(url)
         self.assertEqual([a for a in appels if a[2:3] == ["edit"]], [])
+
+
+class TestResumer(unittest.TestCase):
+    def test_ecrit_dans_le_fichier_du_resume(self):
+        with tempfile.TemporaryDirectory() as d:
+            chemin = Path(d) / "summary.md"
+            with mock.patch.dict(os.environ, {"GITHUB_STEP_SUMMARY": str(chemin)}):
+                commun.resumer("## A\n")
+                commun.resumer("## B\n\nligne")
+            self.assertEqual(chemin.read_text(encoding="utf-8"), "## A\n## B\n\nligne\n")
+
+    def test_sans_fichier_ne_casse_rien(self):
+        env = {k: v for k, v in os.environ.items() if k != "GITHUB_STEP_SUMMARY"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            commun.resumer("## A")
+
+
+class TestDiagnosticFournisseurs(unittest.TestCase):
+    def lancer(self, liste, appels):
+        def faux(f, messages, **kwargs):
+            appels.append(f["nom"])
+            if f["nom"] == "muet":
+                raise commun.Echec("HTTP 429 : 1305", 429)
+            return "ok"
+
+        with mock.patch.object(commun, "fournisseurs", return_value=liste), \
+                mock.patch.object(commun, "_appeler", side_effect=faux):
+            return commun.diagnostic_fournisseurs()
+
+    def test_un_muet_et_un_qui_repond(self):
+        appels = []
+        res = self.lancer([{"nom": "Z.ai", "modele": "glm", "cle": "z"},
+                           {"nom": "muet", "modele": "g", "cle": "x"}], appels)
+        self.assertEqual([r["ok"] for r in res], [True, False])
+        self.assertIn("429", res[1]["detail"])
+        self.assertGreaterEqual(res[1]["duree"], 0)
+
+    def test_sans_cle_pas_d_appel(self):
+        appels = []
+        res = self.lancer([{"nom": "Z.ai", "modele": "glm", "cle": ""}], appels)
+        self.assertEqual(appels, [])
+        self.assertFalse(res[0]["ok"])
+        self.assertIn("aucune clé", res[0]["detail"])

@@ -254,3 +254,65 @@ class TestFicheRedemandee(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestResume(unittest.TestCase):
+    def test_tableau_et_compte(self):
+        texte = histoire.resume([
+            {"marque": "end. label", "articles": 15, "etat": "retenue",
+             "detail": "3 source(s) vérifiée(s)", "fournisseur": "Gemini"},
+            {"marque": "kardo", "articles": 7, "etat": "refusée",
+             "detail": "frise : 3 ou 4 repères attendus", "fournisseur": ""},
+        ], 5)
+        self.assertIn("| end. label | 15 | retenue |", texte)
+        self.assertIn("2 marque(s) tentée(s), **1 retenue(s)**, 1 sans fiche", texte)
+        self.assertIn("5 fiche(s) après fusion", texte)
+        self.assertIn("| — |", texte)  # fournisseur inconnu
+
+    def test_colonne_non_cassee(self):
+        texte = histoire.resume([{"marque": "a|b", "articles": 1, "etat": "refusée",
+                                  "detail": "x|y", "fournisseur": ""}], 0)
+        self.assertIn("a/b", texte)
+        self.assertIn("x/y", texte)
+        self.assertNotIn("a|b", texte)
+
+    def test_vide_dit_qu_il_n_y_a_rien(self):
+        texte = histoire.resume([], 3)
+        self.assertIn("0 marque(s) tentée(s)", texte)
+
+
+class TestDiagnostic(unittest.TestCase):
+    def test_sans_cle_sort_en_echec(self):
+        with mock.patch.object(histoire.c, "a_une_cle", return_value=False), \
+                mock.patch.object(histoire.c, "resumer") as resume:
+            self.assertEqual(histoire.diagnostic(), 1)
+        self.assertIn("Aucune clé", resume.call_args[0][0])
+
+    def test_tous_muets_sort_en_echec(self):
+        essais = [{"nom": "Z.ai", "modele": "glm", "ok": False,
+                   "detail": "HTTP 429 : 1305", "duree": 0.4}]
+        with mock.patch.object(histoire.c, "a_une_cle", return_value=True), \
+                mock.patch.object(histoire.c, "diagnostic_fournisseurs", return_value=essais), \
+                mock.patch.object(histoire.c, "resumer") as resume:
+            self.assertEqual(histoire.diagnostic(), 1)
+        texte = resume.call_args[0][0]
+        self.assertIn("Aucun fournisseur ne répond", texte)
+        self.assertIn("AI_API_KEY_BACKUP", texte)
+
+    def test_un_fournisseur_qui_repond_laisse_passer(self):
+        essais = [{"nom": "Z.ai", "modele": "glm", "ok": False,
+                   "detail": "HTTP 429 : 1305", "duree": 0.4},
+                  {"nom": "Gemini", "modele": "gemini-3.8-flash", "ok": True,
+                   "detail": "—", "duree": 2.1}]
+        with mock.patch.object(histoire.c, "a_une_cle", return_value=True), \
+                mock.patch.object(histoire.c, "diagnostic_fournisseurs", return_value=essais), \
+                mock.patch.object(histoire.c, "resumer") as resume:
+            self.assertEqual(histoire.diagnostic(), 0)
+        self.assertIn("**Gemini**", resume.call_args[0][0])
+
+    def test_aucune_marque_resume_et_sort_a_zero(self):
+        with mock.patch.object(histoire, "candidats", return_value=[]), \
+                mock.patch.object(histoire.c, "lire_json", return_value={}), \
+                mock.patch.object(histoire.c, "resumer") as resume:
+            self.assertEqual(histoire.main(), 0)
+        self.assertIn("Aucune marque", resume.call_args[0][0])
