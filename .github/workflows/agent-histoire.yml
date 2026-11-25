@@ -23,7 +23,8 @@ jobs:
       # Secret ou, à défaut, variable de dépôt : les deux onglets fonctionnent.
       AI_API_BASE: ${{ secrets.AI_API_BASE || vars.AI_API_BASE }}
       AI_MODEL: ${{ secrets.AI_MODEL || vars.AI_MODEL }}
-      # Repli quand le principal refuse (401/403/404/429). Gemini par défaut ;
+      # Repli quand le principal refuse (401/403/404/429) ou tombe en panne
+      # (500/502/503). Gemini par défaut ;
       # plusieurs clés possibles, séparées par des virgules, avec leur base et
       # leur modèle dans le même ordre.
       AI_API_KEY_BACKUP: ${{ secrets.AI_API_KEY_BACKUP }}

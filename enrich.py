@@ -13,7 +13,7 @@ ne fait rien et sort avec le code 0, donc la tâche de collecte n'échoue jamais
 
 L'appel passe par `agents/commun.py`, comme les deux agents : il hérite donc du
 repli automatique (`AI_API_KEY_BACKUP`, Gemini par défaut) quand le principal
-refuse pour clé, quota ou modèle inconnu.
+refuse pour clé, quota ou modèle inconnu, ou répond par une erreur serveur.
 
 Variables d'environnement :
   AI_API_KEY           clé du fournisseur principal

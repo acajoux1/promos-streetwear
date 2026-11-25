@@ -237,6 +237,47 @@ class TestResumer(unittest.TestCase):
             commun.resumer("## A")
 
 
+class TestBasculeSurPanneServeur(unittest.TestCase):
+    """Une panne passagère (5xx) du principal doit mener au repli, pas perdre la marque."""
+
+    LISTE = [{"nom": "Z.ai", "modele": "glm", "cle": "z"},
+             {"nom": "Gemini", "modele": "g", "cle": "x"}]
+
+    def tearDown(self):
+        commun.oublier_dernier_appel()
+
+    def lancer(self, codes):
+        vus = []
+
+        def faux(f, messages, *args, **kwargs):
+            vus.append((f["nom"], kwargs.get("abandonner_sur")))
+            code = codes.get(f["nom"])
+            if code:
+                raise commun.Echec("HTTP %s" % code, code)
+            return "ok"
+
+        with mock.patch.object(commun, "fournisseurs", return_value=self.LISTE), \
+                mock.patch.object(commun, "_appeler", side_effect=faux):
+            return commun.appeler("systeme", "utilisateur"), vus
+
+    def test_les_pannes_serveur_font_basculer(self):
+        for code in (500, 502, 503):
+            self.assertIn(code, commun.BASCULE, "un %s doit passer au repli" % code)
+
+    def test_503_sur_le_principal_passe_au_repli(self):
+        texte, vus = self.lancer({"Z.ai": 503})
+        self.assertEqual(texte, "ok")
+        self.assertEqual([nom for nom, _ in vus], ["Z.ai", "Gemini"])
+        self.assertIn(503, vus[0][1], "le principal abandonne sur place, sans réessai")
+        self.assertEqual(vus[1][1], (), "le dernier fournisseur garde ses réessais")
+
+    def test_502_sur_les_deux_laisse_un_echec_lisible(self):
+        with self.assertRaises(commun.Echec) as ctx:
+            self.lancer({"Z.ai": 502, "Gemini": 502})
+        self.assertIn("Gemini", str(ctx.exception))
+        self.assertEqual(ctx.exception.code, 502)
+
+
 class TestDiagnosticFournisseurs(unittest.TestCase):
     def lancer(self, liste, appels):
         def faux(f, messages, **kwargs):

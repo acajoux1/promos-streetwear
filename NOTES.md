@@ -65,9 +65,10 @@
     variables de dépôt pour les deux dernières ; une valeur vide vaut le défaut). Aucun accès
     en écriture à `main`, aux tests ou aux workflows depuis le code des agents.
   - **Repli automatique** (`agents/commun.py`) : si le principal répond **401/403** (clé refusée),
-    **429** (quota épuisé), **404/400** (modèle ou route inconnue), l'appel passe au fournisseur
-    suivant sans attendre les réessais, inutiles quand la limite est journalière. Un 500/502/503
-    garde l'ancien comportement : réessai sur place, pas de bascule.
+    **429** (quota épuisé), **404/400** (modèle ou route inconnue) ou **500/502/503** (panne
+    passagère du service), l'appel passe au fournisseur suivant sans attendre les réessais,
+    inutiles quand la limite est journalière et risqués quand le service est à terre. Le dernier
+    fournisseur de la liste, lui, réessaie sur place : sans repli, c'est sa seule chance.
     Le secours par défaut est **Gemini** (Google AI Studio, `gemini-3.8-flash`,
     `https://generativelanguage.googleapis.com/v1beta/openai`), gratuit sans carte bancaire et
     compatible OpenAI ; la clé se crée sur `aistudio.google.com/apikey`. Les variables :

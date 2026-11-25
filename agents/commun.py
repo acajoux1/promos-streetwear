@@ -42,9 +42,11 @@ BASE_REPLI = "https://generativelanguage.googleapis.com/v1beta/openai"
 MODELE_REPLI = "gemini-3.8-flash"
 
 # Statuts qui ne valent pas un réessai sur le même fournisseur : la main passe
-# tout de suite au suivant quand il y en a un. Un 500/502/503 garde l'ancien
-# comportement (réessai sur place, pas de bascule).
-BASCULE = (400, 401, 403, 404, 429)
+# tout de suite au suivant quand il y en a un. Les erreurs serveur (500/502/503)
+# en font partie : un incident passager chez le principal ne doit pas coûter une
+# marque alors qu'un repli est configuré. Sans repli (dernier fournisseur), le
+# réessai sur place reste la seule chance et `_appeler` s'en charge.
+BASCULE = (400, 401, 403, 404, 429, 500, 502, 503)
 
 # Noms lisibles dans le journal du workflow : on lit l'hôte, pas une étiquette
 # recopiée à la main qui finirait par mentir.
@@ -204,10 +206,12 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
     """Un tour de conversation, avec repli automatique. Lève RuntimeError à la fin.
 
     Le principal (`AI_API_*`) répond en premier. S'il refuse pour clé (401/403),
-    quota (429), route ou modèle inconnu (400/404) et qu'un repli est configuré
-    (`AI_API_KEY_BACKUP`), la main passe au suivant sans attendre les réessais —
-    inutiles quand la limite est journalière. Le journal nomme chaque fournisseur
-    essayé et celui qui a répondu, pour qu'un run vert ne laisse rien deviner.
+    quota (429), route ou modèle inconnu (400/404) ou erreur serveur (500/502/503)
+    et qu'un repli est configuré (`AI_API_KEY_BACKUP`), la main passe au suivant
+    sans attendre les réessais — inutiles quand la limite est journalière, et
+    risqués quand le service est momentanément en panne. Le journal nomme chaque
+    fournisseur essayé et celui qui a répondu, pour qu'un run vert ne laisse rien
+    deviner.
     """
     messages = [
         {"role": "system", "content": system},
@@ -295,8 +299,10 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
             derniere, code = "HTTP %s%s" % (
                 e.code, " : " + detail.strip()[:200] if detail.strip() else ""), e.code
             if e.code in abandonner_sur:
-                break  # quota ou clé : un réessai ne changerait rien, le repli prend le relais
+                break  # quota, clé ou serveur en panne : le repli prend le relais
             if e.code in (429, 500, 502, 503) and tentatives > 0:
+                # Dernier fournisseur seulement : sans repli, réessayer est la
+                # seule chance que la marque ne soit pas perdue.
                 time.sleep(10)
                 continue
             break
