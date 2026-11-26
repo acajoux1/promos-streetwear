@@ -361,3 +361,68 @@ class TestDiagnosticFournisseurs(unittest.TestCase):
         self.assertEqual(appels, [])
         self.assertFalse(res[0]["ok"])
         self.assertIn("aucune clé", res[0]["detail"])
+
+
+class TestFournisseurs(unittest.TestCase):
+    """Lecture de `AI_API_KEY_BACKUP` : clés multiples, bases et modèles alignés.
+
+    L'environnement est vidé pour chaque cas : un `AI_API_*` posé sur la
+    machine qui lance les tests ne doit pas changer le résultat.
+    """
+
+    def lire(self, **env):
+        with mock.patch.dict(os.environ, env, clear=True):
+            return commun.fournisseurs(), commun.a_une_cle()
+
+    def test_plusieurs_cles_alignent_base_et_modele(self):
+        liste, une_cle = self.lire(
+            AI_API_KEY="z-123",
+            # Un secret collé avec des espaces autour des virgules reste lisible.
+            AI_API_KEY_BACKUP=" g-1 ,  g-2 ",
+            AI_API_BASE_BACKUP=("https://generativelanguage.googleapis.com/v1beta/openai,"
+                                "https://api.groq.com/openai/v1"),
+            AI_MODEL_BACKUP="gemini-3.8-flash,llama-4-scout",
+        )
+        self.assertTrue(une_cle)
+        self.assertEqual([f["nom"] for f in liste], ["Z.ai", "Gemini", "Groq"])
+        self.assertEqual([f["cle"] for f in liste], ["z-123", "g-1", "g-2"])
+        self.assertEqual([f["base"] for f in liste][1:], [
+            "https://generativelanguage.googleapis.com/v1beta/openai",
+            "https://api.groq.com/openai/v1",
+        ])
+        self.assertEqual([f["modele"] for f in liste],
+                         ["glm-4-flash", "gemini-3.8-flash", "llama-4-scout"])
+
+    def test_une_seule_base_et_un_seul_modele_valent_pour_toutes_les_cles(self):
+        liste, _ = self.lire(
+            AI_API_KEY_BACKUP="g-1,g-2",
+            AI_API_BASE_BACKUP="https://api.groq.com/openai/v1",
+            AI_MODEL_BACKUP="llama-4-scout",
+        )
+        secours = liste[1:]
+        self.assertEqual([f["base"] for f in secours], [
+            "https://api.groq.com/openai/v1",
+            "https://api.groq.com/openai/v1",
+        ])
+        self.assertEqual([f["modele"] for f in secours], ["llama-4-scout", "llama-4-scout"])
+
+    def test_sans_base_ni_modele_le_secours_prend_gemini(self):
+        liste, _ = self.lire(AI_API_KEY_BACKUP="g-1")
+        self.assertEqual(liste[1]["base"], commun.BASE_REPLI)
+        self.assertEqual(liste[1]["modele"], commun.MODELE_REPLI)
+        self.assertEqual(liste[1]["nom"], "Gemini")
+
+    def test_le_secours_seul_suffit(self):
+        # Cas réel d'un dépôt qui n'a que la clé Gemini : les scripts ne doivent
+        # pas se croire sans clé pour autant.
+        liste, une_cle = self.lire(AI_API_KEY="", AI_API_KEY_BACKUP="g-1")
+        self.assertTrue(une_cle)
+        self.assertEqual(len(liste), 2)
+        self.assertEqual(liste[0]["cle"], "", "le principal sans clé reste en tête")
+        self.assertEqual(liste[1]["cle"], "g-1")
+
+    def test_valeurs_vides_ignorees(self):
+        liste, une_cle = self.lire(AI_API_KEY="   ", AI_API_KEY_BACKUP=" , ,")
+        self.assertFalse(une_cle)
+        self.assertEqual(len(liste), 1, "aucune clé de secours vide ne crée un fournisseur")
+        self.assertEqual(liste[0]["nom"], "Z.ai")
