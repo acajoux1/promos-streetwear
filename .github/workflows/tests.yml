@@ -1,0 +1,47 @@
+name: Tests
+
+# Le workflow horaire lançait déjà la suite, mais seulement sur main et après
+# la collecte : une branche ou une pull request pouvait casser sans que
+# personne ne le voie avant la fusion. Ici la suite tourne avant, sur du code
+# qui n'est pas encore publié.
+
+on:
+  push:
+    branches-ignore: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Syntaxe JavaScript
+        run: node --check app.js && node --check veille.js && node --check sw.js
+      - name: Dépendances de test épinglées
+        run: python -m pip install --disable-pip-version-check -r requirements-ci.txt
+      - name: Cache du navigateur
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements-ci.txt') }}
+      - name: Installation de Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Suite de tests
+        run: python -m unittest discover -p 'test*.py' -v

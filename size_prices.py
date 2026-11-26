@@ -169,9 +169,11 @@ def rapport_variantes_aberrantes(items, records, seuil=PRIX_ABERRANT):
                    if isinstance(item, dict)}
     par_boutique = {}
     fiches = 0
+    variantes = 0
     for record in records:
         count = 0
         for variant in record.get("variantes") or []:
+            variantes += 1
             price = variant.get("prix")
             if isinstance(price, (int, float)) and not isinstance(price, bool) and price >= seuil:
                 count += 1
@@ -180,7 +182,41 @@ def rapport_variantes_aberrantes(items, records, seuil=PRIX_ABERRANT):
             boutique = boutique_de.get(record.get("lien"), "?")
             par_boutique[boutique] = par_boutique.get(boutique, 0) + count
     return {"seuil": seuil, "total": sum(par_boutique.values()),
-            "fiches": fiches, "par_boutique": par_boutique}
+            "fiches": fiches, "variantes": variantes, "par_boutique": par_boutique}
+
+
+PART_ABERRANTE_MAX = 0.005  # 0,5 % des variantes
+ABERRANT_BLOQUANT = 50      # plancher : sous 50, le bruit ne bloque rien
+
+
+def aberrantes_bloquantes(rapport, part=PART_ABERRANTE_MAX, plancher=ABERRANT_BLOQUANT):
+    """Vrai quand les prix invraisemblables dépassent ce qu'explique le catalogue.
+
+    Dimension Stores vend des pièces d'archive à plus de 1 500 € : quelques
+    variantes au-dessus du seuil sont normales. Un parsing cassé, lui, en
+    produit des milliers — c'est ce que ce contrôle attrape. Il ne bloque donc
+    que si le total dépasse à la fois le plancher et la part attendue.
+    """
+    total = rapport.get("total", 0)
+    variantes = rapport.get("variantes", 0)
+    return total > max(plancher, part * variantes)
+
+
+def controler_aberrants(promos_path="data/promos.json", records_path="data/prix_tailles.json"):
+    """Code de sortie du script : 1 si les prix aberrants sont anormaux."""
+    with open(promos_path, encoding="utf-8") as fichier:
+        items = json.load(fichier).get("items") or []
+    with open(records_path, encoding="utf-8") as fichier:
+        records = list((json.load(fichier).get("by_link") or {}).values())
+    rapport = rapport_variantes_aberrantes(items, records)
+    if not aberrantes_bloquantes(rapport):
+        return 0
+    print("PRIX ABERRANTS : {} variantes sur {} dépassent {:.0f} € (seuil {:.1f} %).".format(
+        rapport["total"], rapport["variantes"], rapport["seuil"],
+        100 * PART_ABERRANTE_MAX))
+    print("Le parsing d'au moins une boutique est probablement cassé ; "
+          "voir le détail par boutique ci-dessus.")
+    return 1
 
 
 def extract_variant_id(product_url: str):
@@ -448,9 +484,12 @@ def main():
         with open("data/tailles_index.json", "w", encoding="utf-8") as target:
             json.dump(index, target, ensure_ascii=False, separators=(",", ":"))
         print("Index régénéré :", index["total"], "fiches")
-        return
+        return 0
     run_size_prices(index_path="data/tailles_index.json")
+    # Un prix à quatre chiffres qui se multiplie trahit un parsing cassé :
+    # mieux vaut un passage en échec que des remises inventées publiées.
+    return controler_aberrants()
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

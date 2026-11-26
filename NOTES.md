@@ -3,7 +3,10 @@
 ## Fonctionnement
 
 - Boutiques : Starcow Paris, END., Footshop, Laced Run, Dimension Stores
-- Relevé : toutes les 1 h (`.github/workflows/maj.yml`), avec `pull --rebase` avant l'envoi
+- Relevé : toutes les 1 h (`.github/workflows/maj.yml`), avec `pull --rebase` avant l'envoi.
+  Les trois étapes (collecte, prix par taille, flux) passent par `pipeline.py` : l'ordre est
+  dans le code et la première étape en échec arrête tout, plutôt que de publier des prix
+  d'hier avec des promos du jour.
 - `scraper.py` : collecte les promos (`data/promos.json`), l'historique de prix (`data/history.json`),
   la santé par boutique (`data/sante.json`, alerte si une boutique perd plus de la moitié de ses articles)
   et l'instantané des variantes (`data/variantes.json` : prix et disponibilité réels de chaque taille,
@@ -12,7 +15,10 @@
   dans la même exécution et n'alourdit pas le dépôt.
 - `size_prices.py` : prix et disponibilité par taille (`data/prix_tailles.json`, détaillé)
   et index léger consommé au démarrage (`data/tailles_index.json` : bornes + prix mini par taille).
-  Il affiche aussi le nombre de variantes à prix aberrant (>= 1500 €) par boutique.
+  Il affiche aussi le nombre de variantes à prix aberrant (>= 1500 €) par boutique, et le
+  passage **échoue** quand ce nombre dépasse à la fois 50 et 0,5 % des variantes : quelques
+  pièces d'archive à 2 000 € sont normales, un parsing cassé en produit des milliers. Le
+  seuil est dans `aberrantes_bloquantes()`.
   Pour ne régénérer que l'index sans refaire de réseau : `python3 size_prices.py --index-seulement`
 - Prix par taille : `size_prices.py` lit `data/variantes.json` en priorité ; chaque taille garde le prix
   de ses propres variantes (chez Dimension Stores, chaque pointure est une pièce unique avec son prix).
@@ -28,9 +34,11 @@
 - Polices : titres et texte en Archivo (Google Fonts, graisses 300 à 900, `display=swap`), une seule
   famille géométrique, chargée depuis Google Fonts ; aucune police locale n'est servie. Repli
   Helvetica Neue / Arial puis sans-serif système.
-- Version du cache du service worker : `promos-v39` (`sw.js` ; shell = index, `app.js`, `veille.js`,
-  `style.css`, `manifest.json`, pages méthode et état, icône 192 et les cinq visuels éditoriaux
-  `img/story-*.jpg`)
+- Version du cache du service worker : calculée, plus recopiée (`version_sw.py`, lancé par le
+  workflow avant la publication). Elle dérive du contenu des fichiers de `SHELL` (`sw.js` ; index,
+  `app.js`, `veille.js`, `style.css`, `manifest.json`, pages méthode et état, icône 192 et les cinq
+  visuels éditoriaux `img/story-*.jpg`) : elle change exactement quand l'un d'eux change, et
+  `python3 version_sw.py --verifier` dit si elle a pris du retard.
 - `feed.py` : écrit `feed.xml` (RSS 2.0, 60 dernières baisses) et `sitemap.xml` (accueil, méthode, état)
   à partir des JSON déjà livrés, sans réseau. Lancé par le workflow juste après `size_prices.py`.
   Il écrit aussi les fiches `p/<modèle>-<hash>.html` des 40 meilleures remises : page statique
@@ -38,14 +46,18 @@
   Elles servent au partage et au référencement, pas au parcours quotidien.
 - `enrich.py` (le bot) : écrit une note de deux phrases par article dans `data/descriptions.json`,
   affichée sous « Le mot du radar » dans la fiche. Il choisit les articles sans note, puis les
-  notes de plus de `--refresh-days` (45 j), `--limit` (12) par passage, et tourne avec l’agent
-  histoire (une fois par jour), qui livre le fichier dans sa pull request. API compatible OpenAI : `AI_API_KEY`, `AI_API_BASE`
+  notes de plus de `--refresh-days` (45 j), `--limit` (12) par passage. Il a sa propre tâche
+  quotidienne (`.github/workflows/agent-notes.yml`, 06:10) et pousse `data/descriptions.json`
+  directement dans `main` : ce sont des données additives, et elles ne s'arrêtent plus quand
+  l'agent histoire n'a pas de fournisseur. API compatible OpenAI : `AI_API_KEY`, `AI_API_BASE`
   (défaut `https://api.z.ai/api/paas/v4`), `AI_MODEL` (défaut `glm-4-flash`), lus dans les
   secrets du dépôt, jamais dans le code. Les réponses hors bornes (60–320 caractères, pas d’URL,
   pas de prix, ponctuation finale) sont écartées. **Sans `AI_API_KEY`, le script ne fait rien et
   sort en 0** : la collecte n’en dépend pas. `--dry-run` liste les articles visés sans appeler.
-- Deux agents autonomes, **jamais sur `main`** : chacun travaille sur une branche et ouvre une pull
-  request, sans fusion automatique. Les deux s’arrêtent proprement si `AI_API_KEY` manque.
+- Deux agents autonomes : chacun travaille sur une branche et ouvre une pull request, jamais un
+  commit direct sur `main`. L'agent structure ne fusionne pas — sa proposition attend une relecture ;
+  l'agent histoire, lui, **fusionne sa PR en squash** dès que ses contrôles passent, et le run
+  échoue si la fusion n'a pas eu lieu. Les deux s’arrêtent proprement si aucune clé n'est configurée.
   - **Structure et expérience** (`agents/structure.py`, lundi 06:40, `agent-structure.yml`) :
     audit déterministe (identifiants dupliqués, images sans `alt`, boutons sans texte, liens
     internes cassés, cache du service worker, JSON, marques sans histoire), puis au plus deux
@@ -89,7 +101,14 @@
 - `verifie_sante.py` : lancé par le workflow **après** la publication. Il échoue — donc GitHub
   prévient le propriétaire — si le relevé a plus de 3 h, si le catalogue tombe sous 500 articles,
   si une boutique n'a pas répondu ou si `sante.json` signale un effondrement. Un échec ne bloque
-  pas la publication : les données valides sont déjà en ligne.
+  pas la publication : les données valides sont déjà en ligne. `maj.yml` a un `timeout-minutes`
+  pour qu'un passage bloqué ne retienne pas la file horaire.
+- `verifie_site.py` (`.github/workflows/surveillance.yml`, toutes les heures à :50) : regarde le
+  site **réellement publié** — accueil, `promos.json`, `index` des tailles — et non les fichiers du
+  dépôt. Si le relevé a plus de 3 h, il relance `maj.yml` par l'API (`workflow_dispatch`, qui est
+  l'exception autorisée à `GITHUB_TOKEN`) ; sinon les problèmes finissent en échec, donc en courriel.
+  C'est le chien de garde : le cron de GitHub ne respecte pas l'heure demandée et saute parfois un
+  passage.
 
 ## Mobile
 
@@ -134,7 +153,9 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 
 ## Tests
 
-`python -m unittest discover -p 'test*.py'` (lancé par le workflow horaire) couvre :
+`python -m unittest discover -p 'test*.py'` tourne dans `maj.yml` et dans `tests.yml` (push sur une
+  branche, pull request, lancement manuel). Les dépendances de test sont épinglées dans
+  `requirements-ci.txt` (Playwright fixe aussi la version de Chromium). La suite couvre :
 - les prix par taille (`test_size_prices.py`)
 - le choix d'offre et les marques du scraper (`test_scraper.py`)
 - l'intégrité des JSON livrés : bornes = variantes disponibles, `articles`/`by_link` cohérents,
@@ -143,8 +164,12 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - l'interface dans un vrai navigateur (`test_interface.py`, ignoré si Playwright est absent) : grille
   remplie, aucun débordement horizontal, tiroir et fiche qui s'ouvrent et se ferment, recherche
   tolérante, lien profond `#p=`, et aucune erreur console. En local :
-  `pip install playwright && python -m playwright install chromium`, puis
-  `python -m unittest test_interface`. Le workflow horaire ne l'installe pas : il est ignoré.
+  `python -m pip install -r requirements-ci.txt && python -m playwright install --with-deps chromium`,
+  puis `python -m unittest test_interface`.
+- la version du cache du service worker (`test_version_sw.py`), l'orchestrateur (`test_pipeline.py`)
+  et le contrôle du site publié (`test_verifie_site.py`).
+- Les deux workflows qui en ont besoin (horaire et tests) installent Playwright et Chromium ; le
+  navigateur est mis en cache sur `~/.cache/ms-playwright`, la clé suivant `requirements-ci.txt`.
 
 ## Interface
 

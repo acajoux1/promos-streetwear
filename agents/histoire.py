@@ -24,7 +24,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import commun as c
 
 MAX_PAR_PASSAGE = 2
-NOTES_PAR_PASSAGE = 12
 MIN_ARTICLES = 6
 RETENTE_JOURS = 14
 MAX_CANDIDATS = 3  # URL candidates essayées par source, dans l'ordre donné
@@ -364,12 +363,11 @@ def main():
                   "(ni `AI_API_KEY` ni `AI_API_KEY_BACKUP`) : rien de nouveau, aucune pull request.")
         return 0
 
-    # Volet 1 : les notes de style des articles (même agent, même branche).
-    code, sortie = c.lancer([sys.executable, "enrich.py", "--limit", str(NOTES_PAR_PASSAGE)], timeout=900)
-    if sortie.strip():
-        c.log(sortie.strip())
+    # Les notes de style (`enrich.py`) ont leur propre tâche, agent-notes.yml :
+    # elles ne doivent pas s'arrêter parce que les fiches de marques n'ont pas
+    # de fournisseur ce jour-là.
 
-    # Volet 2 : les histoires de marques, vérifiées par leurs sources.
+    # Les histoires de marques, vérifiées par leurs sources.
     ajouts = {}
     resultats = []
     for n, marque in cible:
@@ -418,8 +416,9 @@ def main():
 
     c.resumer(resume(resultats, len(items)))
 
-    lignes = ["Deux volets dans cette branche : les notes de style du jour "
-              "(`data/descriptions.json`) et les histoires de marques vérifiées.", ""]
+    lignes = ["Cette branche ne contient que les histoires de marques vérifiées "
+              "(`data/histoires.json`) ; les notes de style ont leur propre tâche "
+              "(`agent-notes.yml`).", ""]
     if ajouts:
         lignes += ["## Histoires", "",
                    "Sources vérifiées : page accessible, marque citée, dates retrouvées.", ""]

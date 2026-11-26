@@ -1,0 +1,59 @@
+name: Notes de style
+
+# Les notes de `data/descriptions.json` étaient produites à l'intérieur de
+# l'agent histoire : quand le diagnostic des fournisseurs échouait, le job
+# s'arrêtait avant elles et le fichier ne bougeait plus. Tâche séparée, elles
+# ne dépendent plus du sort des fiches de marques, et elles arrivent
+# directement dans `main` : ce sont des données additives, lues par le site à
+# la demande.
+
+on:
+  schedule:
+    - cron: "10 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agent-notes
+  cancel-in-progress: false
+
+jobs:
+  notes:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      AI_API_KEY: ${{ secrets.AI_API_KEY }}
+      AI_API_BASE: ${{ secrets.AI_API_BASE || vars.AI_API_BASE }}
+      AI_MODEL: ${{ secrets.AI_MODEL || vars.AI_MODEL }}
+      # Repli quand le principal refuse (401/403/404/429), tombe en panne
+      # (500/502/503) ou ne répond pas (timeout, réseau).
+      AI_API_KEY_BACKUP: ${{ secrets.AI_API_KEY_BACKUP }}
+      AI_API_BASE_BACKUP: ${{ secrets.AI_API_BASE_BACKUP || vars.AI_API_BASE_BACKUP }}
+      AI_MODEL_BACKUP: ${{ secrets.AI_MODEL_BACKUP || vars.AI_MODEL_BACKUP }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntaxe
+        run: python3 -m py_compile enrich.py agents/commun.py
+      # Sans aucune clé (ni principale ni secours), le script sort en 0 sans
+      # rien écrire : une panne de fournisseur ne doit pas faire échouer la
+      # tâche, mais elle doit se voir dans le journal.
+      - name: Notes du jour
+        run: python3 enrich.py --limit 12
+      - name: Publication des notes
+        run: |
+          git config user.name "promos-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add data/descriptions.json
+          git diff --cached --quiet && echo 'Rien de nouveau' && exit 0
+          git commit -m "Ajout des notes de style du jour"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            sleep 5
+          done
+          exit 1

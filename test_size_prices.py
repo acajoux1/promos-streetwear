@@ -5,6 +5,7 @@ import unittest
 from unittest.mock import patch
 
 from size_prices import (
+    aberrantes_bloquantes,
     collect_article_prices,
     deduplicate_entries,
     extract_from_html_page,
@@ -12,6 +13,7 @@ from size_prices import (
     extract_variant_id,
     norm_size_key,
     parse_price,
+    rapport_variantes_aberrantes,
     run_size_prices,
 )
 
@@ -178,6 +180,29 @@ class TestGeneralSizePrices(unittest.TestCase):
             self.assertEqual(result["total"], 2)
             self.assertIn("https://shop-a.test/products/item-1", result["by_link"])
             self.assertEqual(result["by_link"]["https://shop-b.test/item-2"]["prix_max"], 169.0)
+
+
+class TestVariantesAberrantes(unittest.TestCase):
+    def test_quelques_pieces_d_archive_ne_bloquent_pas(self):
+        # 18 variantes au-dessus de 1 500 € sur 17 000 : la situation réelle.
+        rapport = {"total": 18, "variantes": 17020}
+        self.assertFalse(aberrantes_bloquantes(rapport))
+
+    def test_un_parsing_casse_bloque(self):
+        rapport = {"total": 4000, "variantes": 17000}
+        self.assertTrue(aberrantes_bloquantes(rapport))
+
+    def test_le_plancher_protege_un_petit_catalogue(self):
+        self.assertFalse(aberrantes_bloquantes({"total": 49, "variantes": 10}))
+
+    def test_rapport_compte_toutes_les_variantes(self):
+        items = [{"lien": "https://shop.test/p/1", "boutique": "Shop"}]
+        records = [{"lien": "https://shop.test/p/1", "variantes": [
+            {"prix": 90.0}, {"prix": 1600.0}, {"prix": 2100.0},
+        ]}]
+        rapport = rapport_variantes_aberrantes(items, records)
+        self.assertEqual(rapport["variantes"], 3)
+        self.assertEqual(rapport["total"], 2)
 
 
 if __name__ == "__main__":

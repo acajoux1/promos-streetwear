@@ -1,0 +1,35 @@
+name: Surveillance du site publié
+
+# Une heure après le relevé, la page réellement servie est ouverte : elle doit
+# répondre, contenir le catalogue complet et porter un relevé de moins de 3 h.
+# Si les données sont figées, `maj.yml` est relancé par l'API — le cron de
+# GitHub ne respecte pas l'heure demandée et saute parfois un passage.
+
+on:
+  schedule:
+    - cron: "50 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write  # relance de maj.yml (workflow_dispatch)
+
+concurrency:
+  group: surveillance
+  cancel-in-progress: false
+
+jobs:
+  site:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Contrôle du site et relance si besoin
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 verifie_site.py

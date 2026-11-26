@@ -1,0 +1,6 @@
+# Dépendances des tests d'interface, épinglées.
+#
+# La version de Playwright fixe aussi celle de Chromium que
+# `python -m playwright install` télécharge : une version qui glisse seule
+# pouvait casser la suite horaire sans qu'aucun commit ne l'ait annoncé.
+playwright==1.65.2
