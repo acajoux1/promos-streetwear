@@ -292,7 +292,8 @@ def corps_pr(pbs, mods, rapport, echecs):
                % (SEUIL["modifications"], SEUIL["fichiers"], SEUIL["lignes"], SEUIL["croissance_pct"]),
                "- identifiants, liens et chaînes protégées conservés ;",
                "- syntaxe JS, équilibre HTML/CSS et suite de tests vérifiés.",
-               "", "Aucune fusion automatique : cette branche attend une relecture.", ""]
+               "", "Fusion automatique en squash dès que les contrôles passent ; "
+               "la PR reste ouverte en relecture sinon.", ""]
     return "\n".join(lignes)
 
 
@@ -350,10 +351,18 @@ def main():
         c.log("Contrôles en échec, tout est annulé :\n- " + "\n- ".join(echecs))
         laisser_audit()
         return 0
-    url = c.creer_pr(c.titre_date("Agent structure"), corps_pr(pbs, mods, proposition.get("rapport"), []),
-                     "agents/structure-" + time.strftime("%Y%m%d"))
-    if url:
-        c.log("Proposition envoyée en relecture.")
+    branche = "agents/structure-" + time.strftime("%Y%m%d")
+    url = c.creer_pr(c.titre_date("Agent structure"),
+                     corps_pr(pbs, mods, proposition.get("rapport"), []), branche)
+    if not url:
+        return 0
+    # Les garde-fous ont déjà validé fichiers, budget, identifiants et tests :
+    # la fusion attend seulement que les contrôles de la PR soient verts.
+    etat = c.fusionner_pr(branche)
+    if etat == "fusionnée":
+        c.log("Proposition fusionnée dans main après contrôles verts.")
+        return 0
+    c.log("Proposition laissée en relecture (%s) : %s" % (etat, url))
     return 0
 
 

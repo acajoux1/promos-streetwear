@@ -1,0 +1,33 @@
+name: Canari des boutiques
+
+# Une fois par jour, chaque source est interrogée pour elle-même : la réponse
+# doit encore ressembler à ce que le scraper sait lire. Une boutique qui change
+# de plateforme ou de collection est signalée par son nom le matin, avant la
+# première collecte ratée — et l'issue d'incident suit (incident.yml).
+
+on:
+  schedule:
+    - cron: "30 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canari
+  cancel-in-progress: false
+
+jobs:
+  sources:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntaxe
+        run: python3 -m py_compile scraper.py canary.py
+      - name: Forme des sources
+        run: python3 canary.py

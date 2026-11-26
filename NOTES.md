@@ -4,9 +4,16 @@
 
 - Boutiques : Starcow Paris, END., Footshop, Laced Run, Dimension Stores
 - Relevé : toutes les 1 h (`.github/workflows/maj.yml`), avec `pull --rebase` avant l'envoi.
-  Les trois étapes (collecte, prix par taille, flux) passent par `pipeline.py` : l'ordre est
-  dans le code et la première étape en échec arrête tout, plutôt que de publier des prix
-  d'hier avec des promos du jour.
+  Les étapes (collecte, prix par taille, contrat des données, flux) passent par `pipeline.py` :
+  l'ordre est dans le code. Une étape critique en échec (collecte, contrat) arrête tout ; une
+  étape non critique (prix par taille, flux) laisse les suivantes tourner sur les fichiers
+  précédents, puis le workflow rougit en fin de job — les données valides sont publiées sans
+  que le passage passe pour vert.
+- Sources : `boutiques.json` (nom, type, collection, préfixe produit). `scraper.py` construit
+  ses adaptateurs à partir de ce fichier, et `canary.py` contrôle les mêmes entrées. Quand une
+  collection soldée ne rend plus rien, `collection_auto()` cherche son remplaçant dans
+  `/collections.json` par mot-clé (`soldes`, `sale`, `outlet`, …) : un slug daté comme
+  `soldes-2026` ne fige plus la collecte au changement d'année.
 - `scraper.py` : collecte les promos (`data/promos.json`), l'historique de prix (`data/history.json`),
   la santé par boutique (`data/sante.json`, alerte si une boutique perd plus de la moitié de ses articles)
   et l'instantané des variantes (`data/variantes.json` : prix et disponibilité réels de chaque taille,
@@ -52,12 +59,18 @@
   l'agent histoire n'a pas de fournisseur. API compatible OpenAI : `AI_API_KEY`, `AI_API_BASE`
   (défaut `https://api.z.ai/api/paas/v4`), `AI_MODEL` (défaut `glm-4-flash`), lus dans les
   secrets du dépôt, jamais dans le code. Les réponses hors bornes (60–320 caractères, pas d’URL,
-  pas de prix, ponctuation finale) sont écartées. **Sans `AI_API_KEY`, le script ne fait rien et
-  sort en 0** : la collecte n’en dépend pas. `--dry-run` liste les articles visés sans appeler.
+  pas de prix, ponctuation finale) sont écartées. **Sans `AI_API_KEY`, le script n'écrit aucune
+  note et sort en 0** : la collecte n’en dépend pas. Un bloc `_etat` (dernier code, dernière
+  réussite, couverture de la cible) est écrit même dans ce cas, pour que l'absence de clé se voie
+  sur `etat.html` ; rien n'y change sans nouvelle note, donc aucun commit vide. Politique de
+  couverture : les 300 articles à la plus forte remise sont la cible (`CIBLE_TOP`), leur part
+  couverte est affichée à chaque passage. `--dry-run` liste les articles visés sans appeler.
 - Deux agents autonomes : chacun travaille sur une branche et ouvre une pull request, jamais un
-  commit direct sur `main`. L'agent structure ne fusionne pas — sa proposition attend une relecture ;
-  l'agent histoire, lui, **fusionne sa PR en squash** dès que ses contrôles passent, et le run
-  échoue si la fusion n'a pas eu lieu. Les deux s’arrêtent proprement si aucune clé n'est configurée.
+  commit direct sur `main`. L'agent structure fusionne désormais sa PR en squash quand ses
+  garde-fous et les contrôles passent (sinon elle reste ouverte en relecture) ; l'agent histoire
+  fait de même, et son run échoue si la fusion n'a pas eu lieu. Les deux s’arrêtent proprement si
+  aucune clé n'est configurée. Les PR d'agent sans activité depuis trente jours sont fermées avec
+  leur branche (`menage.py`, le lundi).
   - **Structure et expérience** (`agents/structure.py`, lundi 06:40, `agent-structure.yml`) :
     audit déterministe (identifiants dupliqués, images sans `alt`, boutons sans texte, liens
     internes cassés, cache du service worker, JSON, marques sans histoire), puis au plus deux
@@ -290,4 +303,34 @@ articles), ce qui rend l'extension possible sans devenir aveugle.
 - Bandeau « nouvelle version » : `controllerchange` du service worker déclenche un rechargement proposé,
   sans écraser la position de lecture.
 - Pied de page : méthode, état des collectes, flux RSS. Pages `methode.html` (règles de calcul, limites)
-  et `etat.html` (santé par boutique, lue dans `data/sante.json`).
+  et `etat.html` (santé par boutique, lue dans `data/sante.json`, et état des notes de style).
+
+## Tourner seul sans intervention
+
+- `surveillance.yml` tourne au cron `:50` **et** à la fin de chaque `maj.yml` (`workflow_run`) :
+  si le cron de GitHub est sauté ou très en retard, le chien de garde n'est pas muet pour autant.
+  `verifie_site.relance_utile()` empêche les boucles : pas de relance quand un passage est déjà
+  en file, ni quand le dernier s'est terminé il y a moins de vingt minutes (déploiement Pages
+  compris). Une relance refusée n'est pas une alerte : le contrôle suivant tranche.
+- `couverture.py` (après la publication) mesure ce qui manque *dans* les articles : part des
+  articles avec prix par taille, avec image, avec prix barré. Seuils 80 / 90 / 80 %, calibrés
+  sous les valeurs observées (100 % sur les trois). Un parseur cassé à moitié ne passe plus.
+  `verifie_sante.py` alerte en plus au-delà de 300 Mo publiés (limite Pages : 1 Go).
+- `schema.py` (étape critique du pipeline) vérifie la forme de `promos.json` et de l'index :
+  articles complets, prix positifs, pas de doublon de lien, bornes cohérentes, index de la même
+  collecte. Un fichier hors contrat n'est pas publié.
+- `canary.py` (07:30) interroge chaque boutique pour elle-même et vérifie que la réponse
+  ressemble encore à ce que le scraper sait lire (`products.json` avec variantes et images,
+  balisage Footshop). Une rupture d'adaptateur est signalée par son nom le matin, avant la
+  collecte ratée. Il lit les mêmes entrées que le scraper, `boutiques.json`.
+- `incident.yml` + `incident.py` : chaque workflow en échec ouvre **une** issue à son nom
+  (`Incident · <workflow>`), commentée une fois par run (déduplication par URL) et refermée au
+  premier passage vert du même workflow. Permission `issues: write` seulement, aucun service
+  externe. Le courriel GitHub reste un filet, plus le seul canal.
+- `menage.yml` + `menage.py` (lundi) : ferme les pull requests d'agent sans activité depuis
+  trente jours et supprime leur branche. Les PR humaines ne sont jamais touchées.
+- `.github/dependabot.yml` : PR mensuelles pour les actions GitHub et la version épinglée de
+  Playwright ; `tests.yml` les vérifie avant fusion.
+- Restent manuels, par nature : le secret `AI_API_KEY_BACKUP` (clé Gemini gratuite, Settings →
+  Secrets and variables → Actions) sans lequel l'agent histoire et les notes s'arrêtent ; et
+  l'ajout d'une boutique dans `boutiques.json`.

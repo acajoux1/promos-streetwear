@@ -44,5 +44,37 @@ class TestDiagnosticSite(unittest.TestCase):
         self.assertFalse(verifie_site.relancer("depot/test", ""))
 
 
+class TestRelanceUtile(unittest.TestCase):
+    def _api(self, runs):
+        return lambda url, jeton: {"workflow_runs": runs}
+
+    def test_passage_deja_en_cours(self):
+        utile, raison = verifie_site.relance_utile(
+            "jeton", api=self._api([{"status": "in_progress"}]), maintenant=MAINTENANT)
+        self.assertFalse(utile)
+        self.assertIn("en cours", raison)
+
+    def test_passage_recent_ne_relance_pas(self):
+        fin = (MAINTENANT - timedelta(minutes=5)).isoformat()
+        utile, raison = verifie_site.relance_utile(
+            "jeton", api=self._api([{"status": "completed", "updated_at": fin}]),
+            maintenant=MAINTENANT)
+        self.assertFalse(utile)
+        self.assertIn("5 min", raison)
+
+    def test_collecte_figee_depuis_longtemps(self):
+        fin = (MAINTENANT - timedelta(hours=1)).isoformat()
+        utile, _ = verifie_site.relance_utile(
+            "jeton", api=self._api([{"status": "completed", "updated_at": fin}]),
+            maintenant=MAINTENANT)
+        self.assertTrue(utile)
+
+    def test_api_illisible_laisse_relancer(self):
+        self.assertTrue(verifie_site.relance_utile("jeton", api=lambda u, j: None)[0])
+
+    def test_sans_jeton(self):
+        self.assertFalse(verifie_site.relance_utile("")[0])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

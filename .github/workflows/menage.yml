@@ -1,0 +1,36 @@
+name: Ménage des pull requests
+
+# Les agents travaillent sur des branches datées. Une proposition ni fusionnée
+# ni refusée reste ouverte indéfiniment : ici les branches d'agent sans activité
+# depuis trente jours sont fermées et supprimées. Rien d'autre n'est touché.
+
+on:
+  schedule:
+    - cron: "20 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: menage
+  cancel-in-progress: false
+
+jobs:
+  menage:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Syntaxe
+        run: python3 -m py_compile incident.py menage.py
+      - name: Fermeture des propositions périmées
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 menage.py

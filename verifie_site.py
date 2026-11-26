@@ -18,6 +18,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime, timezone
 
 from verifie_sante import age_heures
 
@@ -91,6 +92,61 @@ def verifier(base=BASE):
     return promo, problemes
 
 
+def api_json(url, jeton, timeout=20):
+    """Objet JSON de l'API GitHub, ou None si le réseau ou le jeton ne suit pas."""
+    req = urllib.request.Request(url, headers={
+        "Accept": "application/vnd.github+json",
+        "Authorization": "Bearer " + jeton,
+        "X-GitHub-Api-Version": "2022-11-28",
+        "User-Agent": "promos-surveillance/1.0",
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8", "replace"))
+    except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, OSError,
+            ValueError):
+        return None
+
+
+def relance_utile(jeton, depot=DEPOT, maintenant=None, fenetre_min=20, api=None):
+    """(faut-il relancer, explication) : évite une boucle de relances.
+
+    `surveillance.yml` tourne aussi à la fin de chaque `maj.yml` : sans ce
+    garde-fou, une page publiée quelques secondes trop tard serait prise pour
+    un relevé figé et relancerait la collecte en boucle. On ne relance donc ni quand
+un passage est déjà en file, ni quand le dernier s'est terminé il y a moins de
+vingt minutes (déploiement Pages compris).
+    """
+    if not jeton:
+        return False, "pas de jeton"
+    api = api or api_json
+    url = "https://api.github.com/repos/%s/actions/workflows/%s/runs?per_page=10" % (
+        depot, WORKFLOW)
+    data = api(url, jeton)
+    if not isinstance(data, dict):
+        return True, "état des passages illisible"
+    runs = [r for r in data.get("workflow_runs") or [] if isinstance(r, dict)]
+    for r in runs:
+        if (r.get("status") or "").lower() in (
+                "queued", "in_progress", "waiting", "requested", "pending"):
+            return False, "un passage est déjà en cours"
+    maintenant = maintenant or datetime.now(timezone.utc)
+    for r in runs:
+        if (r.get("status") or "").lower() != "completed":
+            continue
+        fin = r.get("updated_at") or r.get("run_started_at") or r.get("created_at")
+        try:
+            t = datetime.fromisoformat(str(fin).replace("Z", "+00:00"))
+        except ValueError:
+            continue
+        if t.tzinfo is None:
+            t = t.replace(tzinfo=timezone.utc)
+        minutes = (maintenant - t).total_seconds() / 60
+        if 0 <= minutes < fenetre_min:
+            return False, "passage terminé il y a %d min" % minutes
+    return True, "aucun passage récent"
+
+
 def relancer(depot=DEPOT, jeton="", workflow=WORKFLOW, branche="main"):
     """Déclenche `maj.yml` par l'API ; vrai si GitHub a accepté la demande."""
     if not jeton:
@@ -136,7 +192,12 @@ def main():
         print(" -", probleme)
     if any("vieux" in p for p in problemes):
         jeton = os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN") or ""
-        if relancer(os.environ.get("GITHUB_REPOSITORY") or DEPOT, jeton):
+        depot = os.environ.get("GITHUB_REPOSITORY") or DEPOT
+        utile, raison = relance_utile(jeton, depot)
+        if not utile:
+            print("Pas de relance : %s. Le prochain contrôle tranchera." % raison)
+            return 0
+        if relancer(depot, jeton):
             print("Collecte relancée (%s) : le passage suivant devrait rafraîchir les données."
                   % WORKFLOW)
             return 0

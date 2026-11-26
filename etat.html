@@ -32,7 +32,7 @@
   <h2>Comment lire ce tableau</h2>
   <p>« Articles » compte les pièces en promotion retenues pour la boutique. La colonne « Écart » compare au relevé précédent : une chute brutale (plus de la moitié) est signalée en bleu et la boutique est considérée comme en échec pour ce passage — ses prix restent affichés, mais datés.</p>
   <p>Une boutique peut aussi refuser temporairement les requêtes (limitation de débit). Dans ce cas rien n’est inventé : le site conserve les dernières données valides et l’indique dans le bandeau.</p>
-  <p>En plus de ce tableau, un contrôle automatique signale l’incident et prévient le mainteneur dès qu’une boutique n’a pas répondu, que le catalogue tombe sous 500 articles ou que le relevé dépasse trois heures. La publication des données déjà valides n’est pas bloquée pour autant.</p>
+  <p>En plus de ce tableau, trois contrôles automatiques : la couverture des données (prix par taille, images, prix barrés), la forme de chaque source (canari du matin) et le site réellement publié. Un échec ouvre une issue « incident » sur le dépôt et la referme au premier passage vert ; la publication des données déjà valides n’est pas bloquée pour autant.</p>
 
   <a class="back" href="./">← Retour au radar</a>
 </main>
@@ -57,7 +57,7 @@ if(h<24)return "il y a "+h+" heure"+(h>1?"s":"");
 var j=Math.round(h/24);
 return "il y a "+j+" jour"+(j>1?"s":"");
 }
-function render(sante,promos){
+function render(sante,promos,desc){
 var box=$("etat");
 if(!box)return;
 var b=(sante&&sante.boutiques)||{};
@@ -70,6 +70,16 @@ noms.sort(function(a,c){return (b[c].n||0)-(b[a].n||0)});
 var total=0,ko=0;
 noms.forEach(function(n){total+=(b[n].n||0);if(b[n].alerte)ko++});
 var h='<p class="s" style="margin:16px 0 4px">Dernier relevé : <b>'+esc(fdate(sante.maj||(promos&&promos.maj)||""))+'</b> · '+esc(age(sante.maj||(promos&&promos.maj)))+' · '+total+' articles · '+(ko?ko+" boutique"+(ko>1?"s":"")+" en échec":"toutes les boutiques ont répondu")+'</p>';
+var e=(desc&&desc._etat)||{};
+if(e.dernier_code){
+var txt="Notes de style : "+(e.notes||0)+" note"+((e.notes||0)>1?"s":"");
+if(e.dernier_code==="sans_cle")txt+=" · aucune clé d’API configurée";
+else if(e.dernier_code==="echec")txt+=" · dernier passage en échec";
+else if(e.dernier_code==="partiel")txt+=" · dernier passage partiel";
+if(e.derniere_reussite)txt+=" · dernière réussite "+esc(fdate(e.derniere_reussite));
+if(typeof e.couverture_top==="number")txt+=" · cible couverte à "+Math.round(100*e.couverture_top)+" %";
+h+='<p class="s" style="margin:0 0 4px">'+txt+'</p>';
+}
 h+='<table><thead><tr><th>Boutique</th><th class="n">Articles</th><th class="n">Écart</th><th>État</th></tr></thead><tbody>';
 noms.forEach(function(n){
 var o=b[n]||{},d=(o.n||0)-(o.avant||0);
@@ -80,9 +90,10 @@ box.innerHTML=h;
 }
 Promise.all([
 fetch("data/sante.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null}),
-fetch("data/promos.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null})
+fetch("data/promos.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null}),
+ fetch("data/descriptions.json?"+Date.now()).then(function(r){return r.ok?r.json():null}).catch(function(){return null})
 ]).then(function(res){
-render(res[0],res[1]);
+render(res[0],res[1],res[2]);
 }).catch(function(){
 var box=$("etat");
 if(box)box.innerHTML='<p class="s">Données momentanément indisponibles.</p>';

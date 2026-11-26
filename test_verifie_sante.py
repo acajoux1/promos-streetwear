@@ -35,6 +35,11 @@ class TestDiagnosticSante(unittest.TestCase):
         problemes = diagnostic(promo(articles=12), {}, MAINTENANT)
         self.assertTrue(any("articles seulement" in p for p in problemes))
 
+    def test_depot_trop_gros(self):
+        problemes = diagnostic(promo(), {}, MAINTENANT, taille_mo=350)
+        self.assertTrue(any("Mo publiés" in p for p in problemes))
+        self.assertEqual(diagnostic(promo(), {}, MAINTENANT, taille_mo=12), [])
+
 
 if __name__ == "__main__":
     unittest.main()

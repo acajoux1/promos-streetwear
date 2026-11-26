@@ -1,0 +1,20 @@
+version: 2
+
+# Les versions d'actions et la version épinglée de Playwright vieillissent
+# seules. Une PR par mois, testée par tests.yml avant toute fusion.
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    commit-message:
+      prefix: "Actions"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    allow:
+      - dependency-name: "playwright"
+    commit-message:
+      prefix: "Playwright"

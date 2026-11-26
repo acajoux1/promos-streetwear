@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 """Le bot qui écrit les descriptions produit.
 
-Il tourne dans la même tâche planifiée que le scraper : à chaque passage, il
-choisit quelques articles sans description (ou dont la description a vieilli),
-demande un texte court au modèle, vérifie la réponse puis l'écrit dans
-`data/descriptions.json`. Le site lit ce fichier à la demande : s'il est absent
-ou vide, les fiches s'affichent exactement comme avant.
+Il tourne dans sa propre tâche planifiée (`agent-notes.yml`) : à chaque
+passage, il choisit quelques articles sans description (ou dont la description
+a vieilli), demande un texte court au modèle, vérifie la réponse puis l'écrit
+dans `data/descriptions.json`. Le site lit ce fichier à la demande : s'il est
+absent ou vide, les fiches s'affichent exactement comme avant.
+
+Le catalogue est bien trop grand pour être couvert par douze notes par jour :
+la politique est donc explicite — les 300 articles à la plus forte remise
+forment la cible, et leur couverture est mesurée à chaque passage. Un bloc
+`_etat` (dernier code, dernière réussite, couverture) est écrit même sans clé,
+pour qu'une panne de fournisseur se voie sur `etat.html` au lieu de ressembler
+à une journée sans nouveauté. Rien n'y change d'un passage à l'autre sans
+nouvelle note : la tâche ne produit donc pas de commit vide.
 
 Aucune clé n'est écrite ici. Sans aucune clé (principal ni secours), le script
 ne fait rien et sort avec le code 0, donc la tâche de collecte n'échoue jamais
@@ -40,6 +48,8 @@ PROMOS = ROOT / "data" / "promos.json"
 CACHE = ROOT / "data" / "descriptions.json"
 
 MIN_LEN, MAX_LEN = 60, 320
+# Politique de couverture : les articles à la plus forte remise d'abord.
+CIBLE_TOP = 300
 
 SYSTEM = (
     "Tu écris les notes de style d'un radar de promos streetwear, en français. "
@@ -80,17 +90,43 @@ def age_jours(iso):
     return (datetime.now(timezone.utc) - t).days
 
 
+def note_de(cache, lien):
+    """Texte déjà en cache pour ce lien, quel que soit le format de l'entrée."""
+    entree = cache.get(lien)
+    if isinstance(entree, dict):
+        return (entree.get("d") or "").strip()
+    return entree.strip() if isinstance(entree, str) else ""
+
+
+def decrivables(items):
+    """Articles qui méritent une note : lien exploitable et nom lisible."""
+    return [x for x in items
+            if (x.get("lien") or "").startswith("http")
+            and len((x.get("nom") or "").strip()) >= 8]
+
+
+def prioritaires(items, cible=CIBLE_TOP):
+    """Les articles de la cible : les plus fortes remises d'abord."""
+    retenus = decrivables(items)
+    retenus.sort(key=lambda x: (-(x.get("remise") or 0), x.get("nom") or ""))
+    return retenus[:cible]
+
+
+def couverture(items, cache, cible=CIBLE_TOP):
+    """Part de la cible qui a déjà une note (0 à 1)."""
+    top = prioritaires(items, cible)
+    if not top:
+        return 0.0
+    return sum(1 for x in top if note_de(cache, x["lien"])) / len(top)
+
+
 def choisir(items, cache, limit, refresh_days):
     """Sans description d'abord, puis les plus anciennes, à remise égale."""
     neufs, vieux = [], []
-    for x in items:
+    for x in decrivables(items):
         lien = (x.get("lien") or "").strip()
-        nom = (x.get("nom") or "").strip()
-        if not lien.startswith("http") or len(nom) < 8:
-            continue
         entree = cache.get(lien)
-        texte = entree.get("d") if isinstance(entree, dict) else entree
-        if not texte:
+        if not note_de(cache, lien):
             neufs.append(x)
         elif isinstance(entree, dict) and age_jours(entree.get("t")) >= refresh_days:
             vieux.append(x)
@@ -152,19 +188,36 @@ def main():
     cache_brut = lire_json(CACHE, {})
     cache = cache_brut.get("items") if isinstance(cache_brut, dict) else {}
     cache = cache if isinstance(cache, dict) else {}
+    maintenant = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    etat = dict(cache_brut.get("_etat") or {}) if isinstance(cache_brut, dict) else {}
+    ancien_maj = cache_brut.get("_maj") if isinstance(cache_brut, dict) else None
+    ecrits, echecs = 0, 0
+
+    def enregistrer(code):
+        etat.update({
+            "dernier_code": code,
+            "notes": len(cache),
+            "couverture_top": round(couverture(promos, cache), 3),
+        })
+        contenu = {"_etat": etat, "items": cache}
+        maj = maintenant if ecrits else ancien_maj
+        if maj:
+            contenu["_maj"] = maj
+        ecrire_json(CACHE, contenu)
 
     if not commun.a_une_cle():
         print("Aucune clé d'API (ni AI_API_KEY ni AI_API_KEY_BACKUP) : descriptions inchangées.")
+        enregistrer("sans_cle")
         return 0
 
     cible = choisir(promos, cache, args.limit, args.refresh_days)
-    print("%d article(s) à décrire (cache : %d)." % (len(cible), len(cache)))
+    print("%d article(s) à décrire (cache : %d, couverture de la cible : %.1f %%)."
+          % (len(cible), len(cache), 100 * couverture(promos, cache)))
     if args.dry_run:
         for x in cible:
             print(" -", x.get("marque"), "·", x.get("nom"))
         return 0
 
-    ecrits, echecs = 0, 0
     for x in cible:
         lien = x["lien"]
         try:
@@ -185,12 +238,19 @@ def main():
         ecrits += 1
         time.sleep(0.8)
 
+    if ecrits and echecs:
+        code = "partiel"
+    elif ecrits:
+        code = "ok"
+    elif echecs:
+        code = "echec"
+    else:
+        code = "ok"
     if ecrits:
-        ecrire_json(CACHE, {
-            "_maj": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
-            "items": cache,
-        })
-    print("%d description(s) écrite(s), %d écartée(s)." % (ecrits, echecs))
+        etat["derniere_reussite"] = maintenant
+    enregistrer(code)
+    print("%d description(s) écrite(s), %d écartée(s) ; couverture de la cible : %.1f %%."
+          % (ecrits, echecs, 100 * couverture(promos, cache)))
     return 0
 
 

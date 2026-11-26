@@ -6,12 +6,16 @@ il sert à ce qu'une boutique muette ou des données figées ne passent pas
 inaperçues — `etat.html` les affichait déjà, mais personne ne le lisait.
 """
 import json
+import os
 from datetime import datetime, timezone
 
 PROMOS = "data/promos.json"
 SANTE = "data/sante.json"
 AGE_MAX_H = 3
 MIN_ARTICLES = 500
+# GitHub Pages plafonne le site à 1 Go, et le dépôt republie ses données à
+# chaque passage : à 300 Mo, il reste largement le temps de réagir.
+TAILLE_MAX_MO = 300
 
 
 def charger(chemin):
@@ -31,7 +35,26 @@ def age_heures(maj, maintenant=None):
     return (maintenant - t).total_seconds() / 3600
 
 
-def diagnostic(promo, sante, maintenant=None, age_max=AGE_MAX_H, minimum=MIN_ARTICLES):
+def taille_livree(racine="."):
+    """Taille en Mo de ce qui est réellement publié (données, fiches, flux)."""
+    total = 0
+    for dossier in ("data", "p"):
+        for chemin, _, fichiers in os.walk(os.path.join(racine, dossier)):
+            for nom in fichiers:
+                try:
+                    total += os.path.getsize(os.path.join(chemin, nom))
+                except OSError:
+                    pass
+    for nom in ("feed.xml", "sitemap.xml"):
+        try:
+            total += os.path.getsize(os.path.join(racine, nom))
+        except OSError:
+            pass
+    return total / 1e6
+
+
+def diagnostic(promo, sante, maintenant=None, age_max=AGE_MAX_H, minimum=MIN_ARTICLES,
+               taille_mo=None, taille_max=TAILLE_MAX_MO):
     problemes = []
     items = promo.get("items") or []
     age = age_heures(promo.get("maj"), maintenant)
@@ -47,6 +70,8 @@ def diagnostic(promo, sante, maintenant=None, age_max=AGE_MAX_H, minimum=MIN_ART
     for nom, etat in (sante.get("boutiques") or {}).items():
         if etat.get("alerte"):
             problemes.append(f"{nom} : {etat.get('n')} articles contre {etat.get('avant')} au relevé précédent")
+    if taille_mo is not None and taille_mo > taille_max:
+        problemes.append(f"{taille_mo:.0f} Mo publiés (seuil {taille_max} Mo)")
     return problemes
 
 
@@ -55,7 +80,7 @@ def main():
     if not promo:
         print("promos.json absent ou illisible")
         return 1
-    problemes = diagnostic(promo, charger(SANTE))
+    problemes = diagnostic(promo, charger(SANTE), taille_mo=taille_livree())
     if not problemes:
         print(f"Collectes en ordre : {len(promo.get('items') or [])} articles")
         return 0

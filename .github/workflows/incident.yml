@@ -1,0 +1,46 @@
+name: Incidents
+
+# Le courriel de GitHub se perd vite. Chaque workflow qui échoue ouvre une
+# issue à son nom (une seule, commentée à chaque passage), et la referme au
+# premier passage vert du même workflow. `issues: write` suffit : aucun service
+# externe, aucun secret supplémentaire.
+
+on:
+  workflow_run:
+    workflows:
+      - "Mise à jour des promos"
+      - "Surveillance du site publié"
+      - "Notes de style"
+      - "Agent histoire"
+      - "Agent structure"
+      - "Canari des boutiques"
+    types: [completed]
+
+permissions:
+  issues: write
+  contents: read
+
+concurrency:
+  group: incident-${{ github.event.workflow_run.id }}
+  cancel-in-progress: false
+
+jobs:
+  signaler:
+    if: github.repository == 'acajoux1/promos-streetwear'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Issue d'incident
+        env:
+          GH_TOKEN: ${{ github.token }}
+          WORKFLOW: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          CONCLUSION: ${{ github.event.workflow_run.conclusion }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: >-
+          python3 incident.py --workflow "$WORKFLOW" --url "$RUN_URL"
+          --conclusion "$CONCLUSION" --branche "$BRANCH"

@@ -9,6 +9,9 @@ on:
     paths:
       - "scraper.py"
       - "size_prices.py"
+      - "schema.py"
+      - "couverture.py"
+      - "boutiques.json"
       - "feed.py"
       - "pipeline.py"
       - "version_sw.py"
@@ -54,9 +57,13 @@ jobs:
         run: python -m playwright install --with-deps chromium
       - name: Tests
         run: python -m unittest discover -p 'test*.py' -v
-      # Un seul passage, dans l'ordre tenu par pipeline.py : la collecte, les
-      # prix par taille, puis le flux. La première étape en échec arrête tout.
+      # Un seul passage, dans l'ordre tenu par pipeline.py : collecte, prix par
+      # taille, contrat des données, flux. Une étape critique en échec arrête
+      # tout ; une étape non critique laisse les suivantes tourner sur les
+      # fichiers précédents, et le run rougit en fin de job.
       - name: Collecte, prix par taille et flux
+        id: collecte
+        continue-on-error: true
         run: python pipeline.py
       # La version du cache du service worker suit le contenu de la coquille :
       # plus de bump à retenir à la main.
@@ -78,3 +85,14 @@ jobs:
       # échec ici prévient le propriétaire par le courriel de GitHub.
       - name: Contrôle de santé des collectes
         run: python verifie_sante.py
+      # Images, prix barrés, prix par taille : ce qui manque *dans* les
+      # articles, pas seulement leur nombre.
+      - name: Contrôle de couverture
+        run: python couverture.py
+      # Les données valides ont été publiées ; le passage reste rouge pour que
+      # l'incident soit visible et signalé (incident.yml).
+      - name: Signalement d'une collecte dégradée
+        if: steps.collecte.outcome == 'failure'
+        run: |
+          echo "Collecte ou contrat des données en échec : voir l'étape « Collecte, prix par taille et flux »."
+          exit 1

@@ -1,0 +1,43 @@
+{
+ "commentaire": "Sources collectées par scraper.py. Ajouter une boutique ici suffit : le canari (canary.py) la contrôle aussi. collection = chemin complet de la collection soldée, produits = préfixe des fiches produit, min_articles = plancher attendu pour le canari (une page de products.json plafonne à 250).",
+ "boutiques": [
+  {
+   "nom": "Starcow Paris",
+   "type": "shopify",
+   "base": "https://www.starcowparis.com",
+   "collection": "/collections/outlet",
+   "produits": "https://www.starcowparis.com/products/",
+   "min_articles": 400
+  },
+  {
+   "nom": "END.",
+   "type": "shopify",
+   "base": "https://www.endclothing.com",
+   "collection": "/en-eu/collections/sale",
+   "produits": "https://www.endclothing.com/en-eu/products/",
+   "min_articles": 800
+  },
+  {
+   "nom": "Footshop",
+   "type": "footshop",
+   "url": "https://www.footshop.fr/fr/872-promos",
+   "min_articles": 200
+  },
+  {
+   "nom": "Laced Run",
+   "type": "shopify",
+   "base": "https://lacedrun.com",
+   "collection": "/collections/soldes-2026",
+   "produits": "https://lacedrun.com/products/",
+   "min_articles": 200
+  },
+  {
+   "nom": "Dimension Stores",
+   "type": "shopify",
+   "base": "https://dimension-stores.com",
+   "collection": "/collections/good-deals",
+   "produits": "https://dimension-stores.com/products/",
+   "min_articles": 800
+  }
+ ]
+}

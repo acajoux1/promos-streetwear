@@ -8,6 +8,13 @@ name: Surveillance du site publié
 on:
   schedule:
     - cron: "50 * * * *"
+  # Deuxième déclencheur : le contrôle repart à la fin de chaque collecte. Si
+  # le cron de GitHub est sauté ou très en retard, le chien de garde n'est pas
+  # muet pour autant ; la relance évite les boucles (passage en cours ou
+  # terminé depuis moins de vingt minutes).
+  workflow_run:
+    workflows: ["Mise à jour des promos"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:

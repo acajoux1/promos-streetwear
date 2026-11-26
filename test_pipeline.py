@@ -16,6 +16,16 @@ class TestPipeline(unittest.TestCase):
             self.assertEqual(pipeline.executer(etapes, racine=dossier), 3)
             self.assertFalse(os.path.exists(marque))
 
+    def test_etape_non_critique_continue_et_rend_2(self):
+        with tempfile.TemporaryDirectory() as dossier:
+            marque = os.path.join(dossier, "fait")
+            etapes = (
+                ("prix", ("-c", "raise SystemExit(3)"), False),
+                ("flux", ("-c", "open(%r, 'w')" % marque), True),
+            )
+            self.assertEqual(pipeline.executer(etapes, racine=dossier), 2)
+            self.assertTrue(os.path.exists(marque))
+
     def test_enchaine_les_etapes_dans_l_ordre(self):
         with tempfile.TemporaryDirectory() as dossier:
             etapes = (

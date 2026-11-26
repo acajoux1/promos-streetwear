@@ -98,7 +98,33 @@ def choisir_offre(variantes):
             meilleure = (prix, ancien)
     return meilleure if meilleure else (None, None)
 
-def shopify(boutique, base, collection, prod_base, maxpages=20):
+COLLECTIONS_SOLDES = re.compile(
+    r"(soldes?|sale|outlet|promo|deal|remise|destock)", re.I)
+
+
+def collection_auto(base, collection):
+    """Collection soldée de remplacement, trouvée dans /collections.json.
+
+    Les slugs datés (« soldes-2026 ») meurent au changement d'année. Quand la
+    collection configurée ne rend plus rien, on cherche son remplaçant par
+    mot-clé au lieu d'attendre une intervention à la main.
+    """
+    prefixe = collection.split("/collections/")[0]
+    try:
+        data = json.loads(fetch(base + prefixe + "/collections.json?limit=250"))
+    except Exception:
+        return None
+    candidats = [c for c in data.get("collections") or []
+                 if isinstance(c, dict) and c.get("handle")
+                 and COLLECTIONS_SOLDES.search(c["handle"])
+                 and not collection.endswith("/" + c["handle"])]
+    if not candidats:
+        return None
+    candidats.sort(key=lambda c: -(c.get("products_count") or 0))
+    return "/collections/" + candidats[0]["handle"]
+
+
+def shopify(boutique, base, collection, prod_base, maxpages=20, auto=True):
     items = []
     for page in range(1, maxpages + 1):
         url = base + collection + "/products.json?limit=250&page=" + str(page)
@@ -146,6 +172,11 @@ def shopify(boutique, base, collection, prod_base, maxpages=20):
                 it["_variantes"] = variantes
             items.append(it)
         time.sleep(0.5)
+    if not items and auto:
+        autre = collection_auto(base, collection)
+        if autre and autre != collection:
+            print(boutique, ": collection", collection, "vide, essai de", autre)
+            return shopify(boutique, base, autre, prod_base, maxpages, auto=False)
     return items
 
 MARQUES = ["Air Jordan", "Nike", "Adidas", "New Balance", "Puma", "Asics", "Calvin Klein",
@@ -171,13 +202,13 @@ def decode(s):
     except Exception:
         return s
 
-def footshop(maxpages=40):
+def footshop(maxpages=40, url=None):
     base = "https://www.footshop.fr/fr/"
+    url = url or "https://www.footshop.fr/fr/872-promos"
     vus, items = set(), []
     for page in range(1, maxpages + 1):
-        url = "https://www.footshop.fr/fr/872-promos"
         if page > 1:
-            url = url + "?page=" + str(page)
+            url = url.split("?")[0] + "?page=" + str(page)
         try:
             html = fetch(url)
         except Exception as e:
@@ -217,13 +248,44 @@ def footshop(maxpages=40):
         time.sleep(0.5)
     return items
 
-SOURCES = [
-    ("Starcow Paris", lambda: shopify("Starcow Paris", "https://www.starcowparis.com", "/collections/outlet", "https://www.starcowparis.com/products/")),
-    ("END.", lambda: shopify("END.", "https://www.endclothing.com", "/en-eu/collections/sale", "https://www.endclothing.com/en-eu/products/")),
-    ("Footshop", footshop),
-    ("Laced Run", lambda: shopify("Laced Run", "https://lacedrun.com", "/collections/soldes-2026", "https://lacedrun.com/products/")),
-    ("Dimension Stores", lambda: shopify("Dimension Stores", "https://dimension-stores.com", "/collections/good-deals", "https://dimension-stores.com/products/")),
-]
+BOUTIQUES_FICHIER = "boutiques.json"
+
+
+def charger_boutiques(chemin=BOUTIQUES_FICHIER):
+    """Sources déclarées dans `boutiques.json`, entrées incomplètes écartées."""
+    try:
+        with open(chemin, encoding="utf-8") as f:
+            data = json.load(f)
+    except (OSError, ValueError):
+        return []
+    liste = data.get("boutiques") if isinstance(data, dict) else data
+    if not isinstance(liste, list):
+        return []
+    return [b for b in liste
+            if isinstance(b, dict) and b.get("nom")
+            and b.get("type") in ("shopify", "footshop")]
+
+
+def sources(boutiques=None):
+    """(nom, fonction de collecte) pour chaque boutique configurée."""
+    bouts = charger_boutiques() if boutiques is None else boutiques
+    liste = []
+    for b in bouts:
+        nom = b["nom"]
+        if b["type"] == "footshop":
+            url = b.get("url") or "https://www.footshop.fr/fr/872-promos"
+            liste.append((nom, lambda nom=nom, url=url: footshop(url=url)))
+        else:
+            base, collection = b["base"], b["collection"]
+            produits = b["produits"]
+            liste.append((nom, lambda nom=nom, base=base, collection=collection,
+                          produits=produits:
+                          shopify(nom, base, collection, produits)))
+    return liste
+
+
+# Compatibilité : le module expose toujours la liste construite au chargement.
+SOURCES = sources()
 
 def charger(chemin, defaut):
     try:
@@ -300,6 +362,11 @@ def main():
     maj = now.strftime("%Y-%m-%dT%H:%M:%SZ")
     jour = now.strftime("%Y-%m-%d")
 
+    boutiques = sources()
+    if not boutiques:
+        print("boutiques.json absent, illisible ou vide : collecte annulée.")
+        return 1
+
     ancien = charger("data/promos.json", {})
     anciens_items = ancien.get("items", [])
     ancien_statut = ancien.get("statut", {})
@@ -308,7 +375,7 @@ def main():
     items = []
     statut = {}
     variantes = charger("data/variantes.json", {}).get("by_link", {})
-    for nom, fn in SOURCES:
+    for nom, fn in boutiques:
         try:
             r = fn()
         except Exception as e:
@@ -350,8 +417,8 @@ def main():
     with open("data/variantes.json", "w", encoding="utf-8") as f:
         json.dump({"maj": maj, "by_link": variantes}, f, ensure_ascii=False, separators=(",", ":"))
     print("TOTAL", len(items))
-    return items
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

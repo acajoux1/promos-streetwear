@@ -17,6 +17,8 @@ jobs:
   structure:
     if: github.repository == 'acajoux1/promos-streetwear'
     runs-on: ubuntu-latest
+    # L'attente des contrôles de la PR avant fusion peut durer quinze minutes.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
