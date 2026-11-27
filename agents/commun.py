@@ -50,6 +50,13 @@ MODELE_REPLI = "gemini-3.8-flash"
 # la marque `Echec.reseau` et elle bascule de la même façon.
 BASCULE = (400, 401, 403, 404, 429, 500, 502, 503)
 
+# Statuts qui peuvent se débloquer d'eux-mêmes : quota momentané (429) ou
+# surcharge (5xx). Quand *tous* les fournisseurs échouent ainsi, `appeler()`
+# refait un tour complet après une courte pause avant d'abandonner, et l'échec
+# final porte `panne=True` pour que l'appelant le signale.
+PASSAGERES = (429, 500, 502, 503)
+PAUSE_AVANT_REPRISE = 15  # secondes
+
 # Noms lisibles dans le journal du workflow : on lit l'hôte, pas une étiquette
 # recopiée à la main qui finirait par mentir.
 HOTES = {
@@ -204,10 +211,13 @@ class Echec(RuntimeError):
     doit basculer vers le repli comme une erreur serveur.
     """
 
-    def __init__(self, message, code=None, reseau=False):
+    def __init__(self, message, code=None, reseau=False, panne=False):
         super().__init__(message)
         self.code = code
         self.reseau = reseau
+        # `panne` : tous les fournisseurs ont échoué sur un statut passager, la
+        # marque n'a rien à se reprocher. À distinguer d'un refus de contenu.
+        self.panne = panne
 
 
 def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, json_mode=False):
@@ -221,40 +231,71 @@ def appeler(system, utilisateur, temperature=0.3, max_tokens=1600, essais=2, jso
     inutiles quand la limite est journalière, et risqués quand le service est
     momentanément en panne. Le journal nomme chaque fournisseur essayé et celui
     qui a répondu, pour qu'un run vert ne laisse rien deviner.
+
+    Si tout le monde échoue sur un statut passager (429, 5xx) ou une panne de
+    transport, un second tour complet est tenté après `PAUSE_AVANT_REPRISE`
+    secondes : une surcharge de quelques dizaines de secondes ne doit pas coûter
+    les marques du passage. Si ce tour échoue aussi, l'`Echec` porte
+    `panne=True`, pour que l'appelant le signale au lieu de conclure « rien à
+    proposer ».
     """
     messages = [
         {"role": "system", "content": system},
         {"role": "user", "content": utilisateur},
     ]
     liste = fournisseurs()
-    problemes = []
-    dernier_code, dernier_reseau = None, False
+    for passe in (1, 2):
+        texte, echecs = _passe(liste, messages, temperature, max_tokens, essais, json_mode)
+        if texte is not None:
+            return texte
+        problemes = ["%s : %s" % (f["nom"], e) for f, e in echecs]
+        dernier = echecs[-1][1]
+        # Panne passagère : chacun des fournisseurs essayés a échoué sur un
+        # statut qui peut se débloquer (quota, surcharge, réseau).
+        panne = all(e.reseau or e.code in PASSAGERES for _, e in echecs)
+        if passe == 1 and panne:
+            log("Aucun fournisseur n'a répondu (%s) → nouvelle tentative dans %d s."
+                % (" ; ".join(problemes), PAUSE_AVANT_REPRISE))
+            time.sleep(PAUSE_AVANT_REPRISE)
+            continue
+        # `Echec` est un `RuntimeError` : les appelants qui attrapent
+        # RuntimeError continuent de fonctionner, et `code` reste lisible.
+        raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes),
+                    dernier.code, reseau=dernier.reseau, panne=panne)
+    # Inatteignable : la seconde passe lève toujours.
+    raise Echec("appel au modèle impossible", panne=True)
+
+
+def _passe(liste, messages, temperature, max_tokens, essais, json_mode):
+    """Un tour de la liste des fournisseurs, sans réessai global.
+
+    Retourne `(texte, echecs)` : `texte` vaut None si personne n'a répondu, et
+    `echecs` liste les `(fournisseur, Echec)` essayés, dans l'ordre. Le premier
+    qui répond arrête le tour ; le repli ne sert qu'après un échec qui peut
+    passer la main (statut de `BASCULE` ou panne de transport).
+    """
+    echecs = []
     for i, f in enumerate(liste):
         dernier = i + 1 == len(liste)
         try:
             texte = _appeler(f, messages, temperature, max_tokens, essais, json_mode,
                              abandonner_sur=() if dernier else BASCULE)
         except Echec as e:
-            problemes.append("%s : %s" % (f["nom"], e))
-            dernier_code, dernier_reseau = e.code, e.reseau
+            echecs.append((f, e))
             # Une panne de transport n'a pas de statut : elle compte comme une
             # erreur serveur, sinon un simple timeout perdrait la marque alors
             # qu'un repli est configuré.
             if not dernier and (e.reseau or e.code in BASCULE):
                 log("%s indisponible (%s) → repli sur %s." % (f["nom"], e, liste[i + 1]["nom"]))
                 continue
-            # `Echec` est un `RuntimeError` : les appelants qui attrapent
-            # RuntimeError continuent de fonctionner, et `code` reste lisible.
-            raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes),
-                        dernier_code, reseau=dernier_reseau)
+            return None, echecs
         if i:
             log("Réponse de %s (%s), après l'échec de %s." % (f["nom"], f["modele"], liste[0]["nom"]))
         else:
             log("Réponse de %s (%s)." % (f["nom"], f["modele"]))
         _dernier.update(nom=f["nom"], modele=f["modele"])
-        return texte
-    # Inatteignable : la dernière tentative lève toujours.
-    raise Echec("appel au modèle impossible (%s)" % " ; ".join(problemes), dernier_code)
+        return texte, echecs
+    return None, echecs
 
 
 def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner_sur=()):

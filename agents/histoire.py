@@ -281,7 +281,10 @@ def fiche(marque, n):
             obj = demander(marque, n, pbs)
         except (RuntimeError, ValueError) as e:
             c.log("  réponse inutilisable :", e)
-            return None, None, getattr(e, "code", None) == 429
+            # `panne` est posé par `commun.appeler()` quand tous les fournisseurs
+            # ont échoué sur un statut passager ; les codes restent acceptés pour
+            # un `Echec` construit ailleurs.
+            return None, None, getattr(e, "panne", False) or getattr(e, "code", None) in c.PASSAGERES
         pbs = valide(obj, marque)
         if not pbs:
             return obj, None, False
@@ -416,6 +419,17 @@ def main():
 
     c.resumer(resume(resultats, len(items)))
 
+    # Une panne de fournisseur n'est pas « rien à proposer » : sans ce compte,
+    # un passage où tout le monde répond 429 ou 503 finissait vert et muet.
+    pannes = [r["marque"] for r in resultats if r["etat"] == "panne fournisseur"]
+    if pannes:
+        c.resumer("## Panne des fournisseurs\n\n%s : aucune réponse exploitable "
+                  "après une nouvelle tentative. Le passage sort en échec pour que "
+                  "la panne soit visible ; aucune de ces marques n'est gelée."
+                  % ", ".join("« %s »" % m for m in pannes))
+        c.log("Panne des fournisseurs : %d marque(s) sans réponse (%s)."
+              % (len(pannes), ", ".join(pannes)))
+
     lignes = ["Cette branche ne contient que les histoires de marques vérifiées "
               "(`data/histoires.json`) ; les notes de style ont leur propre tâche "
               "(`agent-notes.yml`).", ""]
@@ -437,12 +451,14 @@ def main():
     if url is None:
         c.resumer("## Fusion\n\nRien à proposer ce passage : pas de pull request.")
         c.log("Aucune nouveauté ce passage : pas de pull request.")
-        return 0
+        return 1 if pannes else 0
     etat = c.fusionner_pr(branche)
     if etat == "fusionnée":
         c.resumer("## Fusion\n\nPull request fusionnée dans `main` "
                   "(branche `%s`) : %s" % (branche, url))
-        return 0
+        # Le travail a bien été publié, mais une marque a manqué à l'appel :
+        # le run le dit, sinon la panne resterait invisible.
+        return 1 if pannes else 0
     # `main` n'a rien reçu : le run doit le dire, pas afficher un vert trompeur.
     c.resumer("## Fusion\n\nPull request **non fusionnée** — %s.\n\nÀ reprendre "
               "à la main : %s" % (etat, url))

@@ -258,7 +258,8 @@ class TestBasculeSurPanneServeur(unittest.TestCase):
             return "ok"
 
         with mock.patch.object(commun, "fournisseurs", return_value=self.LISTE), \
-                mock.patch.object(commun, "_appeler", side_effect=faux):
+                mock.patch.object(commun, "_appeler", side_effect=faux), \
+                mock.patch.object(commun, "PAUSE_AVANT_REPRISE", 0):
             return commun.appeler("systeme", "utilisateur"), vus
 
     def test_les_pannes_serveur_font_basculer(self):
@@ -298,7 +299,8 @@ class TestBasculeSurErreurReseau(unittest.TestCase):
             return "ok"
 
         with mock.patch.object(commun, "fournisseurs", return_value=self.LISTE), \
-                mock.patch.object(commun, "_appeler", side_effect=faux):
+                mock.patch.object(commun, "_appeler", side_effect=faux), \
+                mock.patch.object(commun, "PAUSE_AVANT_REPRISE", 0):
             return commun.appeler("systeme", "utilisateur"), vus
 
     def test_un_timeout_sur_le_principal_passe_au_repli(self):
@@ -333,6 +335,64 @@ class TestBasculeSurErreurReseau(unittest.TestCase):
         self.assertTrue(ctx.exception.reseau)
         self.assertIsNone(ctx.exception.code)
         self.assertIn("timed out", str(ctx.exception))
+
+
+class TestNouvelleTentativeApresPanne(unittest.TestCase):
+    """Quand tout le monde échoue sur 429/5xx, un second tour est tenté."""
+
+    LISTE = [{"nom": "Z.ai", "modele": "glm", "cle": "z"},
+             {"nom": "Gemini", "modele": "g", "cle": "x"}]
+
+    def tearDown(self):
+        commun.oublier_dernier_appel()
+
+    def lancer(self, suite):
+        """`suite` : l'échec à lever (ou None pour répondre) à chaque appel."""
+        appels = []
+
+        def faux(f, messages, *args, **kwargs):
+            appels.append(f["nom"])
+            e = suite[len(appels) - 1]
+            if e is not None:
+                raise e
+            return "ok"
+
+        with mock.patch.object(commun, "fournisseurs", return_value=self.LISTE), \
+                mock.patch.object(commun, "_appeler", side_effect=faux), \
+                mock.patch.object(commun, "PAUSE_AVANT_REPRISE", 0):
+            try:
+                return commun.appeler("systeme", "utilisateur"), appels
+            except commun.Echec as e:
+                return e, appels
+
+    def test_une_surcharge_qui_passe_est_rattrapee_au_second_tour(self):
+        texte, appels = self.lancer([commun.Echec("HTTP 429 : 1305", 429),
+                                     commun.Echec("HTTP 503 : UNAVAILABLE", 503),
+                                     None])
+        self.assertEqual(texte, "ok")
+        self.assertEqual(appels, ["Z.ai", "Gemini", "Z.ai"],
+                         "le second tour repart du principal")
+
+    def test_deux_tours_echoues_levent_une_panne(self):
+        echec, appels = self.lancer([commun.Echec("HTTP 429 : 1305", 429),
+                                    commun.Echec("HTTP 503 : UNAVAILABLE", 503)] * 2)
+        self.assertIsInstance(echec, commun.Echec)
+        self.assertTrue(echec.panne, "une panne générale doit être signalable")
+        self.assertEqual(echec.code, 503)
+        self.assertEqual(len(appels), 4, "deux tours complets, pas plus")
+        self.assertIn("Gemini", str(echec))
+
+    def test_un_refus_de_contenu_ne_relance_pas(self):
+        echec, appels = self.lancer([commun.Echec("réponse vide (finish_reason=stop)", None)])
+        self.assertFalse(echec.panne)
+        self.assertEqual(appels, ["Z.ai"])
+
+    def test_une_panne_de_transport_est_retentee(self):
+        texte, appels = self.lancer([commun.Echec("timed out", None, reseau=True),
+                                     commun.Echec("timed out", None, reseau=True),
+                                     None])
+        self.assertEqual(texte, "ok")
+        self.assertEqual(len(appels), 3)
 
 
 class TestDiagnosticFournisseurs(unittest.TestCase):

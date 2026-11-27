@@ -352,3 +352,47 @@ class TestFusionDeLaPr(unittest.TestCase):
         code, _, fusion = self.appeler("fusionnée", url=None)
         self.assertEqual(code, 0)
         fusion.assert_not_called()
+
+
+class TestPanneVisible(unittest.TestCase):
+    """Une panne de tous les fournisseurs doit sortir en échec, pas en vert muet.
+
+    Cas réel du 26/11/2026 : Z.ai 429 puis Gemini 503, « Rien à proposer »,
+    run vert, panne invisible.
+    """
+
+    def lancer(self, echec):
+        with mock.patch.object(histoire, "candidats", return_value=[(8, "kardo")]), \
+                mock.patch.object(histoire.c, "lire_json", return_value={"items": {}}), \
+                mock.patch.object(histoire.c, "a_une_cle", return_value=True), \
+                mock.patch.object(histoire.c, "appeler", side_effect=echec), \
+                mock.patch.object(histoire.c, "ecrire_json") as ecrire, \
+                mock.patch.object(histoire.c, "resumer") as resume, \
+                mock.patch.object(histoire.c, "log"), \
+                mock.patch.object(histoire.c, "branche_libre", return_value="agents/histoire-20261126"), \
+                mock.patch.object(histoire.c, "titre_date", return_value="Agent histoire"), \
+                mock.patch.object(histoire.c, "creer_pr", return_value=None):
+            code = histoire.main()
+        textes = "\n".join(a.args[0] for a in resume.call_args_list)
+        return code, textes, ecrire
+
+    def test_panne_generale_sort_en_echec(self):
+        echec = histoire.c.Echec(
+            "appel au modèle impossible (Z.ai : HTTP 429 ; Gemini : HTTP 503)",
+            503, panne=True)
+        code, textes, ecrire = self.lancer(echec)
+        self.assertEqual(code, 1, "la panne ne doit pas finir en run vert")
+        self.assertIn("Panne des fournisseurs", textes)
+        self.assertIn("kardo", textes)
+        ecrire.assert_not_called()  # la marque n'est pas gelée par une panne
+
+    def test_un_503_du_dernier_fournisseur_reste_une_panne(self):
+        # `commun.appeler()` ne pose `panne` que depuis peu : le code seul suffit.
+        code, textes, _ = self.lancer(histoire.c.Echec("HTTP 503", 503))
+        self.assertEqual(code, 1)
+        self.assertIn("Panne des fournisseurs", textes)
+
+    def test_un_refus_de_contenu_reste_vert(self):
+        code, textes, _ = self.lancer(histoire.c.Echec("HTTP 401", 401))
+        self.assertEqual(code, 0)
+        self.assertNotIn("Panne des fournisseurs", textes)
