@@ -326,6 +326,23 @@ class TestBasculeSurErreurReseau(unittest.TestCase):
             self.lancer({"Z.ai": vide})
         self.assertFalse(vide.reseau)
 
+    def test_le_delai_de_lecture_est_borne(self):
+        # Un fournisseur muet ne doit pas immobiliser le passage : deux tours de
+        # 120 s faisaient d'une panne un trou de quatre minutes.
+        f = {"nom": "Gemini", "base": "https://exemple.test", "modele": "m", "cle": "k"}
+        vu = {}
+
+        def faux(req, timeout=None):
+            vu["timeout"] = timeout
+            raise urllib.error.URLError("timed out")
+
+        with mock.patch.object(commun.urllib.request, "urlopen", side_effect=faux):
+            with self.assertRaises(commun.Echec):
+                commun._appeler(f, [{"role": "user", "content": "x"}], 0.3, 16, 1, False)
+        self.assertEqual(vu["timeout"], commun.DELAI_LECTURE)
+        self.assertLessEqual(commun.DELAI_LECTURE, 30,
+                             "une panne complète doit se voir en moins d'une minute")
+
     def test_le_transport_marque_l_echec_comme_reseau(self):
         f = {"nom": "Z.ai", "base": "https://exemple.test", "modele": "m", "cle": "k"}
         with mock.patch.object(commun.urllib.request, "urlopen",

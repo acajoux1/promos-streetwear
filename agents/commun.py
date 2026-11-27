@@ -57,6 +57,13 @@ BASCULE = (400, 401, 403, 404, 429, 500, 502, 503)
 PASSAGERES = (429, 500, 502, 503)
 PAUSE_AVANT_REPRISE = 15  # secondes
 
+# Délai de lecture d'un appel (secondes). Il borne une réponse qui ne vient
+# jamais : Gemini sait rester muet plus de deux minutes, ce qui transformait une
+# panne en attente interminable pour un texte de 300 jetons. Assez large pour un
+# modèle lent, assez court pour que la reprise et l'abandon se voient vite : une
+# panne complète coûte deux tours de ce délai, plus la pause.
+DELAI_LECTURE = 30
+
 # Noms lisibles dans le journal du workflow : on lit l'hôte, pas une étiquette
 # recopiée à la main qui finirait par mentir.
 HOTES = {
@@ -335,7 +342,7 @@ def _appeler(f, messages, temperature, max_tokens, essais, json_mode, abandonner
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=120) as r:
+            with urllib.request.urlopen(req, timeout=DELAI_LECTURE) as r:
                 j = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             detail = ""
