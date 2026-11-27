@@ -76,6 +76,7 @@ var txt="Notes de style : "+(e.notes||0)+" note"+((e.notes||0)>1?"s":"");
 if(e.dernier_code==="sans_cle")txt+=" · aucune clé d’API configurée";
 else if(e.dernier_code==="echec")txt+=" · dernier passage en échec";
 else if(e.dernier_code==="partiel")txt+=" · dernier passage partiel";
+else if(e.dernier_code==="panne")txt+=" · fournisseur injoignable";
 if(e.derniere_reussite)txt+=" · dernière réussite "+esc(fdate(e.derniere_reussite));
 if(typeof e.couverture_top==="number")txt+=" · cible couverte à "+Math.round(100*e.couverture_top)+" %";
 h+='<p class="s" style="margin:0 0 4px">'+txt+'</p>';

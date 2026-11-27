@@ -41,11 +41,17 @@ jobs:
       - name: Syntaxe
         run: python3 -m py_compile enrich.py agents/commun.py
       # Sans aucune clé (ni principale ni secours), le script sort en 0 sans
-      # rien écrire : une panne de fournisseur ne doit pas faire échouer la
-      # tâche, mais elle doit se voir dans le journal.
+      # rien écrire. En revanche, si des clés existent et que tous les
+      # fournisseurs échouent (429, 5xx, réseau) même après la nouvelle
+      # tentative, il sort en 1 : le job doit être rouge, pas afficher
+      # « rien de neuf » sur une panne.
       - name: Notes du jour
         run: python3 enrich.py --limit 12
+      # Même si l'étape précédente a échoué en cours de route, les notes déjà
+      # écrites sont publiées : le run reste rouge à cause de l'étape en échec,
+      # mais le travail fait n'est pas perdu.
       - name: Publication des notes
+        if: always()
         run: |
           git config user.name "promos-bot"
           git config user.email "bot@users.noreply.github.com"

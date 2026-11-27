@@ -19,6 +19,13 @@ Aucune clé n'est écrite ici. Sans aucune clé (principal ni secours), le scrip
 ne fait rien et sort avec le code 0, donc la tâche de collecte n'échoue jamais
 à cause de lui.
 
+En revanche, quand des clés existent mais que **tous** les fournisseurs échouent
+(429, 5xx, panne de transport) même après la nouvelle tentative de
+`commun.appeler()`, le passage sort avec le code 1 : un run vert qui n'écrit
+rien laisserait croire à une journée sans nouveauté. Les articles concernés
+restent hors du cache, donc rien n'est gelé : ils seront repris au passage
+suivant.
+
 L'appel passe par `agents/commun.py`, comme les deux agents : il hérite donc du
 repli automatique (`AI_API_KEY_BACKUP`, Gemini par défaut) quand le principal
 refuse pour clé, quota ou modèle inconnu, répond par une erreur serveur ou
@@ -191,7 +198,7 @@ def main():
     maintenant = datetime.now(timezone.utc).replace(microsecond=0).isoformat()
     etat = dict(cache_brut.get("_etat") or {}) if isinstance(cache_brut, dict) else {}
     ancien_maj = cache_brut.get("_maj") if isinstance(cache_brut, dict) else None
-    ecrits, echecs = 0, 0
+    ecrits, echecs, pannes = 0, 0, 0
 
     def enregistrer(code):
         etat.update({
@@ -226,8 +233,15 @@ def main():
             # Le repli a déjà fait son travail ; `code` dit ce qui a bloqué à la fin.
             print("%s sur %s" % (e, lien[:60]))
             echecs += 1
-            if e.code is None or e.code in (401, 403, 429):
-                break  # clé, quota ou réseau : insister sur 11 autres articles ne sert à rien
+            # Panne : les fournisseurs ne répondent pas, ce n'est pas l'article
+            # qui est en cause. Insister sur les autres ne servirait à rien et
+            # la marque n'entre pas au cache, donc elle n'est pas gelée.
+            if getattr(e, "panne", False) or e.code in (401, 403, 429) \
+                    or e.code in commun.PASSAGERES:
+                pannes += 1
+                break
+            if e.code is None:
+                break  # réponse inutilisable : le suivant peut encore passer
             continue
         texte = nettoyer(brut)
         if not valide(texte):
@@ -238,7 +252,9 @@ def main():
         ecrits += 1
         time.sleep(0.8)
 
-    if ecrits and echecs:
+    if pannes:
+        code = "panne"
+    elif ecrits and echecs:
         code = "partiel"
     elif ecrits:
         code = "ok"
@@ -251,6 +267,11 @@ def main():
     enregistrer(code)
     print("%d description(s) écrite(s), %d écartée(s) ; couverture de la cible : %.1f %%."
           % (ecrits, echecs, 100 * couverture(promos, cache)))
+    if pannes:
+        # Une panne de fournisseur n'est pas « rien de neuf » : le run doit le dire.
+        print("Panne des fournisseurs : appel au modèle impossible après une nouvelle "
+              "tentative ; le passage sort en échec, les articles seront repris ensuite.")
+        return 1
     return 0
 
 
